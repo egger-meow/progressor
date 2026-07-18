@@ -1,0 +1,25 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Local Claude Code settings (project-shared settings.json is fine to commit;
+# settings.local.json is per-developer)
+.claude/settings.local.json
+
+# Common language build/dependency artifacts — relevant once a real project
+# is built on top of this scaffold. Trim what you don't need.
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.local
