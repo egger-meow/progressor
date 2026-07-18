@@ -68,12 +68,46 @@ Everything else that's real work but doesn't meet this bar belongs under
 
 ## Current Priorities
 
-Empty. `ROADMAP.md` has no Active Phase and no further Authorized Phases
-— every proposal left under "Proposed — Not Yet Authorized" (calendar
-export/sync, notifications/reminders, a mobile companion view) needs a
-human to write its goal and exit condition before the phase loop can
-activate it. Per `ROADMAP.md`'s own rules, this is the correct end state
-to stop and wait in, not a failure.
+Decomposition of `ROADMAP.md`'s Active Phase, "Core Entity Creation UI"
+(authorized by the project owner in chat, 2026-07-18, choosing it over
+the three pre-existing "Proposed" phases specifically to unblock manual
+testing of the product itself).
+
+1. Add `removeTrackableItem`/`removeRoutine`/`removeFixedCommitment`/
+   `removeDeadlineTask` to the relevant `src/server/*.ts` files (mirroring
+   `time-slots.ts`'s existing `removeTimeSlot`), each throwing on an
+   unknown id rather than silently no-op-ing. Add tests for each,
+   including deleting a record that still has a `Time Slot` referencing
+   it (must not throw — `occupantLabel`'s existing "(deleted X)" fallback
+   is what keeps the Weekly View from corrupting or crashing).
+2. Run `npm run verify`, fix failures.
+3. Build `/items` (Trackable Items — `Book` and `Course`): list existing
+   records, a create form, and per-record edit/delete, mirroring the
+   Weekly View's inline-edit-via-`?edit=`-query-param pattern
+   (`src/app/page.tsx`). Server Actions in a new `src/app/items/actions.ts`
+   call directly into `src/server/trackable-items.ts`.
+4. Build `/routines` (`Routine`): same pattern, calling
+   `src/server/routines.ts`. The create/edit form must adapt its anchor
+   input to the selected cadence (no anchor for `daily`, weekday picker
+   for `weekly`, day-of-month picker for `monthly`).
+5. Build `/commitments` (`Semester Commitment` — `Fixed Commitment` and
+   `Deadline Task`): same pattern, calling
+   `src/server/semester-commitments.ts`, kept as two clearly separate
+   sections/forms per `docs/domain-model.md`'s "deliberately non-
+   interchangeable" framing.
+6. Add navigation links between the Weekly View and the three new pages.
+7. Run `npm run verify`, fix failures.
+8. Manually test full create/edit/delete for all five record kinds in the
+   browser via the dev server, including: a `WIP Limit` violation
+   surfacing as a visible error (not a crash); an invalid `Routine`
+   anchor for its cadence surfacing as a visible error; deleting a record
+   that still has a `Time Slot` referencing it and confirming the Weekly
+   View still renders that slot (as "(deleted X)") without corrupting or
+   crashing.
+9. Update `docs/status.md` (Current Behavior, Phase Gate section) and
+   `CHANGELOG.md`; commit.
+10. Write the Phase completion audit; remove the phase from `ROADMAP.md`;
+    update `CHANGELOG.md`; commit.
 
 ## Non-Blocking / Later
 
