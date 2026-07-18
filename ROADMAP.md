@@ -32,22 +32,9 @@ task queue drains.
 
 ## Active Phase
 
-### Elastic Re-Scheduling & Ad-hoc Events
-
-**Goal:** support fast, local repair of an existing `Schedule` when
-something changes — a manual override, an item finished early, an
-`Ad-hoc Event` injected at the last minute — without a full schedule
-rebuild, and while keeping the charter's guardrail that `Ad-hoc Event`s
-always outrank flexible `Trackable Item` work.
-
-**Exit condition (phase gate):** a documented set of disruption scenarios
-(skip today's reading session, insert a same-day `Ad-hoc Event`, mark a
-`Chapter`/`Video` done early) each produce a correctly repaired `Schedule`
-when re-run, verified against expected fixture output; the repair operation
-has a documented, interactively-fast time budget; the existing Phase-1
-manual-edit guarantee (one edit never corrupts another `Time Slot`) still
-holds; fixture-based tests plus a written walkthrough both pass; audit
-written in `docs/audits/`.
+No active phase — see "Proposed — Not Yet Authorized" below. A human
+needs to authorize the next phase (write a goal and exit condition, or
+promote one of the proposals below) before the phase loop can continue.
 
 ## Proposed — Not Yet Authorized
 

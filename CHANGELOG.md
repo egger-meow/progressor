@@ -97,6 +97,14 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   running dev server across all three disruptions, confirming the
   Phase-1 manual-edit guarantee (one edit never corrupts another `Time
   Slot`) still holds.
+- Phase 3 ("Elastic Re-Scheduling & Ad-hoc Events") closed: completion
+  audit at
+  `docs/audits/elastic-re-scheduling-and-ad-hoc-events-audit.md`; removed
+  from `ROADMAP.md`. No phase is currently authorized — `ROADMAP.md`'s
+  Active Phase is empty and every remaining "Proposed" entry (calendar
+  export/sync, notifications/reminders, mobile companion view) needs a
+  human-written goal and exit condition before the phase loop can
+  continue.
 
 ### Changed
 

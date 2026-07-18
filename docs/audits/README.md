@@ -48,3 +48,7 @@ once fixed, either a new audit or a correction note added to
   exceptions (re-run duplication of Scheduler-placed `Fixed
   Commitment`/`Routine` occurrences; same no-creation-UI gap carried over
   from Phase 1).
+- [`elastic-re-scheduling-and-ad-hoc-events-audit.md`](elastic-re-scheduling-and-ad-hoc-events-audit.md)
+  — Phase 3, "Elastic Re-Scheduling & Ad-hoc Events." Complete with noted
+  exceptions (no-creation-UI gap narrowed but not closed — `Ad-hoc Event`
+  gained its first creation UI this phase).
