@@ -117,6 +117,12 @@ export default async function WeeklyView({
         </form>
       </nav>
 
+      <nav className={styles.weekNav}>
+        <a href="/items">Trackable Items</a>
+        <a href="/routines">Routines</a>
+        <a href="/commitments">Semester Commitments</a>
+      </nav>
+
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 
       <div className={styles.weekGrid}>
