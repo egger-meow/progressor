@@ -1,44 +1,47 @@
-<!-- TEMPLATE: This is the generic agent-conventions entry point (read by
-agent tools that look for AGENTS.md rather than CLAUDE.md). Keep this and
-CLAUDE.md in sync in substance — CLAUDE.md is the short orientation +
-pointer, this is the fuller conventions doc. If you're only using one agent
-tool, it's fine for the other file to just say "see AGENTS.md" / "see
-CLAUDE.md". Delete this comment once filled in. -->
-
 # Repository Guidelines
 
 ## Project Structure & Module Organization
 
-<!-- TEMPLATE: Where does code live, by responsibility, not just by folder
-name. Model: "X/ for <responsibility>, Y/ for <responsibility>." Keep this
-current — a stale structure section is worse than none, because an agent
-will trust it. -->
+No code exists yet. Once the Phase 1 scaffold lands (see `ROADMAP.md`'s
+Active Phase), it must follow `docs/system-direction.md`'s layering:
+`src/server/` for the Domain/Service layer (all Prisma access), `src/
+scheduler/` for the Scheduler layer (Phase 2+, pure functions only), `src/
+app/` for the Next.js UI layer, `prisma/` for the schema and migrations.
+Update this section for real once the scaffold exists — a stale structure
+section is worse than none, because an agent will trust it.
 
 ## Build, Test, and Development Commands
 
-<!-- TEMPLATE: The actual commands, with one line each on what they do.
-Prefer copy-pasteable commands over prose. -->
+Not established yet — see `docs/status.md`'s Task Gate section, which is
+the source of truth until this section is filled in for real.
 
 ## Coding Style & Naming Conventions
 
-<!-- TEMPLATE: Indentation, naming conventions, formatting/lint tooling,
-anything a linter doesn't already enforce automatically (things a linter
-enforces don't need to be written here — that's what the linter is for). -->
+TypeScript, standard 2-space indentation. Domain identifiers must match
+`docs/domain-model.md` exactly (e.g. `unitsCompleted`, not a synonym) —
+that doc is the canonical vocabulary, not a suggestion. Formatting/lint
+tooling choice (ESLint config, Prettier or not) is decided when the scaffold
+lands; update this section then instead of leaving it silent.
 
 ## Testing Guidelines
 
-<!-- TEMPLATE: Test framework, naming convention for test files, what needs
-a test and what doesn't, how to run a single test. -->
+Vitest, per `docs/system-direction.md`. Test file naming convention and
+what requires a test vs. what doesn't will be decided alongside the scaffold
+in Phase 1's first `PRIORITIES.md` item — update this section then.
 
 ## Commit & Pull Request Guidelines
 
-<!-- TEMPLATE: Commit message convention (if any), what a PR description
-must include, whether screenshots are required for UI changes. -->
+Single-user local project with no PR workflow today — commit directly to
+`main` with descriptive messages. Revisit this section if that changes
+(e.g. if the project ever grows a remote/collaborator).
 
 ## Security & Configuration Tips
 
-<!-- TEMPLATE: Where secrets/config live, what must never be committed, what
-data is sensitive enough to require extra care when touched. -->
+No secrets exist yet — the only persisted data is the local SQLite file
+(single user, local machine, no auth). If a future phase adds an external
+integration (e.g. calendar sync — currently only Proposed, not authorized
+in `ROADMAP.md`) with credentials, this section must be updated before that
+phase starts.
 
 ## Agent Operating Notes
 
@@ -58,8 +61,6 @@ input per its protocol first), [`PRIORITIES.md`](PRIORITIES.md),
 [`docs/system-direction.md`](docs/system-direction.md),
 [`docs/status.md`](docs/status.md), and
 [`docs/build-status.md`](docs/build-status.md).
-<!-- TEMPLATE: add any subsystem-specific docs an agent must read before
-touching that subsystem, e.g. "also read docs/api-spec.md for API work." -->
 
 Do **not** add `CHANGELOG.md`, `docs/audits/`, or `FRAMEWORK_FEEDBACK.md`
 to that routine read. They're append-only history — open one only for a
@@ -82,11 +83,11 @@ into its canonical home and delete it **in the same commit** — the diff is
 the human's receipt. Never truncate the whole file; delete only what you
 processed.
 
-<!-- TEMPLATE: Add any project-specific standing rule here, in the same
-spirit as this example from a prior project:
-"When the new implementation of X fully covers the legacy path, remove the
-superseded code, config, tests, docs, and references outright — do not keep
-parallel implementations as permanent compatibility fallbacks." -->
+Once a new implementation fully covers a legacy path's behavior (e.g. the
+`Scheduler` superseding manual-only placement once Phase 2 lands), remove
+the superseded code, config, tests, docs, and references outright — this is
+a single-user local tool with no external consumer depending on an old path
+staying available (see `docs/system-direction.md`, "Retiring Legacy Paths").
 
 For subsystems with their own gotchas (a breaking-change dependency version,
 an unusual local convention), add a nested `AGENTS.md` in that subdirectory

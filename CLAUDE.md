@@ -1,9 +1,3 @@
-<!-- TEMPLATE: This is the entry point Claude Code reads automatically in this
-repo. Keep it short — it should orient an agent in under a minute and then
-point at the canonical docs, not duplicate their content. Mirror any
-structural change here into AGENTS.md; the two files should never disagree.
-Delete this comment block once filled in. -->
-
 # CLAUDE.md
 
 This file provides guidance to Claude Code (or any agent reading this
@@ -11,11 +5,14 @@ repo's conventions) when working with code in this repository.
 
 ## What this is
 
-<!-- TEMPLATE: 2-4 sentences. What does this project do, for whom, and what
-is it explicitly NOT (e.g. "an operator-assist tool, not an autonomous
-bot")? Copy the opening framing from docs/project-charter.md once that's
-written — this section should be a compressed pointer to it, not a fork of
-it. -->
+Progressor is a personal, single-user life-scheduling system: it tracks
+long-running items (books by chapter, online courses by video), recurring
+routines (gym, tutoring), semester-driven fixed/deadline commitments (class,
+meetings, homework, exams), and ad-hoc events, and turns them into one
+continuously-updated weekly timetable (課表). It is not a multi-user/team
+calendar tool and not a generic project-management app. Phase 1 (current) is
+data layer + manual weekly view only — no auto-scheduling yet. See
+`docs/project-charter.md` for the full mission and guardrails.
 
 ## Before you change anything
 
@@ -56,29 +53,22 @@ Full procedure (the two loops, the inbox protocol, both verification gates):
 
 ## Commands
 
-<!-- TEMPLATE: fill in the actual install/run/test/lint/build commands for
-this project, e.g.:
-
-```bash
-<install command>
-<run command>
-<test command>
-<lint/typecheck command>
-```
-
-If there's a single bundled task-gate command (recommended — see
-docs/status.md), call it out explicitly here as the thing to run before
-calling any change done. -->
+No scaffold exists yet — establishing it (Next.js + TypeScript + Prisma per
+`docs/system-direction.md`) is the first `PRIORITIES.md` item. Once it
+lands, this section must list the real `npm install` / `npm run dev` / test
+/ lint / typecheck / build commands and the bundled task-gate command
+(`npm run verify`) — see `docs/status.md`'s Task Gate section, which is the
+source of truth in the meantime.
 
 ## Architecture
 
-<!-- TEMPLATE: Short orientation to the codebase layout and the handful of
-non-obvious invariants a change is likely to break — the things a new
-contributor (human or agent) would get wrong without being told. Link to
-docs/system-direction.md and docs/domain-model.md for anything longer than a
-paragraph; don't duplicate them here. Delete this section if
-docs/system-direction.md already covers it well enough that a pointer is
-sufficient. -->
+Three layers, each calling only the one below it: Domain/Service layer (all
+Prisma access) → Scheduler layer (pure functions, introduced Phase 2, never
+touches Prisma directly) → UI layer (Next.js routes/components, never
+queries Prisma directly). See `docs/system-direction.md` for the full
+boundary rules and `docs/domain-model.md` for the shared concepts
+(`Trackable Item`, `Book`, `Course`, `Routine`, `Semester Commitment`,
+`Ad-hoc Event`, `Time Slot`, `Schedule`) that cross those boundaries.
 
 ## Key references
 

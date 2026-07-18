@@ -1,44 +1,117 @@
-<!-- TEMPLATE: This doc exists to prevent the single most common source of
-wasted back-and-forth: the human and the agent using different words for the
-same thing, or the same word for different things. Every noun that matters
-to this project's business logic — not its implementation details — should
-have exactly one name, defined once, here. Reference this doc instead of
-re-explaining a concept every time it comes up. Delete this comment once
-filled in. -->
-
 # Domain Model
 
-Shared vocabulary for this project. If code, docs, or conversation use a
-term for a core concept that isn't defined here, either the term is wrong or
-this doc is out of date — fix whichever it is before proceeding.
+Shared vocabulary for Progressor. If code, docs, or conversation use a term
+for a core concept that isn't defined here, either the term is wrong or this
+doc is out of date — fix whichever it is before proceeding. Concept names
+below are bilingual on purpose (中文名 + English identifier) per the
+project's documentation-language decision; **code always uses the English
+identifier**, never the Chinese gloss, so grep-ability stays intact.
 
 ## Concepts
 
-<!-- TEMPLATE: One entry per core concept. Model shape:
+### Trackable Item（追蹤項目）
 
-### <Concept Name>
+Abstract concept for anything the user is reading/studying through in
+discrete units over multiple sittings. Concrete kinds: `Book`, `Course`.
+Fields: `id`, `title`, `type` (`book` | `course`), `priority` (使用者指定的
+整數優先度，數字越小越優先), `status` (`not-started` | `in-progress` |
+`paused` | `done`), `unitCount`（總單元數）, `unitsCompleted`（已完成單元數）,
+`estimatedDays`（使用者輸入的預估完成天數）. A Trackable Item may have many
+`Time Slot` occurrences assigned to it across many weeks, but at most one
+`status` at a time.
 
-<What it is, in one or two sentences.> <How it relates to other concepts
-defined here — link them.> <Any invariant that follows from the definition,
-e.g. "an X may have many Y but exactly one active Z.">
+### Book（書籍）
 
-Fill in real concepts for this project. Delete concepts that don't apply;
-add ones that do. A project with no interesting domain vocabulary (e.g. a
-small CLI utility) can shrink this doc to a short list of terms and skip
-the essay format — but should still keep the file, since it's the canonical
-place new vocabulary gets added as the project grows. -->
+A `Trackable Item` with `type = "book"`. Its unit is `Chapter`（章節）;
+`unitCount` = chapter count.
 
-### `<Concept A>`
+### Course（線上課程）
 
-`TEMPLATE: definition`
+A `Trackable Item` with `type = "course"`. Its unit is `Video`（影片／課程
+單元）; `unitCount` = video count.
 
-### `<Concept B>`
+### WIP Limit（同時進行上限）
 
-`TEMPLATE: definition, including relationship to <Concept A>`
+A configured maximum number of `Trackable Item`s of a given `type` allowed
+to have `status = "in-progress"` at once. Enforced independently per type
+(one limit for `book`, one for `course`) — starting a new item beyond the
+limit is rejected until an existing in-progress item is paused or finished.
+
+### Routine（常規事件）
+
+A recurring, non-deadline commitment. Fields: `id`, `title`, `category`
+（如 `gym`、`tutoring`／家教）, `cadence` (`daily` | `weekly` | `monthly`),
+`anchor`（依 cadence 決定：weekly 存星期幾，可多個；monthly 存日期）,
+`timeOfDayPreference`（見下）. A `Routine` occurrence recurs indefinitely
+until the user edits or deletes the `Routine` itself — it is not a
+`Deadline Task` and never has a due date.
+
+### Time-of-Day Preference（時段偏好）
+
+A preference, attached to a `Routine`'s `category` or set globally by the
+user, expressed as `morning` | `afternoon` | `evening` | `night` (or an
+explicit hour range). The scheduler (from Phase 2 on) tries to honor this
+when placing flexible work; Phase 1 shows it as metadata only, since Phase 1
+has no scheduler.
+
+### Semester Commitment（學期事務）
+
+Umbrella term for anything that appears once a semester starts. Splits into
+two mutually exclusive kinds:
+
+- **Fixed Commitment（固定事務）**：anchored to an exact recurring time slot
+  that cannot move — weekly class, weekly meeting/report slot. Structurally
+  like a `Routine` with `cadence = "weekly"`, but semantically distinct: it
+  is a hard constraint, never a schedulable-around preference.
+- **Deadline Task（期限任務）**：has a `dueAt` but flexible placement before
+  that time — homework, quiz/exam prep, report writing. Structurally closer
+  to a `Trackable Item` (has `estimatedDays`, gets units of work scheduled
+  into `Time Slot`s) but is deadline-bound, which a `Trackable Item` is not.
+
+### Ad-hoc Event（臨時事件）
+
+A one-off, non-recurring event the user declares — either pre-placed by the
+scheduler as a suggestion, or injected by the user at the last minute (「我
+現在要出門見朋友」). Per the charter's Guardrails, an `Ad-hoc Event` always
+outranks flexible `Trackable Item` work when both want the same `Time Slot`.
+
+### Time Slot（時段）
+
+The atomic bookable unit inside a `Schedule`: `startAt`, `endAt`, and what
+occupies it — one of a `Routine` occurrence, a `Fixed Commitment` occurrence,
+a `Deadline Task` work-session, a `Trackable Item` work-session, an
+`Ad-hoc Event`, or `Slack` (deliberately empty).
+
+### Slack（彈性留白）
+
+A `Time Slot` the scheduler deliberately leaves unassigned so the week isn't
+fully packed. Slack is what makes Elastic Re-Scheduling (Phase 3) possible —
+without reserved slack, absorbing a disruption always cascades into
+rebuilding the whole week.
+
+### Schedule / Weekly View（課表 / 週視圖）
+
+The full set of `Time Slot`s for one calendar week, labelled 本週／下週 in
+the UI. This is the primary surface the user reads and edits. Phase 1's
+Schedule is populated entirely by hand (no `Scheduler` yet); from Phase 2 on
+it is generated/repaired by the `Scheduler` and still remains manually
+editable per the charter's Guardrails.
+
+### Scheduler（自動排程引擎）
+
+The component (introduced Phase 2, "Constraint-Based Auto-Scheduler v1" in
+`../ROADMAP.md`) that computes or repairs a `Schedule` from all `Trackable
+Item`s, `Routine`s, `Semester Commitment`s, `Ad-hoc Event`s,
+`Time-of-Day Preference`s, and `WIP Limit`s. Does not exist in Phase 1.
 
 ## Naming Conventions
 
-<!-- TEMPLATE: If this project has naming conventions that follow from the
-domain model — e.g. "never call it X in code even though users call it X in
-the UI, because X is ambiguous with Y" — record them here. Delete if not
-applicable. -->
+- Code (variable/field/type names) always uses the English identifier shown
+  in this doc — e.g. `unitsCompleted`, not `已完成單元數` — even where the UI
+  displays the Chinese label. Never invent a synonym for a concept already
+  named here (e.g. don't introduce `progress` alongside `unitsCompleted`).
+- "Fixed Commitment" and "Routine" are structurally similar (both recurring)
+  but must stay semantically distinct in code and docs: a `Routine` is a
+  soft preference the scheduler can nudge around within its
+  `timeOfDayPreference`; a `Fixed Commitment` is a hard constraint that never
+  moves. Do not merge them into one type without re-deriving this document.

@@ -1,8 +1,3 @@
-<!-- TEMPLATE: Standard Keep a Changelog style. Add entries under [Unreleased]
-as you go; move them under a version heading at release time per
-docs/release.md. Delete this comment once the project has its first real
-entries. -->
-
 # Changelog
 
 All notable changes to this project are documented here.
@@ -14,7 +9,11 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 
 ### Added
 
-- `TEMPLATE: entry`
+- Bootstrap: drafted all canonical docs (`docs/project-charter.md`,
+  `docs/domain-model.md`, `docs/system-direction.md`, `ROADMAP.md`,
+  `docs/status.md`, `docs/build-status.md`, `docs/release.md`, `CLAUDE.md`,
+  `AGENTS.md`, `PRIORITIES.md`, `README.md`) from the human's project idea,
+  per `BOOTSTRAP.md`.
 
 ### Changed
 

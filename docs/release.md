@@ -1,50 +1,41 @@
-<!-- TEMPLATE: Fill in the versioning scheme and checklist for this specific
-project's stack. The structure below (versioning rule, ordered checklist,
-notes template) is generic and usually doesn't need to change; the commands
-inside it do. Delete this comment once filled in. -->
-
 # Release Process
 
 This document defines the release path for this project.
 
+Progressor is a single-user local tool with no external distribution
+channel today — "release" means "tag a known-good point in the local git
+history," not publishing a package. Keep this checklist minimal until that
+changes.
+
 ## Versioning
 
-<!-- TEMPLATE: State the scheme (SemVer is a reasonable default) and every
-place a version number must be kept in sync, e.g.:
-- `MAJOR.MINOR.PATCH` stored in `<file>`, `<file>`, ...
+- `MAJOR.MINOR.PATCH` (SemVer), stored in `package.json` once the scaffold
+  exists (see `../ROADMAP.md`'s Active Phase).
 - Git tags use a leading `v`, e.g. `v0.1.0`.
-- Any component-level version (schema migrations, API version) that is
-  intentionally NOT the same as the project release version — say so
-  explicitly to prevent an agent from "fixing" the mismatch. -->
+- The Prisma schema's own migration history is versioned independently by
+  Prisma's migration files — do not try to keep migration numbers in sync
+  with the release version; they answer different questions.
 
 ## Release Checklist
 
-<!-- TEMPLATE: Ordered, copy-pasteable steps. Model shape from a real
-project — replace the specifics:
-
 1. Ensure the working tree contains only intended release changes.
-2. Update version metadata in: <files>.
-3. Update `CHANGELOG.md` with the release date, included capabilities,
-   safety/breaking notes, and migration notes when applicable.
-4. Regenerate any generated contracts/types if applicable:
-   ```bash
-   <command>
-   ```
-5. Run the task gate (see `status.md`) — and the phase gate too, if this
+2. Update the version in `package.json`.
+3. Update `CHANGELOG.md` with the release date, included capabilities, and
+   any known limits — move the `[Unreleased]` entries under a new version
+   heading.
+4. Run the task gate (see `docs/status.md`), and the phase gate too if this
    release closes a `ROADMAP.md` phase:
    ```bash
-   <command>
+   npm run verify
    ```
-6. Inspect status docs for drift: `README.md`, `docs/status.md`,
+5. Inspect status docs for drift: `README.md`, `docs/status.md`,
    `docs/build-status.md`, `../PRIORITIES.md`.
-7. Commit the release prep, then create and push an annotated tag:
+6. Commit the release prep, then create an annotated tag:
    ```bash
    git tag -a vX.Y.Z -m "Release vX.Y.Z"
-   git push origin <main-branch>
-   git push origin vX.Y.Z
    ```
-8. Create the release from the tag, using `CHANGELOG.md` as the source for
-   release notes, including the exact validation commands that passed. -->
+   (No `git push` step — this is a local-only project; push only if/when an
+   external remote is actually in use.)
 
 ## Release Notes Template
 

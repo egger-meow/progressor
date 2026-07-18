@@ -1,10 +1,3 @@
-<!-- TEMPLATE: This is the coarse, whole-project map (a table an agent or
-human can scan in seconds) plus a dated, append-only evidence log. The
-evidence log is what makes "done" trustworthy instead of asserted — every
-claim of completion for anything nontrivial should have a matching dated
-entry describing how it was actually verified. Delete this comment once the
-legend and first table rows are filled in; keep the structure. -->
-
 # Build Status
 
 This file tracks build status at a coarse, whole-project level. Update it
@@ -21,20 +14,21 @@ commit. For fine-grained current behavior, see `status.md`.
 
 ## Current Status
 
-<!-- TEMPLATE: One row per major area from project-charter.md /
-domain-model.md. Keep Notes specific — "Built" with no notes tells an agent
-nothing about edge cases; that's what status.md is for, but a one-line
-pointer here to what's NOT covered yet is valuable. -->
-
 | Area | Status | Notes |
 | --- | --- | --- |
-| `TEMPLATE: <area>` | `TEMPLATE: Built/Partial/Planned/Blocked` | `TEMPLATE: notes` |
+| Item Tracking | Planned | Data model documented (`domain-model.md`); no code yet. First `PRIORITIES.md` items. |
+| Routine & Commitment Management | Planned | Same — `Routine` and `Semester Commitment` concepts documented, not implemented. |
+| Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
+| Auto-Scheduling Engine | Blocked | Intentionally deferred to Phase 2 (`../ROADMAP.md`) until the data layer is proven in Phase 1. |
+| Schedule View / Export | Planned | Manual Weekly View is Phase 1 scope; calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
 
-<!-- TEMPLATE: A short, current statement of what the next meaningful chunk
-of work is at a product level — not a duplicate of PRIORITIES.md's item
-list, but the "why" that ties those items together. -->
+Close Phase 1 ("Data Layer & Manual Weekly View"): a working local scaffold
+(Next.js + TypeScript + Prisma/SQLite per `system-direction.md`) with every
+domain concept persisted, WIP limits enforced, and a manually-editable
+Weekly View — proving the data layer is correct before any scheduling logic
+is built on top of it.
 
 ## Verification Evidence
 
@@ -44,6 +38,13 @@ and what (if anything) is still unverified as a result. Never edit or delete
 a past entry; if something it describes later turns out to be wrong, add a
 new entry correcting it and say so explicitly.
 
-<!-- TEMPLATE: seed format, e.g.:
-- 2026-01-01: <what was tested>, <how>, <result>. <what remains unverified,
-  if anything>. -->
+- 2026-07-18: bootstrap interview completed (docs language, guardrails,
+  platform, Phase 1 scope decided by the human — see
+  `../docs/project-charter.md` and `../ROADMAP.md`); `docs/project-charter.md`,
+  `docs/domain-model.md`, `docs/system-direction.md`, `ROADMAP.md`,
+  `docs/status.md`, `docs/build-status.md`, `docs/release.md`, `CLAUDE.md`,
+  `AGENTS.md`, `PRIORITIES.md`, `README.md` drafted. No application code
+  exists yet, so nothing beyond the docs themselves has been verified. Next
+  verification: `./scripts/check-templates.sh` must report only the
+  `ROADMAP.md` bootstrap-authorization marker before this can move to Stage
+  4 (human authorization).

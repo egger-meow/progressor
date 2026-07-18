@@ -39,6 +39,5 @@ once fixed, either a new audit or a correction note added to
 
 ## Index
 
-<!-- TEMPLATE: list audits as they're written, newest first:
-- `<phase-name>-audit.md` — <one-line summary of what phase this certifies>
--->
+_(none yet — the first audit will be written when Phase 1, "Data Layer &
+Manual Weekly View," passes its phase gate; see `../../ROADMAP.md`.)_

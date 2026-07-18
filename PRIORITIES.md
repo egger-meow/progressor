@@ -1,12 +1,3 @@
-<!-- TEMPLATE: Fill in "What Counts as a Blocker" for this project, then
-populate "Current Priorities" with the actual first items. The "Priority
-Rules" section below is meant to be adopted as-is — it's the mechanism that
-makes this file work as an authorization contract instead of a wishlist.
-Change it only if you have a specific reason to; if you do, make sure the
-change still satisfies the goal in LOOP_ENGINEERING.md ("What is the agent
-authorized to work on next?" must always have an unambiguous answer). Delete
-this comment once the file is live. -->
-
 # Priorities
 
 This file is the active, ordered priority contract for this project. An
@@ -25,27 +16,22 @@ is what authorizes the work.
 
 ## What Counts as a Blocker
 
-<!-- TEMPLATE: Replace this with a concrete, project-specific definition of
-"necessary" — the kind of thing that justifies interrupting whatever else is
-in progress. Model (from a trading-system project):
-
-  An item is necessary only if leaving it unfixed could cause one or more of:
-  1. Uncontrolled [core-action] behavior.
-  2. Loss beyond configured limits.
-  3. Behavior that differs from operator/user expectation.
-  4. Incorrect state after [key lifecycle events].
-  5. Missing or stale information that prevents fluent control.
-  6. A hidden safety threat that could become dangerous in real operation.
-
-Your definition should name this project's actual failure modes — what does
-"dangerous," "uncontrolled," or "silently wrong" mean here? A data pipeline,
-a CLI tool, and a trading system have different answers. Write yours below. -->
-
 An item is necessary only if leaving it unfixed could cause one or more of:
 
-1. `TEMPLATE: <failure mode 1>`
-2. `TEMPLATE: <failure mode 2>`
-3. `TEMPLATE: <failure mode 3>`
+1. Loss of already-tracked progress or history (a `Book`/`Course`'s
+   `unitsCompleted`, a past `Schedule`) — the charter's data-loss guardrail
+   is the highest-authority rule in this project.
+2. A `Fixed Commitment` or `Deadline Task` silently missing from the data or
+   the Weekly View instead of being surfaced — a false negative here means
+   the user misses an exam or a class, which defeats the whole point of the
+   system.
+3. A `WIP Limit` silently not enforced (more `in-progress` `Book`s/`Course`s
+   than configured, with no rejection).
+4. A crash, or a manual edit to one `Time Slot` corrupting or deleting a
+   different `Time Slot`'s data.
+5. (once the `Scheduler` exists, from Phase 2 on) An `Ad-hoc Event` failing
+   to take priority over flexible `Trackable Item` work, violating the
+   charter's guardrail.
 
 Everything else that's real work but doesn't meet this bar belongs under
 "Non-Blocking / Later," not "Current Priorities."
@@ -82,16 +68,38 @@ Everything else that's real work but doesn't meet this bar belongs under
 
 ## Current Priorities
 
-<!-- TEMPLATE: List the actual first items here, most urgent first, one
-short paragraph each: what it is, why it qualifies as a blocker per the
-definition above, and (once work starts) what "done" looks like. Delete this
-placeholder once real items exist. An empty list here is a valid state — it
-means the current phase's queue has drained and the agent should return to
-the phase loop (close the phase, or activate the next authorized one from
-ROADMAP.md), not invent work. See LOOP_ENGINEERING.md. -->
+This is the decomposition of `ROADMAP.md`'s Active Phase, "Data Layer &
+Manual Weekly View."
 
-_(none yet — fill in during project init, or leave empty and let the human
-supply the first item)_
+1. **Establish the project scaffold and the task gate.** Nothing else in
+   this queue can be verified without it (see `docs/status.md`'s Task Gate
+   section, currently "not established"). Set up Next.js + TypeScript +
+   Prisma/SQLite + Vitest + ESLint per `docs/system-direction.md`. Done =
+   `npm run verify` (lint + typecheck + test + build) exists and passes on
+   the skeleton app; `docs/status.md`'s Task Gate section updated with the
+   real commands.
+2. **Implement the `Trackable Item` data model (`Book`/`Course`) with `WIP
+   Limit` enforcement.** Qualifies under blocker #1 and #3 above. Done =
+   Prisma schema + service-layer functions to create/read/update a `Book`
+   and a `Course`; attempting to exceed the configured `WIP Limit` for a
+   type is rejected, not silently allowed; unit tests cover the limit; data
+   persists across an app restart.
+3. **Implement `Routine` and `Semester Commitment` (`Fixed Commitment` +
+   `Deadline Task`) data models.** Done = service-layer CRUD for both;
+   `Deadline Task` requires a `dueAt`, `Fixed Commitment` requires a
+   recurring slot — the two are not interchangeable in code; unit tests
+   cover creation and the validation difference.
+4. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
+   Slot` can reference any occupant kind from `domain-model.md`; manual
+   create/edit/remove of a `Time Slot` works without touching unrelated
+   `Time Slot`s (blocker #4).
+5. **Build the manual Weekly View.** Done = renders 本週 from real stored
+   data, navigates to 上週/下週, and every `Time Slot` on it can be added,
+   edited, or removed by hand per `ROADMAP.md`'s exit condition.
+6. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
+   `docs/audits/` entry recording actual verification of every bullet in
+   `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
+   Gate section.
 
 ## Non-Blocking / Later
 
@@ -99,4 +107,6 @@ Items here may be useful, but they must not interrupt "Current Priorities."
 Add work here only when it is outside the active `ROADMAP.md` phase and
 doesn't meet the blocker definition above.
 
-<!-- TEMPLATE: seed with known nice-to-haves, or leave empty. -->
+- Visual polish/styling of the Weekly View beyond function (Phase 1 only
+  needs it correct, not pretty).
+- Dark mode / theming.
