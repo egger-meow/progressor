@@ -16,7 +16,7 @@ commit. For fine-grained current behavior, see `status.md`.
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Item Tracking | Planned | Data model documented (`domain-model.md`); no code yet. First `PRIORITIES.md` items. |
+| Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Planned | Same — `Routine` and `Semester Commitment` concepts documented, not implemented. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
 | Auto-Scheduling Engine | Blocked | Intentionally deferred to Phase 2 (`../ROADMAP.md`) until the data layer is proven in Phase 1. |
@@ -60,3 +60,18 @@ new entry correcting it and say so explicitly.
   Task Gate section updated from "not established" to the real command.
   Unverified: no actual domain data yet — that's items 1-5 remaining in
   `PRIORITIES.md`.
+- 2026-07-18: `PRIORITIES.md` item 1 ("Implement the `Trackable Item` data
+  model with `WIP Limit` enforcement") completed. Added `TrackableItem` and
+  `WipLimit` to `prisma/schema.prisma` (migration
+  `20260718033101_trackable_item_wip_limit`) and
+  `src/server/trackable-items.ts` (create/read/update + `getWipLimit`/
+  `setWipLimit`). Ran `npm run verify` — 15 tests pass, including: WIP limit
+  rejects both a new in-progress item and an update-to-in-progress beyond
+  the configured max (not a silent no-op); book/course limits enforced
+  independently; a slot frees up correctly when an item is paused;
+  persistence verified by connecting a second, independent `PrismaClient` to
+  the same SQLite file after writing (proxy for "survives an app restart,"
+  since an automated test can't restart the process). Output inspected
+  directly. Note: `DEFAULT_WIP_LIMIT = 3` is an inferred placeholder, not a
+  value the human chose — flagged in `src/server/trackable-items.ts` and
+  `docs/status.md`.

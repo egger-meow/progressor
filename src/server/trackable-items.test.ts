@@ -1,0 +1,169 @@
+import { PrismaClient } from "@prisma/client";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { prisma } from "./db";
+import {
+  createTrackableItem,
+  DEFAULT_WIP_LIMIT,
+  getWipLimit,
+  listTrackableItems,
+  setWipLimit,
+  updateTrackableItem,
+  WipLimitExceededError,
+} from "./trackable-items";
+
+afterEach(async () => {
+  await prisma.trackableItem.deleteMany();
+  await prisma.wipLimit.deleteMany();
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+
+function bookInput(overrides: Partial<Parameters<typeof createTrackableItem>[0]> = {}) {
+  return {
+    title: "Designing Data-Intensive Applications",
+    type: "book" as const,
+    priority: 1,
+    unitCount: 12,
+    estimatedDays: 20,
+    ...overrides,
+  };
+}
+
+describe("createTrackableItem", () => {
+  it("creates a book with not-started/0-completed defaults", async () => {
+    const book = await createTrackableItem(bookInput());
+    expect(book.status).toBe("not-started");
+    expect(book.unitsCompleted).toBe(0);
+    expect(book.type).toBe("book");
+  });
+
+  it("creates a course", async () => {
+    const course = await createTrackableItem(
+      bookInput({ type: "course", title: "CS 101", unitCount: 30, estimatedDays: 40 }),
+    );
+    expect(course.type).toBe("course");
+    expect(course.unitCount).toBe(30);
+  });
+
+  it("rejects an invalid type", async () => {
+    // @ts-expect-error deliberately invalid input to prove runtime validation
+    await expect(createTrackableItem(bookInput({ type: "podcast" }))).rejects.toThrow(
+      /Invalid TrackableItem type/,
+    );
+  });
+
+  it("rejects unitCount <= 0", async () => {
+    await expect(createTrackableItem(bookInput({ unitCount: 0 }))).rejects.toThrow(
+      /unitCount must be > 0/,
+    );
+  });
+
+  it("rejects unitsCompleted greater than unitCount", async () => {
+    await expect(
+      createTrackableItem(bookInput({ unitCount: 5, unitsCompleted: 6 })),
+    ).rejects.toThrow(/unitsCompleted must be between/);
+  });
+
+  it("rejects estimatedDays <= 0", async () => {
+    await expect(createTrackableItem(bookInput({ estimatedDays: 0 }))).rejects.toThrow(
+      /estimatedDays must be > 0/,
+    );
+  });
+});
+
+describe("listTrackableItems / getTrackableItem", () => {
+  it("lists items ordered by priority ascending, optionally filtered by type", async () => {
+    await createTrackableItem(bookInput({ title: "Low priority book", priority: 5 }));
+    await createTrackableItem(bookInput({ title: "High priority book", priority: 1 }));
+    await createTrackableItem(bookInput({ type: "course", title: "A course", priority: 2 }));
+
+    const books = await listTrackableItems("book");
+    expect(books.map((b) => b.title)).toEqual(["High priority book", "Low priority book"]);
+
+    const all = await listTrackableItems();
+    expect(all).toHaveLength(3);
+  });
+});
+
+describe("WIP limit enforcement", () => {
+  it("defaults to DEFAULT_WIP_LIMIT when nothing is configured", async () => {
+    expect(await getWipLimit("book")).toBe(DEFAULT_WIP_LIMIT);
+    expect(await getWipLimit("course")).toBe(DEFAULT_WIP_LIMIT);
+  });
+
+  it("rejects creating a new in-progress item beyond the configured limit, not silently", async () => {
+    await setWipLimit("book", 1);
+    await createTrackableItem(bookInput({ title: "A", status: "in-progress" }));
+
+    await expect(
+      createTrackableItem(bookInput({ title: "B", status: "in-progress" })),
+    ).rejects.toThrow(WipLimitExceededError);
+
+    // the rejected item must not have been silently created anyway
+    const books = await listTrackableItems("book");
+    expect(books.map((b) => b.title)).toEqual(["A"]);
+  });
+
+  it("rejects updating an item to in-progress beyond the configured limit", async () => {
+    await setWipLimit("course", 1);
+    await createTrackableItem(bookInput({ type: "course", title: "C1", status: "in-progress" }));
+    const c2 = await createTrackableItem(bookInput({ type: "course", title: "C2" }));
+
+    await expect(updateTrackableItem(c2.id, { status: "in-progress" })).rejects.toThrow(
+      WipLimitExceededError,
+    );
+    const reloaded = await listTrackableItems("course");
+    expect(reloaded.find((c) => c.id === c2.id)?.status).toBe("not-started");
+  });
+
+  it("enforces book and course limits independently", async () => {
+    await setWipLimit("book", 1);
+    await setWipLimit("course", 1);
+    await createTrackableItem(bookInput({ title: "A", status: "in-progress" }));
+
+    // starting an in-progress course must not be blocked by the book limit
+    const course = await createTrackableItem(
+      bookInput({ type: "course", title: "B", status: "in-progress" }),
+    );
+    expect(course.status).toBe("in-progress");
+  });
+
+  it("allows starting a new item once an in-progress one frees a slot", async () => {
+    await setWipLimit("book", 1);
+    const a = await createTrackableItem(bookInput({ title: "A", status: "in-progress" }));
+    await updateTrackableItem(a.id, { status: "paused" });
+
+    const b = await createTrackableItem(bookInput({ title: "B", status: "in-progress" }));
+    expect(b.status).toBe("in-progress");
+  });
+
+  it("does not re-check the limit when an already in-progress item is updated without changing status", async () => {
+    await setWipLimit("book", 1);
+    const a = await createTrackableItem(bookInput({ title: "A", status: "in-progress" }));
+
+    const updated = await updateTrackableItem(a.id, { unitsCompleted: 3 });
+    expect(updated.unitsCompleted).toBe(3);
+    expect(updated.status).toBe("in-progress");
+  });
+});
+
+describe("persistence across restart", () => {
+  it("survives a fresh PrismaClient connecting to the same database file", async () => {
+    const created = await createTrackableItem(bookInput({ title: "Persisted Book" }));
+
+    // A brand-new client (not the app's cached singleton) proves the data
+    // lives in the SQLite file itself, not in-memory state that would be
+    // lost on an app restart.
+    const freshClient = new PrismaClient();
+    try {
+      const found = await freshClient.trackableItem.findUnique({
+        where: { id: created.id },
+      });
+      expect(found?.title).toBe("Persisted Book");
+    } finally {
+      await freshClient.$disconnect();
+    }
+  });
+});

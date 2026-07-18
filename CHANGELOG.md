@@ -17,6 +17,9 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 - Project scaffold: Next.js 16 + TypeScript + Prisma 6 (SQLite) + Vitest 3 +
   ESLint, following `docs/system-direction.md`'s layering. `npm run verify`
   (lint + typecheck + test + build) is now the established task gate.
+- `Trackable Item` (`Book`/`Course`) data model and `WIP Limit` enforcement
+  (`prisma/schema.prisma`, `src/server/trackable-items.ts`), enforced
+  independently per type on both creation and status updates.
 
 ### Changed
 

@@ -71,25 +71,19 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase, "Data Layer &
 Manual Weekly View."
 
-1. **Implement the `Trackable Item` data model (`Book`/`Course`) with `WIP
-   Limit` enforcement.** Qualifies under blocker #1 and #3 above. Done =
-   Prisma schema + service-layer functions to create/read/update a `Book`
-   and a `Course`; attempting to exceed the configured `WIP Limit` for a
-   type is rejected, not silently allowed; unit tests cover the limit; data
-   persists across an app restart.
-2. **Implement `Routine` and `Semester Commitment` (`Fixed Commitment` +
+1. **Implement `Routine` and `Semester Commitment` (`Fixed Commitment` +
    `Deadline Task`) data models.** Done = service-layer CRUD for both;
    `Deadline Task` requires a `dueAt`, `Fixed Commitment` requires a
    recurring slot — the two are not interchangeable in code; unit tests
    cover creation and the validation difference.
-3. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
+2. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
    Slot` can reference any occupant kind from `domain-model.md`; manual
    create/edit/remove of a `Time Slot` works without touching unrelated
    `Time Slot`s (blocker #4).
-4. **Build the manual Weekly View.** Done = renders 本週 from real stored
+3. **Build the manual Weekly View.** Done = renders 本週 from real stored
    data, navigates to 上週/下週, and every `Time Slot` on it can be added,
    edited, or removed by hand per `ROADMAP.md`'s exit condition.
-5. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
+4. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section.

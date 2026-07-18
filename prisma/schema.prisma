@@ -10,3 +10,29 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+// TrackableItem implements docs/domain-model.md's "Trackable Item" (Book /
+// Course). `type` and `status` are plain strings, not Prisma enums, because
+// the sqlite connector has no native enum support — validity is enforced in
+// src/server/trackable-items.ts instead.
+model TrackableItem {
+  id             String   @id @default(cuid())
+  title          String
+  type           String
+  priority       Int
+  status         String   @default("not-started")
+  unitCount      Int
+  unitsCompleted Int      @default(0)
+  estimatedDays  Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([type, status])
+}
+
+// WipLimit implements docs/domain-model.md's "WIP Limit": one configured
+// maxInProgress per TrackableItem `type`, enforced independently per type.
+model WipLimit {
+  type          String @id
+  maxInProgress Int
+}
