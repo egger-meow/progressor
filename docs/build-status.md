@@ -19,7 +19,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
-| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). Data contracts, hard-constraint (Fixed Commitment + Deadline Task), Routine, and flexible Trackable Item placement all implemented; no combined `computeSchedule` entry point yet, no fixture end-to-end suite, no app wiring. |
+| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). `computeSchedule` composes all three placement layers; fixture end-to-end suite passes against the full Phase 2 exit condition. Not yet wired into the running app (`src/server`/`src/app` still don't call it). |
 | Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
@@ -228,3 +228,33 @@ new entry correcting it and say so explicitly.
   `computeSchedule` function combining hard-constraint, Routine, and
   flexible placement into one `SchedulerOutput` — each layer is tested and
   callable independently, but nothing composes them yet.
+- 2026-07-18: `PRIORITIES.md`'s "Add a `computeSchedule` entry point and a
+  fixture-based end-to-end scheduler test suite" item completed (Phase 2).
+  Added `src/scheduler/index.ts` (`computeSchedule`): runs hard-constraint
+  → `Routine` → flexible `Trackable Item` placement in order, threading
+  each layer's output forward as the next layer's `busy`, and merges
+  everything into one `SchedulerOutput`; also re-exports the individual
+  layer functions and all of `types.ts` as the package's public surface.
+  `src/scheduler/index.test.ts` (6 tests) runs one realistic mixed weekly
+  fixture — an in-progress `Book`, a second `Book` blocked because its
+  type's `WIP Limit` is already at cap, a promotable `Course`, a `Fixed
+  Commitment`, a `Deadline Task`, and a weekly `Routine` — through
+  `computeSchedule` and checks it against every bullet in `ROADMAP.md`'s
+  Phase 2 exit condition in one place: no `WIP Limit` violated (verified
+  by counting placed sessions per item, not just trusting the mechanism);
+  no two of the six resulting slots overlap; the `Fixed Commitment` lands
+  exactly at its anchored time and the `Deadline Task` lands before its
+  due date, with an empty conflict list; both `Routine` occurrences land
+  without colliding with the `Fixed Commitment`; and each day's flexible
+  `Trackable Item` time stays inside the `Slack` budget (with the map of
+  per-day flexible time confirmed non-empty, so the check is exercising
+  something real, not vacuously passing on an empty result). A sixth test
+  reruns the fixture with an already-past-due `Deadline Task` and confirms
+  the full composed pipeline still reports a conflict rather than a
+  fabricated placement — the same guarantee `hard-constraints.test.ts`
+  proves in isolation, now proven end-to-end. Traced every intermediate
+  placement by hand before running (fixed commitment, then deadline
+  session immediately after it, then both routine occurrences, then both
+  flexible sessions) to predict exact expected slot times; the actual run
+  matched the prediction exactly on the first attempt. `npm run verify`
+  passes clean — 100 tests total (6 new), lint/typecheck/build all clean.

@@ -184,10 +184,27 @@ rather than packing it solid. Like a `Routine` occurrence, an item with no
 room anywhere this week simply gets no session; no `SchedulerConflict` is
 raised for it.
 
-Nothing in `src/scheduler/` is wired into the running app yet, and there
-is no single `computeSchedule` entry point combining hard-constraint,
-`Routine`, and flexible placement into one `SchedulerOutput` — both are
-upcoming `PRIORITIES.md` items. Deliberately no `@prisma/client` import
+`src/scheduler/index.ts`'s `computeSchedule(input: SchedulerInput):
+SchedulerOutput` is the Scheduler's public entry point: it runs the three
+placement layers in order — hard constraints, then `Routine` occurrences,
+then flexible `Trackable Item` work — feeding each layer's placements
+forward as "busy" for the next, then merges everything into one
+`SchedulerOutput`. `src/scheduler/index.test.ts` is the fixture-based
+end-to-end suite: a realistic mixed week (an in-progress `Book` plus a
+second `Book` blocked by its type's `WIP Limit` already being at cap, a
+promotable `Course`, a `Fixed Commitment`, a `Deadline Task`, and a weekly
+`Routine`) run through `computeSchedule` and checked against every bullet
+in `ROADMAP.md`'s Phase 2 exit condition: no `WIP Limit` violated, no two
+output slots double-book each other, the `Fixed Commitment`/`Deadline
+Task` are honored with an empty conflict list, both `Routine` occurrences
+land without displacing the `Fixed Commitment`, and each day's flexible
+`Trackable Item` time stays within the `Slack` budget — plus a sixth test
+confirming a genuinely-unplaceable `Deadline Task` still produces a
+conflict rather than a fabricated placement, through the full composed
+pipeline (not just the isolated unit tested in `hard-constraints.test.ts`).
+
+Nothing in `src/scheduler/` is wired into the running app yet — that's
+the next `PRIORITIES.md` item. Deliberately no `@prisma/client` import
 anywhere under `src/scheduler/`; these types and functions mirror, but
 don't import, the shapes in `src/server/*`, per
 `docs/system-direction.md`'s layering rule.

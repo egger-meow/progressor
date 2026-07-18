@@ -71,32 +71,20 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase,
 "Constraint-Based Auto-Scheduler v1."
 
-1. **Add a `computeSchedule` entry point and a fixture-based end-to-end
-   scheduler test suite.** Each placement layer
-   (`src/scheduler/hard-constraints.ts`, `routine-placement.ts`,
-   `flexible-placement.ts`) is implemented and independently tested, but
-   nothing composes them yet — add a `computeSchedule(input: SchedulerInput):
-   SchedulerOutput` (e.g. `src/scheduler/index.ts`) that runs all three in
-   order (hard constraints → `Routine` occurrences → flexible `Trackable
-   Item` placement, each layer's output feeding the next as `busy`) and
-   merges their slots/conflicts into one `SchedulerOutput`. Done = a
-   realistic mixed fixture (multiple books/courses at different
-   priorities, a `Fixed Commitment`, a `Deadline Task`, at least one `WIP
-   Limit` at its cap) run through `computeSchedule` asserts, in one place:
-   no `WIP Limit` violated, no two non-Slack items double-book a `Time
-   Slot`, every `Fixed Commitment`/undischarged `Deadline Task` is honored
-   or explicitly conflict-flagged, and the documented minimum `Slack`
-   share holds — directly mirroring `ROADMAP.md`'s exit condition bullet
-   by bullet.
-2. **Wire the Scheduler into the running app.** Done = a service-layer
+1. **Wire the Scheduler into the running app.** Done = a service-layer
    function (e.g. `src/server/scheduler-runs.ts`) snapshots current domain
-   data via existing `src/server/*` query functions, calls the pure
-   `src/scheduler/*` compute function, and persists the resulting `Time
-   Slot`s through the existing `src/server/time-slots.ts` functions (the
-   Scheduler itself still never touches Prisma) — plus a minimal trigger
-   in the Weekly View (`src/app/page.tsx`) so a human can actually run it
-   against the real app, not just fixtures.
-3. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
+   data via existing `src/server/*` query functions, converts it to a
+   `SchedulerInput`, calls `src/scheduler/index.ts`'s `computeSchedule`,
+   and persists the resulting `Time Slot`s through the existing
+   `src/server/time-slots.ts` functions (the Scheduler itself still never
+   touches Prisma) — plus a minimal trigger in the Weekly View
+   (`src/app/page.tsx`) so a human can actually run it against the real
+   app, not just fixtures. Needs a decision on what happens to a
+   `Time Slot` already on the board for the target week when the
+   Scheduler re-runs (overwrite `slack`/its own prior output only, or
+   something broader) — check with the human if `docs/domain-model.md`'s
+   guardrails don't settle it outright.
+2. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section (add a Phase 2 subsection there first, mirroring Phase 1's).

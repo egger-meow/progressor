@@ -62,6 +62,11 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   in `priority` order, WIP-Limit-aware promotion of `not-started`/`paused`
   items, and a new `MIN_SLACK_SHARE_PER_DAY` (20%, an inferred default) so
   flexible placement never packs a day solid.
+- `computeSchedule` (`src/scheduler/index.ts`): composes hard-constraint,
+  `Routine`, and flexible placement into one `SchedulerOutput` — the
+  Scheduler's public entry point. `src/scheduler/index.test.ts` adds a
+  fixture-based end-to-end suite verifying every bullet in `ROADMAP.md`'s
+  Phase 2 exit condition against one realistic mixed week.
 
 ### Changed
 
