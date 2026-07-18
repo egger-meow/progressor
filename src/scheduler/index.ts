@@ -44,3 +44,4 @@ export * from "./types";
 export { placeHardConstraints, placeFixedCommitments, placeDeadlineTasks } from "./hard-constraints";
 export { placeRoutines } from "./routine-placement";
 export { placeFlexibleTrackableItems } from "./flexible-placement";
+export { repairSchedule } from "./repair";

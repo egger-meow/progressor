@@ -68,10 +68,61 @@ Everything else that's real work but doesn't meet this bar belongs under
 
 ## Current Priorities
 
-`ROADMAP.md`'s Active Phase, "Elastic Re-Scheduling & Ad-hoc Events," was
-just activated and has not yet been decomposed into task-loop items — see
-that phase's Goal/Exit condition in `ROADMAP.md` for what it needs to
-break down into.
+Decomposition of `ROADMAP.md`'s Active Phase, "Elastic Re-Scheduling &
+Ad-hoc Events." Design decided with the project owner on 2026-07-18: a
+repair that frees up already-scheduled flexible time (skipping a session,
+or a `Trackable Item` finishing early) immediately backfills that time
+from the next eligible priority item, reusing the existing WIP-Limit-aware
+eligibility logic, rather than always leaving it as `Slack` until the next
+full "Generate Schedule" run.
+
+1. Define repair data contracts in `src/scheduler/types.ts`
+   (`SchedulerDisruption`, `SchedulerRepairResult`; extend `ConflictReason`
+   and `SchedulerConflict.occupantType` to cover an `Ad-hoc Event`
+   overlap). Export `selectEligibleItems`/`dailyWindowMs`/`usedMsOnDay`
+   from `flexible-placement.ts` so `repair.ts` can reuse them instead of
+   duplicating eligibility/Slack-budget logic.
+2. Implement the "skip a flexible session" repair in
+   `src/scheduler/repair.ts`: remove the named `Trackable Item` `Time
+   Slot`, then backfill the freed window from the next eligible item that
+   doesn't already have a session this week (per the owner's backfill
+   decision above).
+3. Implement the "insert a same-day `Ad-hoc Event`" repair: the event's
+   `Time Slot` is always added; any overlapping flexible `Trackable Item`
+   session is evicted and relocated elsewhere in the week (searching all
+   7 days, respecting the `Slack` budget) rather than silently dropped, per
+   the charter's guardrail that an `Ad-hoc Event` always outranks flexible
+   work; an overlap with a `Fixed Commitment` or `Deadline Task` is flagged
+   as a `SchedulerConflict`, not evicted (neither one is "flexible work"
+   the charter lets an `Ad-hoc Event` bump).
+4. Implement the "mark a `Trackable Item` done early" repair: remove only
+   its *future* (`startAt >= now`, an explicit input so the Scheduler stays
+   pure) flexible `Time Slot`(s) this week — never a past one, per the
+   charter's no-history-loss guardrail — and backfill the freed window the
+   same way as item 2.
+5. Write a fixture-based end-to-end repair test suite
+   (`src/scheduler/repair.test.ts`) covering all three disruption
+   scenarios against `ROADMAP.md`'s exit condition, plus a test
+   demonstrating the repair operation's time budget (documented reasoning:
+   it only touches the disrupted slot(s) plus a bounded per-week search,
+   never a full recompute).
+6. Run `npm run verify`, fix failures.
+7. Wire repair into the real store: `src/server/scheduler-repair.ts`
+   (`skipSession`, `insertAdHocEvent`, `completeItemEarly`), applying the
+   returned diff via the existing `time-slots.ts`/`trackable-items.ts`/
+   `ad-hoc-events.ts` service functions — `src/scheduler/` itself still
+   never touches Prisma.
+8. Add minimal Weekly View UI: a "Skip" and "Mark done" control on each
+   flexible `Trackable Item` `Time Slot`, and a small "Quick Ad-hoc Event"
+   insertion form, wired through new Server Actions in `src/app/actions.ts`.
+9. Run `npm run verify`, fix failures.
+10. Manually test all three disruption scenarios in the browser via the
+    dev server; confirm the Phase-1 manual-edit guarantee still holds (a
+    repair never touches a `Time Slot` unrelated to the disruption).
+11. Update `docs/status.md` (repair section, documented time budget, Phase
+    3 Phase Gate subsection); update `CHANGELOG.md`; commit.
+12. Write the Phase 3 completion audit; remove the phase from
+    `ROADMAP.md`; update `CHANGELOG.md`; commit.
 
 ## Non-Blocking / Later
 

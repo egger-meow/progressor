@@ -22,7 +22,7 @@ export interface FlexiblePlacementResult {
   slots: ScheduledTimeSlot[];
 }
 
-function dailyWindowMs(day: Date): number {
+export function dailyWindowMs(day: Date): number {
   return (
     combineDateAndTime(day, DAILY_WINDOW_END).getTime() -
     combineDateAndTime(day, DAILY_WINDOW_START).getTime()
@@ -34,7 +34,7 @@ function dailyWindowMs(day: Date): number {
 // placed this run) — the budget findFreeInterval alone can't express,
 // since a technically-free interval can still exist inside a day that's
 // otherwise packed past the Slack minimum.
-function usedMsOnDay(day: Date, busy: Interval[]): number {
+export function usedMsOnDay(day: Date, busy: Interval[]): number {
   const windowStart = combineDateAndTime(day, DAILY_WINDOW_START);
   const windowEnd = combineDateAndTime(day, DAILY_WINDOW_END);
   let total = 0;
@@ -55,7 +55,7 @@ function usedMsOnDay(day: Date, busy: Interval[]): number {
 // does not persist a status change anywhere — the Scheduler never writes
 // to the store (see types.ts) — it only decides who gets flexible time in
 // the proposed Schedule.
-function selectEligibleItems(input: SchedulerInput): SchedulerTrackableItem[] {
+export function selectEligibleItems(input: SchedulerInput): SchedulerTrackableItem[] {
   const itemsByType = new Map<TrackableItemType, SchedulerTrackableItem[]>();
   for (const item of input.trackableItems) {
     const list = itemsByType.get(item.type) ?? [];
