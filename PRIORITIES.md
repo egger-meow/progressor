@@ -71,20 +71,7 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase,
 "Constraint-Based Auto-Scheduler v1."
 
-1. **Wire the Scheduler into the running app.** Done = a service-layer
-   function (e.g. `src/server/scheduler-runs.ts`) snapshots current domain
-   data via existing `src/server/*` query functions, converts it to a
-   `SchedulerInput`, calls `src/scheduler/index.ts`'s `computeSchedule`,
-   and persists the resulting `Time Slot`s through the existing
-   `src/server/time-slots.ts` functions (the Scheduler itself still never
-   touches Prisma) — plus a minimal trigger in the Weekly View
-   (`src/app/page.tsx`) so a human can actually run it against the real
-   app, not just fixtures. Needs a decision on what happens to a
-   `Time Slot` already on the board for the target week when the
-   Scheduler re-runs (overwrite `slack`/its own prior output only, or
-   something broader) — check with the human if `docs/domain-model.md`'s
-   guardrails don't settle it outright.
-2. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
+1. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section (add a Phase 2 subsection there first, mirroring Phase 1's).

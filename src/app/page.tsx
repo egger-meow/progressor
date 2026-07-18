@@ -3,7 +3,12 @@ import { listRoutines } from "@/server/routines";
 import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commitments";
 import { listTrackableItems } from "@/server/trackable-items";
 import { listAdHocEvents } from "@/server/ad-hoc-events";
-import { createTimeSlotAction, updateTimeSlotAction, deleteTimeSlotAction } from "./actions";
+import {
+  createTimeSlotAction,
+  updateTimeSlotAction,
+  deleteTimeSlotAction,
+  generateScheduleAction,
+} from "./actions";
 import {
   DAY_LABELS,
   addDays,
@@ -103,6 +108,10 @@ export default async function WeeklyView({
         <span className={styles.weekLabel}>
           {formatDateLabel(weekStart)} – {formatDateLabel(addDays(weekStart, 6))}
         </span>
+        <form action={generateScheduleAction} className={styles.inlineForm}>
+          <input type="hidden" name="week" value={weekParam} />
+          <button type="submit">Generate Schedule</button>
+        </form>
       </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}

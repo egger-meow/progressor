@@ -67,6 +67,13 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   Scheduler's public entry point. `src/scheduler/index.test.ts` adds a
   fixture-based end-to-end suite verifying every bullet in `ROADMAP.md`'s
   Phase 2 exit condition against one realistic mixed week.
+- Scheduler wired into the running app: `src/server/scheduler-runs.ts`'s
+  `runScheduler` snapshots current domain data, calls `computeSchedule`,
+  and persists every proposed `Time Slot`; a "Generate Schedule" button on
+  the Weekly View triggers it. Re-run policy (only fill empty time, never
+  touch an existing `Time Slot`) was an explicit product decision, not
+  inferred — see `docs/status.md` for the tradeoff it accepts (repeated
+  runs can duplicate a `Fixed Commitment`/`Routine` occurrence).
 
 ### Changed
 

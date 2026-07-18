@@ -203,11 +203,45 @@ confirming a genuinely-unplaceable `Deadline Task` still produces a
 conflict rather than a fabricated placement, through the full composed
 pipeline (not just the isolated unit tested in `hard-constraints.test.ts`).
 
-Nothing in `src/scheduler/` is wired into the running app yet — that's
-the next `PRIORITIES.md` item. Deliberately no `@prisma/client` import
-anywhere under `src/scheduler/`; these types and functions mirror, but
-don't import, the shapes in `src/server/*`, per
-`docs/system-direction.md`'s layering rule.
+`src/server/scheduler-runs.ts`'s `runScheduler(weekStart, weekEnd)` is
+where the Scheduler meets the real store: it snapshots current domain data
+via existing `src/server/*` query functions (including the target week's
+already-placed `Time Slot`s), converts it to a `SchedulerInput`, calls
+`computeSchedule`, and persists every proposed slot via
+`src/server/time-slots.ts`'s `createTimeSlot` — `src/scheduler/` itself
+still never touches Prisma. The Weekly View (`src/app/page.tsx`) has a
+"Generate Schedule" button next to the week nav, wired to a
+`generateScheduleAction` Server Action in `src/app/actions.ts`; any
+`SchedulerConflict`s from the run are joined into the existing `?error=`
+banner.
+
+**Re-run policy (explicit product decision, not inferred):** the
+Scheduler only fills genuinely empty time — it never modifies or deletes
+a `Time Slot` already on the board for the target week, regardless of how
+that slot got there (manual edit, `Ad-hoc Event`, a prior run). Verified
+manually against the running dev server: seeded a `Book`, a weekly
+`Routine`, a `Fixed Commitment`, and one pre-existing manual `Time Slot`;
+clicking "Generate Schedule" placed the `Fixed Commitment`, the `Routine`
+occurrence, and one `Book` session into the empty time around the manual
+slot, and the manual slot itself was untouched both before and after.
+
+**Known limit of this policy, also confirmed manually:** because nothing
+tracks "the Scheduler placed this specific occurrence," clicking
+"Generate Schedule" a second time for the same week re-places every
+`Fixed Commitment` occurrence and any `Routine` occurrence for which the
+week still has WIP/Slack room again, creating duplicate `Time Slot`s
+rather than recognizing they're already scheduled — confirmed directly
+(a second click produced a second, identical `Fixed Commitment` slot at
+the same time). This is a direct, expected consequence of the "only fill
+empty time" policy the project owner chose (the simplest and safest of
+three options offered) over a policy that would first clear the
+Scheduler's own prior placements — not a bug, but worth knowing before
+clicking the button repeatedly. Deduplicating across runs is unscoped
+follow-up work, not part of this `PRIORITIES.md` item.
+
+Deliberately no `@prisma/client` import anywhere under `src/scheduler/`;
+these types and functions mirror, but don't import, the shapes in
+`src/server/*`, per `docs/system-direction.md`'s layering rule.
 
 **Scheduling parameters** (`src/scheduler/constants.ts`) — chosen by the
 project owner on 2026-07-18 when the Scheduler needed them, not silently
@@ -218,13 +252,16 @@ per calendar day it's scheduled.
 
 ## Known Limits
 
-- No `Scheduler` exists — Phase 1 has no auto-scheduling; every `Time Slot`
-  is placed by hand. This is intentional (see `../ROADMAP.md`'s Active
-  Phase), not a bug.
 - No calendar export/sync, no notifications, no mobile view — all
   intentionally out of scope; see `../ROADMAP.md`'s Proposed section.
 - Single-user only; no auth, no multi-device sync beyond the local SQLite
   file.
+- "Generate Schedule" re-placing a `Fixed Commitment`/`Routine` occurrence
+  as a duplicate `Time Slot` on repeated clicks for the same week — see
+  the Scheduler section above for why and the tradeoff behind it.
+- No creation UI yet for `Book`/`Course`/`Routine`/`Semester
+  Commitment`/`Ad-hoc Event` — only `Time Slot` placement (manual or via
+  "Generate Schedule") has a UI.
 
 ## Configuration / Environment Notes
 

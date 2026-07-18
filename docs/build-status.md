@@ -19,7 +19,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
-| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). `computeSchedule` composes all three placement layers; fixture end-to-end suite passes against the full Phase 2 exit condition. Not yet wired into the running app (`src/server`/`src/app` still don't call it). |
+| Auto-Scheduling Engine | Built | Phase 2 active (`../ROADMAP.md`). `computeSchedule` composes all three placement layers, wired into the running app via `src/server/scheduler-runs.ts` and a "Generate Schedule" button on the Weekly View; manually verified against real seeded data. Only remaining Phase 2 item is the walkthrough/audit. |
 | Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
@@ -258,3 +258,36 @@ new entry correcting it and say so explicitly.
   flexible sessions) to predict exact expected slot times; the actual run
   matched the prediction exactly on the first attempt. `npm run verify`
   passes clean — 100 tests total (6 new), lint/typecheck/build all clean.
+- 2026-07-18: `PRIORITIES.md`'s "Wire the Scheduler into the running app"
+  item completed (Phase 2). Before implementing, stopped and asked the
+  human what should happen to a `Time Slot` already on the board when the
+  Scheduler re-runs, since the charter's highest-priority guardrail is
+  never losing already-tracked data — the human chose the safest of three
+  offered options: only fill genuinely empty time, never modify or delete
+  an existing slot. Added `src/server/scheduler-runs.ts`
+  (`runScheduler`): snapshots current domain data (including the target
+  week's existing `Time Slot`s) via existing `src/server/*` functions,
+  calls `computeSchedule`, and persists every proposed slot via
+  `createTimeSlot` — this policy required no new logic in
+  `src/scheduler/`, since every placement layer already treated
+  `existingSlots` as busy space. Added a `generateScheduleAction` Server
+  Action (`src/app/actions.ts`) and a "Generate Schedule" button on the
+  Weekly View (`src/app/page.tsx`), joining any `SchedulerConflict`
+  messages into the existing `?error=` banner. `npm run verify` passes
+  clean — no new automated tests (this item is wiring, not new
+  service-layer logic; `computeSchedule`'s correctness is already proven
+  by `src/scheduler/index.test.ts`). Manually verified against the running
+  dev server via a temporary seed route (deleted before committing, not
+  shipped): seeded a `Book`, a weekly `Routine`, a `Fixed Commitment`, and
+  a pre-existing manual `Time Slot`; one click correctly placed the `Fixed
+  Commitment` (09:00-10:00), the `Routine` occurrence (10:00-12:00), and
+  a `Book` session (12:00-14:00) into the empty time, leaving the manual
+  slot completely untouched; a second click confirmed the manual slot was
+  *still* untouched, but also surfaced a real, worth-documenting
+  consequence of the chosen policy — the `Fixed Commitment` and `Routine`
+  occurrence were both re-placed as duplicate `Time Slot`s, since nothing
+  tracks "the Scheduler already placed this occurrence" across runs.
+  Recorded as a Known Limit in `docs/status.md` rather than treated as a
+  bug — deduplication was not part of this item's scope and the human
+  chose the simplest of the three re-run policies knowing it was the
+  safest, not the most polished.
