@@ -71,32 +71,25 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase, "Data Layer &
 Manual Weekly View."
 
-1. **Establish the project scaffold and the task gate.** Nothing else in
-   this queue can be verified without it (see `docs/status.md`'s Task Gate
-   section, currently "not established"). Set up Next.js + TypeScript +
-   Prisma/SQLite + Vitest + ESLint per `docs/system-direction.md`. Done =
-   `npm run verify` (lint + typecheck + test + build) exists and passes on
-   the skeleton app; `docs/status.md`'s Task Gate section updated with the
-   real commands.
-2. **Implement the `Trackable Item` data model (`Book`/`Course`) with `WIP
+1. **Implement the `Trackable Item` data model (`Book`/`Course`) with `WIP
    Limit` enforcement.** Qualifies under blocker #1 and #3 above. Done =
    Prisma schema + service-layer functions to create/read/update a `Book`
    and a `Course`; attempting to exceed the configured `WIP Limit` for a
    type is rejected, not silently allowed; unit tests cover the limit; data
    persists across an app restart.
-3. **Implement `Routine` and `Semester Commitment` (`Fixed Commitment` +
+2. **Implement `Routine` and `Semester Commitment` (`Fixed Commitment` +
    `Deadline Task`) data models.** Done = service-layer CRUD for both;
    `Deadline Task` requires a `dueAt`, `Fixed Commitment` requires a
    recurring slot — the two are not interchangeable in code; unit tests
    cover creation and the validation difference.
-4. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
+3. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
    Slot` can reference any occupant kind from `domain-model.md`; manual
    create/edit/remove of a `Time Slot` works without touching unrelated
    `Time Slot`s (blocker #4).
-5. **Build the manual Weekly View.** Done = renders 本週 from real stored
+4. **Build the manual Weekly View.** Done = renders 本週 from real stored
    data, navigates to 上週/下週, and every `Time Slot` on it can be added,
    edited, or removed by hand per `ROADMAP.md`'s exit condition.
-6. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
+5. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section.

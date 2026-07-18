@@ -53,12 +53,14 @@ Full procedure (the two loops, the inbox protocol, both verification gates):
 
 ## Commands
 
-No scaffold exists yet — establishing it (Next.js + TypeScript + Prisma per
-`docs/system-direction.md`) is the first `PRIORITIES.md` item. Once it
-lands, this section must list the real `npm install` / `npm run dev` / test
-/ lint / typecheck / build commands and the bundled task-gate command
-(`npm run verify`) — see `docs/status.md`'s Task Gate section, which is the
-source of truth in the meantime.
+```bash
+npm install
+npm run dev      # Next.js dev server
+npm run verify   # task gate: lint + typecheck + test + build
+```
+
+See `docs/status.md`'s Task Gate section for the individual commands
+`verify` bundles, and `AGENTS.md` for the full command/config reference.
 
 ## Architecture
 

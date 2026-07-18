@@ -23,3 +23,13 @@ __pycache__/
 venv/
 .env
 .env.local
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Prisma / SQLite — the local dev database is per-machine state, not source.
+prisma/*.db
+prisma/*.db-journal

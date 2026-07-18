@@ -1,0 +1,12 @@
+// Prisma schema for Progressor. See docs/domain-model.md for the canonical
+// concept definitions these models implement, and docs/system-direction.md
+// for the layering rule (only src/server/ may import from @prisma/client).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}

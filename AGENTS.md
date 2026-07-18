@@ -2,32 +2,47 @@
 
 ## Project Structure & Module Organization
 
-No code exists yet. Once the Phase 1 scaffold lands (see `ROADMAP.md`'s
-Active Phase), it must follow `docs/system-direction.md`'s layering:
-`src/server/` for the Domain/Service layer (all Prisma access), `src/
-scheduler/` for the Scheduler layer (Phase 2+, pure functions only), `src/
-app/` for the Next.js UI layer, `prisma/` for the schema and migrations.
-Update this section for real once the scaffold exists — a stale structure
-section is worse than none, because an agent will trust it.
+Follows `docs/system-direction.md`'s layering: `src/server/` is the
+Domain/Service layer (the only place that may import `@prisma/client` —
+`src/server/db.ts` holds the cached Prisma client singleton); `src/
+scheduler/` will be the Scheduler layer (Phase 2+, pure functions only, no
+Prisma access — doesn't exist yet, nothing to build there in Phase 1); `src/
+app/` is the Next.js App Router UI layer, which must call into `src/server/`
+rather than querying Prisma directly; `prisma/schema.prisma` holds the
+schema (SQLite datasource, no models yet).
 
 ## Build, Test, and Development Commands
 
-Not established yet — see `docs/status.md`'s Task Gate section, which is
-the source of truth until this section is filled in for real.
+```bash
+npm install
+npm run dev         # Next.js dev server
+npm run lint         # eslint
+npm run typecheck    # tsc --noEmit
+npm test             # vitest run
+npm run build        # next build
+npm run verify        # all four of the above, bundled — the task gate
+```
+
+`DATABASE_URL` must be set (see `.env.example`); copy it to `.env` (gitignored)
+before running anything that touches Prisma.
 
 ## Coding Style & Naming Conventions
 
-TypeScript, standard 2-space indentation. Domain identifiers must match
+TypeScript, standard 2-space indentation, enforced via `eslint.config.mjs`
+(Next.js's default flat config, no Prettier). Domain identifiers must match
 `docs/domain-model.md` exactly (e.g. `unitsCompleted`, not a synonym) —
-that doc is the canonical vocabulary, not a suggestion. Formatting/lint
-tooling choice (ESLint config, Prettier or not) is decided when the scaffold
-lands; update this section then instead of leaving it silent.
+that doc is the canonical vocabulary, not a suggestion.
 
 ## Testing Guidelines
 
-Vitest, per `docs/system-direction.md`. Test file naming convention and
-what requires a test vs. what doesn't will be decided alongside the scaffold
-in Phase 1's first `PRIORITIES.md` item — update this section then.
+Vitest, per `docs/system-direction.md`. Tests are colocated with the code
+they cover as `<name>.test.ts` (e.g. `src/server/db.test.ts`), not in a
+separate `__tests__/` tree. Every Domain/Service-layer function that
+enforces an invariant from `docs/domain-model.md` (a `WIP Limit`, a
+`Fixed Commitment`/`Deadline Task` validation difference, etc.) needs a
+test — see `PRIORITIES.md`'s "What Counts as a Blocker" for which
+invariants are non-negotiable. Pure UI rendering doesn't need one in
+Phase 1.
 
 ## Commit & Pull Request Guidelines
 

@@ -48,3 +48,15 @@ new entry correcting it and say so explicitly.
   verification: `./scripts/check-templates.sh` must report only the
   `ROADMAP.md` bootstrap-authorization marker before this can move to Stage
   4 (human authorization).
+- 2026-07-18: bootstrap authorized by the human; `ROADMAP.md`'s marker
+  removed (commit `67daf91`). `PRIORITIES.md` item 1 ("Establish the
+  project scaffold and the task gate") completed: scaffolded Next.js 16 +
+  TypeScript (App Router, `src/` layout) + Prisma 6 (SQLite datasource,
+  no models yet) + Vitest 3 + ESLint per `docs/system-direction.md`'s
+  layering (`src/server/` holds the Prisma client singleton in `db.ts`;
+  `src/scheduler/` intentionally not created — Phase 2+). Ran
+  `npm run verify` (lint + typecheck + test + build) — all four steps
+  passed clean, output inspected directly, not inferred. `docs/status.md`'s
+  Task Gate section updated from "not established" to the real command.
+  Unverified: no actual domain data yet — that's items 1-5 remaining in
+  `PRIORITIES.md`.

@@ -5,30 +5,27 @@ the running code disagree, the code wins and this doc is out of date — fix
 the doc as part of whatever change you're making, don't leave the drift for
 later.
 
-**Bootstrap state:** no code exists yet. Everything below describes what
-Phase 1's first `PRIORITIES.md` item must establish, not what's built today.
-Update this doc for real the moment the scaffold lands — don't leave it
-describing intent once there's actual behavior to describe.
+**Bootstrap state:** the Phase 1 scaffold (Next.js + TypeScript + Prisma/
+SQLite + Vitest + ESLint) exists and the task gate passes on it. No domain
+data model beyond the Prisma client wiring exists yet — the remaining
+`PRIORITIES.md` items build that up area by area.
 
 ## Verification Gates
 
 ### Task Gate
 
-Not established yet — establishing it is the first `PRIORITIES.md` item.
-Once the Next.js/TypeScript/Prisma scaffold from `docs/system-direction.md`
-exists, this section must be updated to the real bundled command, expected
-to be:
+Established. From the repo root:
 
 ```bash
 npm run lint
 npm run typecheck   # tsc --noEmit
-npm test            # vitest
+npm test            # vitest run
 npm run build
 ```
 
-bundled as a single `npm run verify`. No task in the task loop may be
-claimed done without running this command (see `../LOOP_ENGINEERING.md`,
-"Two verification gates") — until it exists, that itself is the blocker.
+bundled as `npm run verify`. No task in the task loop may be claimed done
+without this command passing clean (see `../LOOP_ENGINEERING.md`, "Two
+verification gates").
 
 ### Phase Gate
 
@@ -50,10 +47,15 @@ see their exit conditions in `../ROADMAP.md`.
 
 ## Current Behavior
 
-Nothing is implemented yet. No `Trackable Item`, `Routine`, `Semester
-Commitment`, `Ad-hoc Event`, or `Schedule` exists in code — only their
-definitions in `domain-model.md`. The first `PRIORITIES.md` items exist to
-change this section from "nothing" to a real, area-by-area account.
+The Next.js app scaffold exists (`src/app/`, default starter page, no
+Progressor-specific UI yet). Prisma is wired to a local SQLite file via
+`src/server/db.ts` (a cached client singleton, safe under Next.js dev-mode
+hot reload), but `prisma/schema.prisma` declares no models yet — only the
+`sqlite` datasource and `prisma-client-js` generator. No `Trackable Item`,
+`Routine`, `Semester Commitment`, `Ad-hoc Event`, or `Schedule` exists in
+code — only their definitions in `domain-model.md`. The remaining
+`PRIORITIES.md` items exist to change this section from "just the scaffold"
+to a real, area-by-area account.
 
 ## Known Limits
 
@@ -67,5 +69,10 @@ change this section from "nothing" to a real, area-by-area account.
 
 ## Configuration / Environment Notes
 
-To be filled in once the scaffold lands (expected: SQLite file path,
-required Node version, any `.env` variables). Nothing to configure yet.
+- Node: v24 (tested with v24.13.1); no lower bound enforced yet.
+- `DATABASE_URL` (`.env`, gitignored) points at the local SQLite file —
+  default `file:./dev.db`. See `.env.example` for the variable name.
+- The dev database file itself (`prisma/*.db`) is gitignored — it's local
+  state, not source, and Phase 1's "persists across a restart" exit
+  condition only requires the file to survive an app restart, not a git
+  clone.
