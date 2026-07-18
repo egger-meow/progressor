@@ -52,3 +52,7 @@ once fixed, either a new audit or a correction note added to
   — Phase 3, "Elastic Re-Scheduling & Ad-hoc Events." Complete with noted
   exceptions (no-creation-UI gap narrowed but not closed — `Ad-hoc Event`
   gained its first creation UI this phase).
+- [`core-entity-creation-ui-audit.md`](core-entity-creation-ui-audit.md)
+  — Phase 4, "Core Entity Creation UI." Complete with noted exceptions
+  (`Routine` anchor input is a simple comma-separated field, not a
+  picker grid; no UI yet to configure a `WIP Limit`).

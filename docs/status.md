@@ -84,7 +84,7 @@ Passed; see
 Passed; see
 [`docs/audits/elastic-re-scheduling-and-ad-hoc-events-audit.md`](audits/elastic-re-scheduling-and-ad-hoc-events-audit.md).
 
-#### Phase 4 — Core Entity Creation UI (active)
+#### Phase 4 — Core Entity Creation UI (closed)
 
 Authorized by the project owner in chat (2026-07-18), choosing it over
 the three pre-existing `ROADMAP.md` "Proposed" phases specifically to
@@ -101,8 +101,11 @@ walkthrough had relied on a throwaway `src/app/api/dev-seed/` route.
 4. A written manual walkthrough exercising all of the above, recorded in
    `docs/audits/`.
 
-Later phases will each add fixture-replay tests to this section when
-they're activated — see their exit conditions in `../ROADMAP.md`.
+Passed; see
+[`docs/audits/core-entity-creation-ui-audit.md`](audits/core-entity-creation-ui-audit.md).
+
+No phase is currently active — see `../ROADMAP.md`'s "Proposed — Not Yet
+Authorized" section for what's left to authorize.
 
 ## Current Behavior
 

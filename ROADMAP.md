@@ -32,28 +32,9 @@ task queue drains.
 
 ## Active Phase
 
-### Core Entity Creation UI
-
-**Goal:** give the user real, persistent UI — reachable through the
-running app alone, no direct DB access, no temporary seed route — to
-create, edit, and delete `Trackable Item` (`Book`/`Course`), `Routine`,
-and `Semester Commitment` (`Fixed Commitment`/`Deadline Task`) records.
-Every prior phase's manual walkthrough has had to fall back on a
-throwaway `src/app/api/dev-seed/` route (deleted before each commit)
-specifically because this UI didn't exist; closing that gap is what
-finally lets the product be tested as itself, not through a debug
-backdoor.
-
-**Exit condition (phase gate):** through the running app alone, a human
-can create, edit, and delete a `Book`, a `Course`, a `Routine`, a `Fixed
-Commitment`, and a `Deadline Task` — each with its service layer's
-existing validation (e.g. `WIP Limit` enforcement, cadence-specific
-anchor ranges, `startTime < endTime`) surfaced as a visible error instead
-of a crash; deleting a record still referenced by an existing `Time Slot`
-does not corrupt or crash the Weekly View (the slot's occupant label
-degrades gracefully, per `time-slots.ts`'s existing `occupantLabel`
-fallback); `npm run verify` passes; a written manual walkthrough exercising
-all of the above is recorded in `docs/audits/`.
+No active phase — see "Proposed — Not Yet Authorized" below. A human
+needs to authorize the next phase (write a goal and exit condition, or
+promote one of the proposals below) before the phase loop can continue.
 
 ## Proposed — Not Yet Authorized
 

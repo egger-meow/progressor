@@ -68,10 +68,12 @@ Everything else that's real work but doesn't meet this bar belongs under
 
 ## Current Priorities
 
-1. Write the "Core Entity Creation UI" phase completion audit
-   (`docs/audits/core-entity-creation-ui-audit.md`), gate by gate against
-   `ROADMAP.md`'s exit condition; remove the phase from `ROADMAP.md`;
-   update `CHANGELOG.md`; commit.
+Empty. `ROADMAP.md` has no Active Phase and no further Authorized Phases
+— every proposal left under "Proposed — Not Yet Authorized" (calendar
+export/sync, notifications/reminders, a mobile companion view) needs a
+human to write its goal and exit condition before the phase loop can
+activate it. Per `ROADMAP.md`'s own rules, this is the correct end state
+to stop and wait in, not a failure.
 
 ## Non-Blocking / Later
 
