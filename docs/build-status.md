@@ -24,11 +24,15 @@ commit. For fine-grained current behavior, see `status.md`.
 
 ## Next Build Milestones
 
-Close Phase 1 ("Data Layer & Manual Weekly View"): a working local scaffold
-(Next.js + TypeScript + Prisma/SQLite per `system-direction.md`) with every
-domain concept persisted, WIP limits enforced, and a manually-editable
-Weekly View — proving the data layer is correct before any scheduling logic
-is built on top of it.
+Phase 1 ("Data Layer & Manual Weekly View") is closed — see
+`docs/audits/data-layer-manual-weekly-view-audit.md`. Active phase is now
+Phase 2, "Constraint-Based Auto-Scheduler v1": a pure, fixture-testable
+`Scheduler` (`src/scheduler/`) that produces a full weekly `Schedule` from
+every `Trackable Item`, `Routine`, `Semester Commitment`, `Ad-hoc Event`,
+`Time-of-Day Preference`, and `WIP Limit` — honoring hard constraints,
+never silently dropping a `Fixed Commitment`/`Deadline Task`, respecting
+`WIP Limit`s, and preserving a documented minimum `Slack` share. See
+`PRIORITIES.md` for the decomposition.
 
 ## Verification Evidence
 

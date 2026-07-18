@@ -32,42 +32,6 @@ task queue drains.
 
 ## Active Phase
 
-### Data Layer & Manual Weekly View
-
-**Goal:** build the persistent data model for every concept in
-`docs/domain-model.md` (`Trackable Item`/`Book`/`Course`, `WIP Limit`,
-`Routine`, `Semester Commitment` [`Fixed Commitment` + `Deadline Task`],
-`Ad-hoc Event`) and a manual `Schedule` / Weekly View where the user places,
-views, and edits `Time Slot`s by hand for 本週/下週 — no `Scheduler` yet.
-This phase exists to prove the data layer and its invariants (WIP limits,
-no silent data loss) are right before any auto-scheduling logic is built on
-top of them.
-
-**Exit condition (phase gate):**
-
-- User can create a `Book` (title, chapter count, estimated reading days,
-  priority) and a `Course` (title, video count, estimated study days,
-  priority); both persist across an app restart (backed by the SQLite file,
-  not in-memory state).
-- `WIP Limit` is enforced per type: attempting to mark more than the
-  configured number of `Book`s (or `Course`s) as `in-progress` at once is
-  rejected with a clear message, not a silent no-op.
-- User can create a `Routine` (cadence, anchor day(s)/date, time-of-day
-  preference) and a `Semester Commitment` of either kind (`Fixed Commitment`
-  with a recurring slot, or `Deadline Task` with a due date).
-- The Weekly View renders 本週 correctly from real stored data, can navigate
-  to 下週/上週, and every `Time Slot` on it can be manually added, edited, or
-  removed without corrupting any other `Time Slot` (no cross-slot data
-  corruption from a single edit).
-- Task gate (`npm run verify`, once established — see `docs/status.md`)
-  passes.
-- A written manual walkthrough covering every bullet above is executed and
-  recorded, and an audit is written in `docs/audits/`.
-
-**Decomposition:** see `PRIORITIES.md` "Current Priorities."
-
-## Authorized Phases (in order)
-
 ### Constraint-Based Auto-Scheduler v1
 
 **Goal:** implement the `Scheduler` (see `docs/system-direction.md`'s
@@ -84,6 +48,10 @@ produces a weekly `Schedule` where every `Fixed Commitment` and undischarged
 items double-book the same `Time Slot`, and a documented minimum share of
 each day is left as `Slack`; fixture-based tests plus a written walkthrough
 both pass; audit written in `docs/audits/`.
+
+**Decomposition:** see `PRIORITIES.md` "Current Priorities."
+
+## Authorized Phases (in order)
 
 ### Elastic Re-Scheduling & Ad-hoc Events
 

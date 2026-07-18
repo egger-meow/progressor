@@ -39,5 +39,7 @@ once fixed, either a new audit or a correction note added to
 
 ## Index
 
-_(none yet — the first audit will be written when Phase 1, "Data Layer &
-Manual Weekly View," passes its phase gate; see `../../ROADMAP.md`.)_
+- [`data-layer-manual-weekly-view-audit.md`](data-layer-manual-weekly-view-audit.md)
+  — Phase 1, "Data Layer & Manual Weekly View." Complete with noted
+  exceptions (no creation UI yet for `Book`/`Course`/`Routine`/`Semester
+  Commitment`/`Ad-hoc Event` — was never in this phase's scope).

@@ -32,6 +32,10 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   上週/本週/下週 via a `?week=` query param, and supports adding, editing,
   and removing `Time Slot`s by hand through Server Actions that call
   straight into `src/server/time-slots.ts`.
+- Phase 1 ("Data Layer & Manual Weekly View") closed: completion audit at
+  `docs/audits/data-layer-manual-weekly-view-audit.md`; removed from
+  `ROADMAP.md`. Phase 2 ("Constraint-Based Auto-Scheduler v1") activated
+  and decomposed into `PRIORITIES.md`.
 
 ### Changed
 
