@@ -32,27 +32,6 @@ task queue drains.
 
 ## Active Phase
 
-### Constraint-Based Auto-Scheduler v1
-
-**Goal:** implement the `Scheduler` (see `docs/system-direction.md`'s
-Scheduler layer) that takes every `Trackable Item`, `Routine`, `Semester
-Commitment`, `Ad-hoc Event`, `Time-of-Day Preference`, and `WIP Limit`, and
-produces a full weekly `Schedule` automatically — respecting priority
-ordering and deliberately preserving `Slack` rather than packing every
-`Time Slot`.
-
-**Exit condition (phase gate):** given a realistic fixture data set (a mix
-of books, courses, routines, and semester commitments), the scheduler
-produces a weekly `Schedule` where every `Fixed Commitment` and undischarged
-`Deadline Task` is honored, no `WIP Limit` is violated, no two non-Slack
-items double-book the same `Time Slot`, and a documented minimum share of
-each day is left as `Slack`; fixture-based tests plus a written walkthrough
-both pass; audit written in `docs/audits/`.
-
-**Decomposition:** see `PRIORITIES.md` "Current Priorities."
-
-## Authorized Phases (in order)
-
 ### Elastic Re-Scheduling & Ad-hoc Events
 
 **Goal:** support fast, local repair of an existing `Schedule` when

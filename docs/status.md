@@ -31,8 +31,7 @@ verification gates").
 
 ### Phase Gate
 
-For the active phase ("Data Layer & Manual Weekly View," see
-`../ROADMAP.md`), the phase gate is:
+#### Phase 1 — Data Layer & Manual Weekly View (closed)
 
 1. `npm run verify` passes.
 2. A written manual walkthrough, executed and recorded in a
@@ -43,9 +42,24 @@ For the active phase ("Data Layer & Manual Weekly View," see
    navigate the Weekly View across 上週/本週/下週, and manually add/edit/
    remove a `Time Slot` without corrupting a neighboring one.
 
-Later phases (Constraint-Based Auto-Scheduler v1, Elastic Re-Scheduling)
-will each add fixture-replay tests to this section when they're activated —
-see their exit conditions in `../ROADMAP.md`.
+Passed; see
+[`docs/audits/data-layer-manual-weekly-view-audit.md`](audits/data-layer-manual-weekly-view-audit.md).
+
+#### Phase 2 — Constraint-Based Auto-Scheduler v1 (active)
+
+1. `npm run verify` passes.
+2. Given a realistic fixture data set (a mix of books, courses, routines,
+   and semester commitments), `src/scheduler/index.ts`'s `computeSchedule`
+   produces a weekly `Schedule` where every `Fixed Commitment` and
+   undischarged `Deadline Task` is honored, no `WIP Limit` is violated, no
+   two non-Slack items double-book the same `Time Slot`, and a documented
+   minimum share of each day is left as `Slack`.
+3. A written manual walkthrough against the running app (not just
+   fixtures), executed and recorded in a `docs/audits/` entry.
+
+Later phases (Elastic Re-Scheduling & Ad-hoc Events) will each add
+fixture-replay tests to this section when they're activated — see their
+exit conditions in `../ROADMAP.md`.
 
 ## Current Behavior
 

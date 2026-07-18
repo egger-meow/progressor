@@ -68,13 +68,10 @@ Everything else that's real work but doesn't meet this bar belongs under
 
 ## Current Priorities
 
-This is the decomposition of `ROADMAP.md`'s Active Phase,
-"Constraint-Based Auto-Scheduler v1."
-
-1. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
-   `docs/audits/` entry recording actual verification of every bullet in
-   `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
-   Gate section (add a Phase 2 subsection there first, mirroring Phase 1's).
+`ROADMAP.md`'s Active Phase, "Elastic Re-Scheduling & Ad-hoc Events," was
+just activated and has not yet been decomposed into task-loop items — see
+that phase's Goal/Exit condition in `ROADMAP.md` for what it needs to
+break down into.
 
 ## Non-Blocking / Later
 

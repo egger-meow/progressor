@@ -43,3 +43,8 @@ once fixed, either a new audit or a correction note added to
   — Phase 1, "Data Layer & Manual Weekly View." Complete with noted
   exceptions (no creation UI yet for `Book`/`Course`/`Routine`/`Semester
   Commitment`/`Ad-hoc Event` — was never in this phase's scope).
+- [`constraint-based-auto-scheduler-v1-audit.md`](constraint-based-auto-scheduler-v1-audit.md)
+  — Phase 2, "Constraint-Based Auto-Scheduler v1." Complete with noted
+  exceptions (re-run duplication of Scheduler-placed `Fixed
+  Commitment`/`Routine` occurrences; same no-creation-UI gap carried over
+  from Phase 1).

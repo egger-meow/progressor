@@ -74,6 +74,10 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   touch an existing `Time Slot`) was an explicit product decision, not
   inferred — see `docs/status.md` for the tradeoff it accepts (repeated
   runs can duplicate a `Fixed Commitment`/`Routine` occurrence).
+- Phase 2 ("Constraint-Based Auto-Scheduler v1") closed: completion audit
+  at `docs/audits/constraint-based-auto-scheduler-v1-audit.md`; removed
+  from `ROADMAP.md`. Phase 3 ("Elastic Re-Scheduling & Ad-hoc Events")
+  activated; not yet decomposed into `PRIORITIES.md`.
 
 ### Changed
 
