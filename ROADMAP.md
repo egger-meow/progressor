@@ -1,6 +1,3 @@
-<!-- TEMPLATE: BOOTSTRAP — drafted by agent, awaiting human authorization.
-No phase in this file licenses any work while this marker exists. -->
-
 # Roadmap
 
 The pre-authorized phase queue. Where [`PRIORITIES.md`](PRIORITIES.md)
