@@ -19,7 +19,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
-| Auto-Scheduling Engine | Blocked | Intentionally deferred to Phase 2 (`../ROADMAP.md`) until the data layer is proven in Phase 1. |
+| Auto-Scheduling Engine | Planned | Phase 2 active (`../ROADMAP.md`). Pure data contracts defined (`src/scheduler/types.ts`); no placement logic yet. |
 | Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
@@ -147,3 +147,14 @@ new entry correcting it and say so explicitly.
   populated from whatever already exists via the service layer, so this
   walkthrough only exercised the `Slack` occupant kind. That gap is
   captured in `docs/status.md`, not treated as done.
+- 2026-07-18: `PRIORITIES.md`'s "Define the Scheduler's data contracts"
+  item completed (Phase 2, `../ROADMAP.md`). Added `src/scheduler/types.ts`
+  with `SchedulerInput` (snapshot of `Trackable Item`s, `Routine`s, `Fixed
+  Commitment`s, `Deadline Task`s, `Ad-hoc Event`s, `WIP Limit`s, and
+  already-placed `Time Slot`s for a target week) and `SchedulerOutput`
+  (`ScheduledTimeSlot[]` plus a `SchedulerConflict[]` for anything that
+  can't be placed). Confirmed no `@prisma/client` import anywhere under
+  `src/scheduler/` (`grep -rn "@prisma/client" src/scheduler/` matches only
+  an explanatory comment, not an actual import). `npm run verify` passes
+  clean (still 69 tests — this item is types only, no runtime logic to
+  test yet). No manual walkthrough needed for a types-only change.

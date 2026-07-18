@@ -36,6 +36,11 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   `docs/audits/data-layer-manual-weekly-view-audit.md`; removed from
   `ROADMAP.md`. Phase 2 ("Constraint-Based Auto-Scheduler v1") activated
   and decomposed into `PRIORITIES.md`.
+- Scheduler data contracts (`src/scheduler/types.ts`): `SchedulerInput`
+  (snapshot of domain data for a target week) and `SchedulerOutput`
+  (proposed `Time Slot`s plus an explicit conflict list), with no
+  `@prisma/client` import anywhere under `src/scheduler/` — the first piece
+  of Phase 2's Scheduler layer.
 
 ### Changed
 

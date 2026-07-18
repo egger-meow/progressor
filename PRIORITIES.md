@@ -71,23 +71,14 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase,
 "Constraint-Based Auto-Scheduler v1."
 
-1. **Define the Scheduler's data contracts in `src/scheduler/`.** Done =
-   `src/scheduler/types.ts` (or similar) defines a snapshot input type
-   (everything the scheduler needs: `Trackable Item`s, `Routine`s,
-   `Semester Commitment`s, `Ad-hoc Event`s, `Time-of-Day Preference`s,
-   `WIP Limit`s) and an output type (a computed `Schedule` as a list of
-   proposed `Time Slot`s, plus an explicit `Conflict` type for anything
-   that couldn't be placed — see item 2). Pure TypeScript only: no
-   `@prisma/client` import anywhere under `src/scheduler/`, per
-   `docs/system-direction.md`'s layering rule.
-2. **Implement hard-constraint placement: `Fixed Commitment` occurrences
+1. **Implement hard-constraint placement: `Fixed Commitment` occurrences
    and undischarged `Deadline Task` work sessions.** Done = every `Fixed
    Commitment` occurrence and every `Deadline Task` with time remaining
    before `dueAt` is placed, or — if it genuinely cannot fit — surfaced as
    an explicit `Conflict` in the output, never silently dropped (charter
    guardrail: 不悄悄丟掉固定期限事務). Fixture tests cover both the
    fits-cleanly case and the cannot-fit-must-conflict case.
-3. **Implement priority-ordered flexible placement for `Trackable Item`
+2. **Implement priority-ordered flexible placement for `Trackable Item`
    work sessions.** Done = remaining (non-hard-constraint) time is filled
    in `priority` order across `Book`/`Course` items, respecting each
    type's `WIP Limit` (only items already `in-progress`, or promotable
@@ -98,7 +89,7 @@ This is the decomposition of `ROADMAP.md`'s Active Phase,
    left unfilled on purpose (this minimum is an inferred placeholder, not
    a user decision yet — flag it in code and `docs/status.md`, same
    pattern as `DEFAULT_WIP_LIMIT`).
-4. **Fixture-based end-to-end scheduler test suite.** Done = a realistic
+3. **Fixture-based end-to-end scheduler test suite.** Done = a realistic
    mixed fixture (multiple books/courses at different priorities, a
    `Fixed Commitment`, a `Deadline Task`, at least one `WIP Limit` at its
    cap) run through the full scheduler asserts, in one place: no `WIP
@@ -107,7 +98,7 @@ This is the decomposition of `ROADMAP.md`'s Active Phase,
    explicitly conflict-flagged, and the documented minimum `Slack` share
    holds — directly mirroring `ROADMAP.md`'s exit condition bullet by
    bullet.
-5. **Wire the Scheduler into the running app.** Done = a service-layer
+4. **Wire the Scheduler into the running app.** Done = a service-layer
    function (e.g. `src/server/scheduler-runs.ts`) snapshots current domain
    data via existing `src/server/*` query functions, calls the pure
    `src/scheduler/*` compute function, and persists the resulting `Time
@@ -115,7 +106,7 @@ This is the decomposition of `ROADMAP.md`'s Active Phase,
    Scheduler itself still never touches Prisma) — plus a minimal trigger
    in the Weekly View (`src/app/page.tsx`) so a human can actually run it
    against the real app, not just fixtures.
-6. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
+5. **Write the Phase 2 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section (add a Phase 2 subsection there first, mirroring Phase 1's).

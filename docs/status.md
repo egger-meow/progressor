@@ -124,6 +124,18 @@ placement has a UI, per this `PRIORITIES.md` item's specific "Done ="
 condition. Styling is intentionally plain (see `PRIORITIES.md`'s
 Non-Blocking section — Phase 1 needs this correct, not pretty).
 
+`Scheduler` (`src/scheduler/types.ts`) currently defines only the pure data
+contracts Phase 2 will compute against: `SchedulerInput` (a snapshot of
+`Trackable Item`s, `Routine`s, `Fixed Commitment`s, `Deadline Task`s,
+`Ad-hoc Event`s, `WIP Limit`s, and already-placed `Time Slot`s for a target
+week) and `SchedulerOutput` (proposed `Time Slot`s plus an explicit
+`SchedulerConflict` list for anything that couldn't be placed, so a `Fixed
+Commitment`/`Deadline Task` is never silently dropped). No placement logic
+exists yet — that's the next `PRIORITIES.md` items. Deliberately no
+`@prisma/client` import anywhere under `src/scheduler/`; the types mirror,
+but don't import, the shapes in `src/server/*`, per
+`docs/system-direction.md`'s layering rule.
+
 ## Known Limits
 
 - No `Scheduler` exists — Phase 1 has no auto-scheduling; every `Time Slot`
