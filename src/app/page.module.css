@@ -115,3 +115,9 @@
   gap: 4px;
   font-size: 12px;
 }
+
+.hint {
+  color: #666;
+  font-size: 12px;
+  max-width: 640px;
+}

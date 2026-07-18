@@ -5,12 +5,14 @@ the running code disagree, the code wins and this doc is out of date — fix
 the doc as part of whatever change you're making, don't leave the drift for
 later.
 
-**Bootstrap state:** the Phase 1 scaffold (Next.js + TypeScript + Prisma/
-SQLite + Vitest + ESLint) exists and the task gate passes on it. Every
-domain concept from `docs/domain-model.md` is now persisted at the data
-layer, and the manual Weekly View (`Schedule`) is implemented as the first
-UI-layer surface. The remaining `PRIORITIES.md` item is the Phase 1
-walkthrough/audit that closes the phase gate.
+**Bootstrap state:** the Next.js + TypeScript + Prisma/SQLite + Vitest +
+ESLint scaffold exists and the task gate passes on it. Every domain
+concept from `docs/domain-model.md` is persisted at the data layer, the
+manual Weekly View (`Schedule`) is the primary UI-layer surface, and the
+`Scheduler` (`src/scheduler/`) both generates a `Schedule` from scratch
+(`computeSchedule`, Phase 2) and locally repairs one for a disruption
+(`repairSchedule`, Phase 3, active — see "Repair" below). Phases 1 and 2
+are closed; see `docs/audits/` for their completion evidence.
 
 ## Verification Gates
 
@@ -45,7 +47,7 @@ verification gates").
 Passed; see
 [`docs/audits/data-layer-manual-weekly-view-audit.md`](audits/data-layer-manual-weekly-view-audit.md).
 
-#### Phase 2 — Constraint-Based Auto-Scheduler v1 (active)
+#### Phase 2 — Constraint-Based Auto-Scheduler v1 (closed)
 
 1. `npm run verify` passes.
 2. Given a realistic fixture data set (a mix of books, courses, routines,
@@ -57,9 +59,25 @@ Passed; see
 3. A written manual walkthrough against the running app (not just
    fixtures), executed and recorded in a `docs/audits/` entry.
 
-Later phases (Elastic Re-Scheduling & Ad-hoc Events) will each add
-fixture-replay tests to this section when they're activated — see their
-exit conditions in `../ROADMAP.md`.
+Passed; see
+[`docs/audits/constraint-based-auto-scheduler-v1-audit.md`](audits/constraint-based-auto-scheduler-v1-audit.md).
+
+#### Phase 3 — Elastic Re-Scheduling & Ad-hoc Events (active)
+
+1. `npm run verify` passes.
+2. A documented set of disruption scenarios (skip today's reading session,
+   insert a same-day `Ad-hoc Event`, mark a `Chapter`/`Video` done early)
+   each produce a correctly repaired `Schedule` when re-run, verified
+   against expected fixture output (`src/scheduler/repair.test.ts`).
+3. The repair operation has a documented, interactively-fast time budget
+   (see "Repair" below).
+4. The existing Phase-1 manual-edit guarantee (one edit never corrupts
+   another `Time Slot`) still holds.
+5. A written manual walkthrough against the running app (not just
+   fixtures), executed and recorded in a `docs/audits/` entry.
+
+Later phases will each add fixture-replay tests to this section when
+they're activated — see their exit conditions in `../ROADMAP.md`.
 
 ## Current Behavior
 
@@ -264,6 +282,67 @@ inferred: the daily window the Scheduler may place flexible work in is
 normal); one "day" of an item's `estimatedDays` becomes one 2-hour session
 per calendar day it's scheduled.
 
+### Repair (Phase 3 — Elastic Re-Scheduling & Ad-hoc Events)
+
+`src/scheduler/repair.ts`'s `repairSchedule(input, disruption)` locally
+repairs an already-placed `Schedule` for one of three disruptions, without
+a `computeSchedule` recompute — same purity rules as the rest of
+`src/scheduler/` (no Prisma, see above):
+
+- **`skip-session`** — removes the named flexible `Trackable Item` `Time
+  Slot`. **Backfill policy (project owner's explicit decision,
+  2026-07-18):** the freed window is immediately offered to the next
+  eligible item that doesn't already have a session this week (reusing
+  `selectEligibleItems`/`dailyWindowMs`/`usedMsOnDay` from
+  `flexible-placement.ts`), never to the skipped item itself — not always
+  left as `Slack` until the next full "Generate Schedule" run.
+- **`insert-ad-hoc-event`** — the `Ad-hoc Event`'s `Time Slot` always
+  places, exactly where declared (same "never refused" pattern as a
+  `Fixed Commitment`). An overlapping flexible `Trackable Item` session is
+  evicted and relocated elsewhere in the week (charter guardrail: an
+  `Ad-hoc Event` always outranks flexible work); an overlap with a `Fixed
+  Commitment` or `Deadline Task` is flagged as a new `"ad-hoc-event-overlap"`
+  `SchedulerConflict` instead of evicted, since neither is flexible work
+  the charter lets an `Ad-hoc Event` bump; a `Routine` occurrence overlap
+  is left alone entirely (already a soft, nudge-around preference with no
+  conflict-flagging precedent elsewhere in the Scheduler).
+- **`item-completed`** — removes only the item's *future* session(s) this
+  week (`startAt >= now`, an explicit input rather than read internally,
+  keeping the Scheduler pure) and backfills the freed window the same way
+  as `skip-session`. A past session is never touched — the charter's
+  guardrail against losing already-tracked history means finishing a book
+  early must not erase that a session already happened.
+
+**Documented time budget:** a repair only touches the disrupted slot(s)
+plus, for `insert-ad-hoc-event`, a bounded per-item day-loop search over
+the rest of the week (never a full recompute of every other item's
+placement). `repair.test.ts`'s time-budget test demonstrates this
+completing in single-digit milliseconds against a busy 8-slot fixture; an
+interactive UI action built on this should never need a loading spinner.
+
+Wired into the real store by `src/server/scheduler-repair.ts`
+(`skipSession`, `insertAdHocEvent`, `completeItemEarly`) — each applies
+whatever domain-data change the disruption itself represents (creating
+the `Ad-hoc Event` record, marking a `Trackable Item` `"done"`) via the
+existing `src/server/*` functions, snapshots a fresh `SchedulerInput` the
+same way `scheduler-runs.ts` does, calls `repairSchedule`, then applies
+the returned diff (`removeTimeSlot`/`createTimeSlot`). The Weekly View
+(`src/app/page.tsx`) exposes this as a "Skip" and "Mark done" control on
+every flexible `Trackable Item` `Time Slot`, and a "Quick Ad-hoc Event"
+form — the latter is also the first creation UI for the `Ad-hoc Event`
+record itself (previously only reachable via the service layer or direct
+DB access).
+
+Manually verified against the running dev server across all three
+disruptions: skipping a session removed only that slot; inserting an
+overlapping `Ad-hoc Event` placed it and relocated the displaced session
+to the next day, leaving every `Fixed Commitment`/`Routine`/other
+`Trackable Item` slot untouched; marking an item done removed its future
+session and the freed window was immediately backfilled by the next
+eligible item in the same window — confirming both the backfill policy
+and the Phase-1 manual-edit guarantee (one edit never corrupts another
+`Time Slot`) hold through the real app, not just fixtures.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
@@ -273,9 +352,10 @@ per calendar day it's scheduled.
 - "Generate Schedule" re-placing a `Fixed Commitment`/`Routine` occurrence
   as a duplicate `Time Slot` on repeated clicks for the same week — see
   the Scheduler section above for why and the tradeoff behind it.
-- No creation UI yet for `Book`/`Course`/`Routine`/`Semester
-  Commitment`/`Ad-hoc Event` — only `Time Slot` placement (manual or via
-  "Generate Schedule") has a UI.
+- No creation UI yet for `Book`/`Course`/`Routine`/`Semester Commitment`
+  — only `Time Slot` placement (manual or via "Generate Schedule") and,
+  as of Phase 3, `Ad-hoc Event` creation (via the Weekly View's "Quick
+  Ad-hoc Event" form) have a UI.
 
 ## Configuration / Environment Notes
 

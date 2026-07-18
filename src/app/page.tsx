@@ -8,6 +8,9 @@ import {
   updateTimeSlotAction,
   deleteTimeSlotAction,
   generateScheduleAction,
+  skipSessionAction,
+  completeItemAction,
+  insertAdHocEventAction,
 } from "./actions";
 import {
   DAY_LABELS,
@@ -185,6 +188,20 @@ export default async function WeeklyView({
                           <input type="hidden" name="week" value={weekParam} />
                           <button type="submit">Remove</button>
                         </form>
+                        {slot.occupantType === "trackable-item" && slot.occupantId ? (
+                          <>
+                            <form action={skipSessionAction} className={styles.inlineForm}>
+                              <input type="hidden" name="slotId" value={slot.id} />
+                              <input type="hidden" name="week" value={weekParam} />
+                              <button type="submit">Skip</button>
+                            </form>
+                            <form action={completeItemAction} className={styles.inlineForm}>
+                              <input type="hidden" name="itemId" value={slot.occupantId} />
+                              <input type="hidden" name="week" value={weekParam} />
+                              <button type="submit">Mark done</button>
+                            </form>
+                          </>
+                        ) : null}
                       </li>
                     );
                   })}
@@ -216,6 +233,36 @@ export default async function WeeklyView({
             <OccupantSelect options={occupantOptions} />
           </label>
           <button type="submit">Add</button>
+        </form>
+      </section>
+
+      <section className={styles.addForm}>
+        <h2>Quick Ad-hoc Event</h2>
+        <p className={styles.hint}>
+          Declares a new Ad-hoc Event and places it right away — an
+          overlapping flexible Book/Course session is moved elsewhere in
+          the week rather than double-booked (Phase 3 repair, not a full
+          Generate Schedule re-run).
+        </p>
+        <form action={insertAdHocEventAction} className={styles.slotForm}>
+          <input type="hidden" name="week" value={weekParam} />
+          <label>
+            Title
+            <input type="text" name="title" required />
+          </label>
+          <label>
+            Date
+            <input type="date" name="date" defaultValue={weekParam} required />
+          </label>
+          <label>
+            Start
+            <input type="time" name="startTime" required />
+          </label>
+          <label>
+            End
+            <input type="time" name="endTime" required />
+          </label>
+          <button type="submit">Insert</button>
         </form>
       </section>
     </main>

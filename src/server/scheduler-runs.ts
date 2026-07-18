@@ -32,7 +32,9 @@ export interface RunSchedulerResult {
   createdSlotIds: string[];
 }
 
-async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promise<SchedulerInput> {
+// Exported so src/server/scheduler-repair.ts (Phase 3) can snapshot the
+// same shape without duplicating this mapping.
+export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promise<SchedulerInput> {
   const [trackableItems, routines, fixedCommitments, deadlineTasks, adHocEvents, existingSlots, bookLimit, courseLimit] =
     await Promise.all([
       listTrackableItems(),

@@ -78,6 +78,25 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   at `docs/audits/constraint-based-auto-scheduler-v1-audit.md`; removed
   from `ROADMAP.md`. Phase 3 ("Elastic Re-Scheduling & Ad-hoc Events")
   activated; not yet decomposed into `PRIORITIES.md`.
+- Scheduler repair layer (`src/scheduler/repair.ts`'s `repairSchedule`,
+  Phase 3): locally repairs an existing `Schedule` for one of three
+  disruptions without a full recompute — skipping a flexible `Trackable
+  Item` session, inserting a same-day `Ad-hoc Event`, or marking an item
+  done early — each backed by fixture tests in `repair.test.ts` plus
+  evidence for a documented, interactively-fast time budget. Backfill
+  policy (freeing scheduled time immediately offers it to the next
+  eligible priority item, never left as `Slack` until the next full
+  "Generate Schedule" run) was the project owner's explicit decision
+  (2026-07-18), not inferred.
+- Scheduler repair wired into the real store
+  (`src/server/scheduler-repair.ts`: `skipSession`, `insertAdHocEvent`,
+  `completeItemEarly`) and exposed on the Weekly View as a "Skip" and
+  "Mark done" control on every flexible `Trackable Item` `Time Slot`, plus
+  a "Quick Ad-hoc Event" form — the latter is also the first creation UI
+  for the `Ad-hoc Event` record itself. Manually verified against the
+  running dev server across all three disruptions, confirming the
+  Phase-1 manual-edit guarantee (one edit never corrupts another `Time
+  Slot`) still holds.
 
 ### Changed
 
