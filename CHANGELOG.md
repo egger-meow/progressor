@@ -27,6 +27,11 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 - `Ad-hoc Event` (`src/server/ad-hoc-events.ts`) and `Time Slot`
   (`src/server/time-slots.ts`), with occupant-existence validation across
   all five referenceable occupant kinds plus `slack`.
+- Manual Weekly View (`src/app/page.tsx`, `src/app/actions.ts`,
+  `src/app/week.ts`): renders 本週 from real `Time Slot` data, navigates
+  上週/本週/下週 via a `?week=` query param, and supports adding, editing,
+  and removing `Time Slot`s by hand through Server Actions that call
+  straight into `src/server/time-slots.ts`.
 
 ### Changed
 

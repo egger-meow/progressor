@@ -20,7 +20,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
 | Auto-Scheduling Engine | Blocked | Intentionally deferred to Phase 2 (`../ROADMAP.md`) until the data layer is proven in Phase 1. |
-| Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented (`src/server/time-slots.ts`, `src/server/ad-hoc-events.ts`); Weekly View UI is the next `PRIORITIES.md` item. Calendar export is Proposed, not authorized. |
+| Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
 
@@ -112,3 +112,34 @@ new entry correcting it and say so explicitly.
   — an id from the old occupant type has no meaning under the new one —
   fixed to require a fresh `occupantId` whenever `occupantType` changes.
   69 tests pass total (24 new). Output inspected directly.
+- 2026-07-18: `PRIORITIES.md`'s "Build the manual Weekly View" item
+  completed. Added the root route `src/app/page.tsx` (renders 本週 from
+  real `TimeSlot` data via a new service-layer helper,
+  `listTimeSlotsWithLabels` in `src/server/time-slots.ts`, which resolves
+  each occupant to a display label), `src/app/actions.ts` (Server Actions
+  `createTimeSlotAction`/`updateTimeSlotAction`/`deleteTimeSlotAction`
+  calling directly into `src/server/time-slots.ts`), and `src/app/week.ts`
+  (pure week-boundary date math, no Prisma access — `?week=` query param
+  holds the Monday date of the displayed week). `npm run verify` passed
+  clean (still 69 tests — this item added no new service-layer logic, only
+  UI/actions, so no new automated tests were written for it; verification
+  is the manual walkthrough below). Manually exercised via the dev server
+  in the Browser tool at `http://localhost:3000`, actually clicking through
+  the running app, not just reading code: (1) added a `Time Slot` (Tue
+  7/14 09:00-10:30, occupant Slack) via the Add form and confirmed it
+  rendered in the correct day column; (2) clicked Edit, confirmed the
+  inline form pre-filled the exact stored date/start/end/occupant, changed
+  the end time to 11:00, saved, and confirmed the displayed slot updated;
+  (3) added a second `Time Slot` on a different day (Wed 7/15
+  14:00-15:00), removed the first one, and confirmed the second was
+  untouched — neighbor isolation (blocker #4) holds in the real UI, not
+  just in the unit test; (4) navigated `← 上週` (7/6-7/12) and `下週 →`
+  (7/20-7/26) and confirmed each showed the correct date range with no
+  slots leaking across week boundaries, then navigated back to `本週`.
+  Cleaned up the test slot afterward so the dev database was left empty.
+  Known gap, not a regression: there is still no UI to create the
+  `Routine`/`FixedCommitment`/`DeadlineTask`/`TrackableItem`/`AdHocEvent`
+  records a `Time Slot` can reference — the occupant `<select>` is
+  populated from whatever already exists via the service layer, so this
+  walkthrough only exercised the `Slack` occupant kind. That gap is
+  captured in `docs/status.md`, not treated as done.

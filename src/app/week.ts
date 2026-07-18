@@ -1,0 +1,60 @@
+// Pure date math for the Weekly View. No Prisma access here — this is UI
+// layer, so it only shapes dates for src/server/time-slots.ts to consume.
+
+export const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function toDateOnly(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// ISO-style week: Monday is day 0.
+export function startOfWeek(date: Date): Date {
+  const d = toDateOnly(date);
+  const day = d.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+export function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+export function formatDateParam(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function parseDateParam(value: string | undefined): Date {
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const parsed = new Date(`${value}T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return new Date();
+}
+
+export function formatDateLabel(date: Date): string {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+export function formatTimeLabel(date: Date): string {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+export function combineDateAndTime(dateParam: string, timeParam: string): Date {
+  const combined = new Date(`${dateParam}T${timeParam}:00`);
+  if (Number.isNaN(combined.getTime())) {
+    throw new Error(`Invalid date/time: ${dateParam} ${timeParam}`);
+  }
+  return combined;
+}

@@ -71,10 +71,7 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase, "Data Layer &
 Manual Weekly View."
 
-1. **Build the manual Weekly View.** Done = renders 本週 from real stored
-   data, navigates to 上週/下週, and every `Time Slot` on it can be added,
-   edited, or removed by hand per `ROADMAP.md`'s exit condition.
-2. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
+1. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section.

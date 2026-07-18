@@ -6,9 +6,11 @@ the doc as part of whatever change you're making, don't leave the drift for
 later.
 
 **Bootstrap state:** the Phase 1 scaffold (Next.js + TypeScript + Prisma/
-SQLite + Vitest + ESLint) exists and the task gate passes on it. No domain
-data model beyond the Prisma client wiring exists yet — the remaining
-`PRIORITIES.md` items build that up area by area.
+SQLite + Vitest + ESLint) exists and the task gate passes on it. Every
+domain concept from `docs/domain-model.md` is now persisted at the data
+layer, and the manual Weekly View (`Schedule`) is implemented as the first
+UI-layer surface. The remaining `PRIORITIES.md` item is the Phase 1
+walkthrough/audit that closes the phase gate.
 
 ## Verification Gates
 
@@ -62,8 +64,9 @@ no native enum support in Prisma). `WIP Limit` is enforced independently per
 updating an item to `status = "in-progress"` beyond the configured limit
 throws `WipLimitExceededError` rather than silently succeeding; the default
 limit (3, `DEFAULT_WIP_LIMIT`) is an inferred placeholder, not a value the
-user chose — `setWipLimit` overrides it per type. No UI exists yet for any
-of this (that's Weekly View, `PRIORITIES.md` item 3).
+user chose — `setWipLimit` overrides it per type. No UI exists yet to
+create or edit `Trackable Item`s directly (see the Weekly View paragraph
+below for what UI does exist).
 
 `Routine` is implemented (`src/server/routines.ts`): `cadence` is
 `"daily" | "weekly" | "monthly"`; `anchor` is a JSON-encoded array of
@@ -98,8 +101,28 @@ always override a slot, both presuppose two things can want the same time
 constraint. Editing or removing one `Time Slot` never touches another
 (verified directly by test, not just by the absence of a relation).
 
-`Schedule` (the Weekly View) is not implemented yet — that's the next
-`PRIORITIES.md` item.
+`Schedule` (the Weekly View, `src/app/page.tsx`) is implemented as the root
+route: it renders 本週 by default from real `TimeSlot` data (via
+`listTimeSlotsWithLabels`, a service-layer helper in
+`src/server/time-slots.ts` that resolves each slot's occupant to a
+human-readable label so the UI never has to know how each occupant kind is
+looked up), and `← 上週` / `本週` / `下週 →` navigate via a `?week=` query
+param holding the Monday date of the displayed week (date math in
+`src/app/week.ts`, pure functions, no Prisma access). Every `Time Slot` can
+be added, edited, or removed by hand: `src/app/actions.ts` holds three
+Server Actions (`createTimeSlotAction`/`updateTimeSlotAction`/
+`deleteTimeSlotAction`) that call directly into `src/server/time-slots.ts`
+— the UI layer still never touches Prisma. The occupant `<select>` is built
+from whatever `Routine`/`FixedCommitment`/`DeadlineTask`/`TrackableItem`/
+`AdHocEvent` records already exist (plus `Slack`); a validation error from
+the service layer (invalid range, dangling occupant) round-trips back to
+the same week via a `?error=` query param instead of crashing. There is no
+UI yet to create `Book`/`Course`/`Routine`/`Semester Commitment`/
+`Ad-hoc Event` records themselves — those still only exist via the service
+functions (exercised in tests) or direct DB access; only `Time Slot`
+placement has a UI, per this `PRIORITIES.md` item's specific "Done ="
+condition. Styling is intentionally plain (see `PRIORITIES.md`'s
+Non-Blocking section — Phase 1 needs this correct, not pretty).
 
 ## Known Limits
 

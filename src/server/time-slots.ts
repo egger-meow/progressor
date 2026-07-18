@@ -177,3 +177,64 @@ export function listTimeSlots(range?: ListTimeSlotsRange) {
     orderBy: { startAt: "asc" },
   });
 }
+
+// Human-readable label for a Time Slot's occupant, for display in the
+// Weekly View. Lives here (service layer) rather than in the UI so the UI
+// never has to know how each occupant kind is looked up.
+async function occupantLabel(
+  occupantType: OccupantType,
+  occupantId: string | null,
+): Promise<string> {
+  if (occupantType === "slack" || !occupantId) {
+    return "Slack";
+  }
+  switch (occupantType) {
+    case "routine": {
+      const routine = await prisma.routine.findUnique({ where: { id: occupantId } });
+      return routine ? `Routine: ${routine.title}` : "(deleted routine)";
+    }
+    case "fixed-commitment": {
+      const commitment = await prisma.fixedCommitment.findUnique({
+        where: { id: occupantId },
+      });
+      return commitment ? `Fixed Commitment: ${commitment.title}` : "(deleted fixed commitment)";
+    }
+    case "deadline-task": {
+      const task = await prisma.deadlineTask.findUnique({ where: { id: occupantId } });
+      return task ? `Deadline Task: ${task.title}` : "(deleted deadline task)";
+    }
+    case "trackable-item": {
+      const item = await prisma.trackableItem.findUnique({ where: { id: occupantId } });
+      return item ? `${item.type === "book" ? "Book" : "Course"}: ${item.title}` : "(deleted trackable item)";
+    }
+    case "ad-hoc-event": {
+      const event = await prisma.adHocEvent.findUnique({ where: { id: occupantId } });
+      return event ? `Ad-hoc Event: ${event.title}` : "(deleted ad-hoc event)";
+    }
+  }
+}
+
+export interface TimeSlotWithLabel {
+  id: string;
+  startAt: Date;
+  endAt: Date;
+  occupantType: OccupantType;
+  occupantId: string | null;
+  occupantLabel: string;
+}
+
+export async function listTimeSlotsWithLabels(
+  range?: ListTimeSlotsRange,
+): Promise<TimeSlotWithLabel[]> {
+  const slots = await listTimeSlots(range);
+  return Promise.all(
+    slots.map(async (slot) => ({
+      id: slot.id,
+      startAt: slot.startAt,
+      endAt: slot.endAt,
+      occupantType: slot.occupantType as OccupantType,
+      occupantId: slot.occupantId,
+      occupantLabel: await occupantLabel(slot.occupantType as OccupantType, slot.occupantId),
+    })),
+  );
+}
