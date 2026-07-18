@@ -8,7 +8,14 @@ import {
   ScheduledTimeSlot,
   SchedulerConflict,
 } from "./types";
-import { addDays, offsetFromMonday, combineDateAndTime, overlaps } from "./time";
+import {
+  addDays,
+  offsetFromMonday,
+  combineDateAndTime,
+  overlaps,
+  findFreeInterval,
+  type Interval,
+} from "./time";
 import {
   DAILY_WINDOW_START,
   DAILY_WINDOW_END,
@@ -19,11 +26,6 @@ import {
 export interface HardConstraintResult {
   slots: ScheduledTimeSlot[];
   conflicts: SchedulerConflict[];
-}
-
-interface Interval {
-  start: Date;
-  end: Date;
 }
 
 // Fixed Commitments are anchored (domain-model.md: "cannot move"), so
@@ -105,27 +107,7 @@ function findFreeSlot(
 ): Interval | null {
   const windowStart = combineDateAndTime(day, DAILY_WINDOW_START);
   const windowEnd = combineDateAndTime(day, DAILY_WINDOW_END);
-
-  const dayBusy = busy
-    .filter((interval) => overlaps(windowStart, windowEnd, interval.start, interval.end))
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
-
-  let candidateStart = windowStart;
-  for (const interval of dayBusy) {
-    const candidateEnd = new Date(candidateStart.getTime() + durationMs);
-    if (candidateEnd <= interval.start && candidateEnd <= notAfter && candidateEnd <= windowEnd) {
-      return { start: candidateStart, end: candidateEnd };
-    }
-    if (interval.end > candidateStart) {
-      candidateStart = interval.end;
-    }
-  }
-
-  const candidateEnd = new Date(candidateStart.getTime() + durationMs);
-  if (candidateEnd <= windowEnd && candidateEnd <= notAfter) {
-    return { start: candidateStart, end: candidateEnd };
-  }
-  return null;
+  return findFreeInterval(windowStart, windowEnd, durationMs, busy, notAfter);
 }
 
 // Deadline Task sessions are flexible (unlike a Fixed Commitment, they have

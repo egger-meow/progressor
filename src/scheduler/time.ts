@@ -26,3 +26,43 @@ export function combineDateAndTime(day: Date, time: string): Date {
 export function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
+
+export interface Interval {
+  start: Date;
+  end: Date;
+}
+
+// Finds the first free `durationMs` window inside [windowStart, windowEnd),
+// not overlapping any interval in `busy`, ending no later than `notAfter`
+// (defaults to windowEnd). Shared by hard-constraints.ts and
+// routine-placement.ts so "search this window for room" behaves the same
+// way everywhere in the Scheduler.
+export function findFreeInterval(
+  windowStart: Date,
+  windowEnd: Date,
+  durationMs: number,
+  busy: Interval[],
+  notAfter: Date = windowEnd,
+): Interval | null {
+  const effectiveEnd = notAfter < windowEnd ? notAfter : windowEnd;
+  const relevantBusy = busy
+    .filter((interval) => overlaps(windowStart, windowEnd, interval.start, interval.end))
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  let candidateStart = windowStart;
+  for (const interval of relevantBusy) {
+    const candidateEnd = new Date(candidateStart.getTime() + durationMs);
+    if (candidateEnd <= interval.start && candidateEnd <= effectiveEnd) {
+      return { start: candidateStart, end: candidateEnd };
+    }
+    if (interval.end > candidateStart) {
+      candidateStart = interval.end;
+    }
+  }
+
+  const candidateEnd = new Date(candidateStart.getTime() + durationMs);
+  if (candidateEnd <= effectiveEnd) {
+    return { start: candidateStart, end: candidateEnd };
+  }
+  return null;
+}

@@ -72,19 +72,17 @@ This is the decomposition of `ROADMAP.md`'s Active Phase,
 "Constraint-Based Auto-Scheduler v1."
 
 1. **Implement priority-ordered flexible placement for `Trackable Item`
-   work sessions.** Done = remaining (non-hard-constraint) time is filled
-   in `priority` order across `Book`/`Course` items, respecting each
-   type's `WIP Limit` (only items already `in-progress`, or promotable
-   without exceeding the limit, get sessions), leaning toward each item's
-   `Routine`/`Time-of-Day Preference` where one exists, and never
-   double-booking a `Time Slot` already claimed by a hard constraint or
-   another flexible item. A documented minimum `Slack` share per day is
-   left unfilled on purpose (this minimum is an inferred placeholder, not
-   a user decision yet — flag it in code and `docs/status.md`, same
-   pattern as `DEFAULT_WIP_LIMIT`). Builds on the hard-constraint
-   placement in `src/scheduler/hard-constraints.ts` (`placeHardConstraints`)
-   and the scheduling window/session-length constants in
-   `src/scheduler/constants.ts`.
+   work sessions.** Done = remaining time (after hard constraints and
+   `Routine` occurrences) is filled in `priority` order across
+   `Book`/`Course` items, respecting each type's `WIP Limit` (only items
+   already `in-progress`, or promotable without exceeding the limit, get
+   sessions), and never double-booking a `Time Slot` already claimed by a
+   hard constraint, a `Routine` occurrence, or another flexible item. A
+   documented minimum `Slack` share per day is left unfilled on purpose
+   (this minimum is an inferred placeholder, not a user decision yet —
+   flag it in code and `docs/status.md`, same pattern as
+   `DEFAULT_WIP_LIMIT`). Builds on `src/scheduler/hard-constraints.ts` and
+   `src/scheduler/routine-placement.ts`.
 2. **Fixture-based end-to-end scheduler test suite.** Done = a realistic
    mixed fixture (multiple books/courses at different priorities, a
    `Fixed Commitment`, a `Deadline Task`, at least one `WIP Limit` at its

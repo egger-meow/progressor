@@ -146,7 +146,26 @@ past its deadline (or due exactly at `weekStart`) naturally falls through
 to this same conflict path — no separate "is this overdue" branch exists.
 `placeHardConstraints` combines both and ensures a `Deadline Task` session
 never double-books a `Fixed Commitment` occurrence or an existing `Time
-Slot`. No flexible (`Trackable Item`) placement exists yet, and nothing in
+Slot`.
+
+`src/scheduler/routine-placement.ts`'s `placeRoutines` places each
+`Routine`'s occurrence(s) for the target week: `daily` occurs every day,
+`weekly` on its anchor weekday(s), `monthly` on its anchor day(s)-of-month
+when one falls in the week. Each occurrence first searches within its
+`timeOfDayPreference`'s sub-window (a fixed mapping in that file — e.g.
+`evening` → `17:00`–`20:00` — itself an inferred placeholder, not a user
+decision) and falls back to the full daily scheduling window if that
+sub-window has no room. A `Routine`, unlike a `Fixed Commitment`, is
+explicitly a soft preference the scheduler "can nudge around"
+(`docs/domain-model.md`) — an occurrence with no room anywhere in the day
+is silently skipped, not reported as a `SchedulerConflict`; the charter's
+never-silently-drop guardrail is scoped to `Fixed Commitment`/`Deadline
+Task`, not `Routine`. `src/scheduler/time.ts`'s `findFreeInterval` is the
+shared free-window search both `hard-constraints.ts` and
+`routine-placement.ts` use, so "find room in this window" behaves
+identically everywhere in the Scheduler.
+
+No flexible (`Trackable Item`) placement exists yet, and nothing in
 `src/scheduler/` is wired into the running app yet — both are upcoming
 `PRIORITIES.md` items. Deliberately no `@prisma/client` import anywhere
 under `src/scheduler/`; these types and functions mirror, but don't

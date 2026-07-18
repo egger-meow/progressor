@@ -49,6 +49,14 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   when none exists. Daily scheduling window (`08:00`–`23:00`) and session
   length (2h/day) are configured in `src/scheduler/constants.ts` per the
   project owner's explicit decision, not inferred.
+- Scheduler Routine occurrence placement
+  (`src/scheduler/routine-placement.ts`): expands each `Routine`'s
+  occurrences for the target week from its cadence/anchor, prefers its
+  Time-of-Day Preference sub-window and falls back to the full daily
+  window, and silently skips an occurrence with no room (a soft
+  preference, unlike `Fixed Commitment`/`Deadline Task`). Corrects an
+  earlier `PRIORITIES.md` scoping error that assumed `Trackable Item`
+  referenced a `Routine`, which the schema doesn't support.
 
 ### Changed
 

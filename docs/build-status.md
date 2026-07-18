@@ -19,7 +19,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
-| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). Data contracts (`src/scheduler/types.ts`) and hard-constraint placement (`src/scheduler/hard-constraints.ts` — Fixed Commitment + Deadline Task) implemented; flexible Trackable Item placement and app wiring still open. |
+| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). Data contracts, hard-constraint placement (Fixed Commitment + Deadline Task), and Routine occurrence placement implemented; flexible Trackable Item placement and app wiring still open. |
 | Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
@@ -181,3 +181,26 @@ new entry correcting it and say so explicitly.
   Commitment` filling the only day a `Deadline Task` could have used) and
   a combined no-overlap placement. `npm run verify` passes clean — 79
   tests total (10 new), lint/typecheck/build all clean.
+- 2026-07-18: `PRIORITIES.md`'s "Implement `Routine` occurrence placement"
+  item completed (Phase 2). This item's own earlier text had a scoping
+  error — it assumed `Trackable Item` referenced a `Routine`/`Time-of-Day
+  Preference`, which the schema doesn't support — caught and corrected in
+  `PRIORITIES.md` before writing any code. Added
+  `src/scheduler/routine-placement.ts` (`placeRoutines`): expands each
+  `Routine`'s occurrences for the target week from its `cadence`/`anchor`
+  (daily/weekly/monthly), searches its `timeOfDayPreference` sub-window
+  first and falls back to the full daily window, and silently skips an
+  occurrence with no room anywhere (a soft preference, not a
+  guardrail-covered fixed-deadline affair — no `SchedulerConflict`
+  raised). Refactored the free-window search shared by
+  `hard-constraints.ts` and this file into `src/scheduler/time.ts`'s
+  `findFreeInterval`, removing the duplicate copy that was in
+  `hard-constraints.ts` (behavior-preserving — its existing 10 tests still
+  pass unchanged). `src/scheduler/routine-placement.test.ts` (7 tests)
+  covers daily/weekly/monthly occurrence expansion (including a monthly
+  anchor date that does and doesn't fall in the target week), Time-of-Day
+  Preference sub-window placement, fallback to the full window when the
+  sub-window is busy, silent skip when the whole day is busy, and no
+  double-booking between two Routines competing for the same window.
+  `npm run verify` passes clean — 86 tests total (7 new), lint/typecheck/
+  build all clean.
