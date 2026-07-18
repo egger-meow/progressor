@@ -100,11 +100,34 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 - Phase 3 ("Elastic Re-Scheduling & Ad-hoc Events") closed: completion
   audit at
   `docs/audits/elastic-re-scheduling-and-ad-hoc-events-audit.md`; removed
-  from `ROADMAP.md`. No phase is currently authorized — `ROADMAP.md`'s
-  Active Phase is empty and every remaining "Proposed" entry (calendar
-  export/sync, notifications/reminders, mobile companion view) needs a
-  human-written goal and exit condition before the phase loop can
-  continue.
+  from `ROADMAP.md`.
+- Phase 4 ("Core Entity Creation UI") authorized by the project owner in
+  chat (2026-07-18), choosing it over the three pre-existing "Proposed"
+  phases specifically to unblock manual testing of the product itself —
+  every prior phase's walkthrough had relied on a temporary,
+  non-shipped `src/app/api/dev-seed/` route for exactly this reason.
+- `removeTrackableItem`/`removeRoutine`/`removeFixedCommitment`/
+  `removeDeadlineTask` (`src/server/*.ts`) — the one piece missing from
+  full CRUD at the service layer, mirroring `time-slots.ts`'s existing
+  `removeTimeSlot`. A dedicated test proves the delete-with-reference
+  safety gate: deleting a `TrackableItem` still referenced by a `Time
+  Slot` doesn't throw, and `listTimeSlotsWithLabels` degrades that
+  slot's label to `"(deleted trackable item)"` rather than corrupting or
+  crashing the Weekly View.
+- Creation UI for `Book`/`Course` (`/items`), `Routine` (`/routines`),
+  and `Semester Commitment` (`/commitments`), each following the Weekly
+  View's existing list + inline-edit + Server Action pattern. Every
+  existing service-layer validation now surfaces as a visible error
+  instead of only being reachable via a test or the temporary seed
+  route. Manually verified end-to-end for all five record kinds
+  (create/edit/delete, validation errors, and deleting a record still
+  referenced by a `Time Slot`) against the running dev server.
+- Phase 4 ("Core Entity Creation UI") closed: completion audit at
+  `docs/audits/core-entity-creation-ui-audit.md`; removed from
+  `ROADMAP.md`. No phase is currently authorized — every remaining
+  "Proposed" entry (calendar export/sync, notifications/reminders,
+  mobile companion view) needs a human-written goal and exit condition
+  before the phase loop can continue.
 
 ### Changed
 

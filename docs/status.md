@@ -11,7 +11,12 @@ concept from `docs/domain-model.md` is persisted at the data layer, the
 manual Weekly View (`Schedule`) is the primary UI-layer surface, and the
 `Scheduler` (`src/scheduler/`) both generates a `Schedule` from scratch
 (`computeSchedule`, Phase 2) and locally repairs one for a disruption
-(`repairSchedule`, Phase 3, active — see "Repair" below). Phases 1 and 2
+(`repairSchedule`, Phase 3 — see "Repair" below). Every domain record
+(`Book`/`Course`, `Routine`, `Fixed Commitment`, `Deadline Task`,
+`Ad-hoc Event`) now has real creation/edit/delete UI (Phase 4, active —
+see "Core Entity Creation UI" below), closing the gap that previously
+forced every phase's manual walkthrough to rely on a temporary,
+non-shipped seed route. Phases 1, 2, and 3
 are closed; see `docs/audits/` for their completion evidence.
 
 ## Verification Gates
@@ -62,7 +67,7 @@ Passed; see
 Passed; see
 [`docs/audits/constraint-based-auto-scheduler-v1-audit.md`](audits/constraint-based-auto-scheduler-v1-audit.md).
 
-#### Phase 3 — Elastic Re-Scheduling & Ad-hoc Events (active)
+#### Phase 3 — Elastic Re-Scheduling & Ad-hoc Events (closed)
 
 1. `npm run verify` passes.
 2. A documented set of disruption scenarios (skip today's reading session,
@@ -75,6 +80,26 @@ Passed; see
    another `Time Slot`) still holds.
 5. A written manual walkthrough against the running app (not just
    fixtures), executed and recorded in a `docs/audits/` entry.
+
+Passed; see
+[`docs/audits/elastic-re-scheduling-and-ad-hoc-events-audit.md`](audits/elastic-re-scheduling-and-ad-hoc-events-audit.md).
+
+#### Phase 4 — Core Entity Creation UI (active)
+
+Authorized by the project owner in chat (2026-07-18), choosing it over
+the three pre-existing `ROADMAP.md` "Proposed" phases specifically to
+unblock manual testing of the product itself — every prior phase's
+walkthrough had relied on a throwaway `src/app/api/dev-seed/` route.
+
+1. `npm run verify` passes.
+2. Through the running app alone, a human can create, edit, and delete a
+   `Book`, a `Course`, a `Routine`, a `Fixed Commitment`, and a `Deadline
+   Task` — each with its service layer's existing validation surfaced as
+   a visible error instead of a crash.
+3. Deleting a record still referenced by an existing `Time Slot` does not
+   corrupt or crash the Weekly View.
+4. A written manual walkthrough exercising all of the above, recorded in
+   `docs/audits/`.
 
 Later phases will each add fixture-replay tests to this section when
 they're activated — see their exit conditions in `../ROADMAP.md`.
@@ -282,6 +307,57 @@ inferred: the daily window the Scheduler may place flexible work in is
 normal); one "day" of an item's `estimatedDays` becomes one 2-hour session
 per calendar day it's scheduled.
 
+### Core Entity Creation UI (Phase 4)
+
+Three new routes, each following the Weekly View's existing plain
+list + inline-edit-via-`?edit=`-query-param + Server Action pattern
+(`src/app/page.tsx`'s pattern, reused rather than reinvented):
+
+- `/items` (`src/app/items/`) — create, edit, and delete `Book` and
+  `Course` records: title, type, priority, `unitCount`,
+  `unitsCompleted`, `estimatedDays`, `status`. `type` is immutable once
+  created (not part of the edit form, matching `updateTrackableItem`'s
+  input shape).
+- `/routines` (`src/app/routines/`) — create, edit, and delete `Routine`
+  records. `anchor` is entered as a comma-separated list ("1,3,5")
+  rather than a full weekday/day-of-month picker grid — an inferred
+  simplification, not a user decision, since a `Routine`'s anchor is an
+  occasional-edit field, not a frequent-input one.
+- `/commitments` (`src/app/commitments/`) — create, edit, and delete
+  both `Fixed Commitment` and `Deadline Task`, kept as two clearly
+  separate sections/forms rather than a merged form, matching
+  `domain-model.md`'s "deliberately non-interchangeable" framing.
+
+Every existing service-layer validation (`WIP Limit` enforcement,
+`Routine` cadence/anchor range checks, `Fixed Commitment`'s
+`startTime < endTime`) now surfaces as a visible `?error=` banner on
+these pages instead of only being reachable via a test or the temporary
+dev-seed route prior phases relied on. `removeTrackableItem`/
+`removeRoutine`/`removeFixedCommitment`/`removeDeadlineTask`
+(`src/server/*.ts`) were the one piece missing from full CRUD at the
+service layer before this phase — each throws on an unknown id, mirroring
+`time-slots.ts`'s existing `removeTimeSlot`.
+
+**Delete-with-reference guarantee:** `occupantId` was never a real
+foreign key (sqlite/Prisma has no polymorphic relations — see the `Time
+Slot` paragraph below), so deleting a record still referenced by an
+existing `Time Slot` was already safe at the data layer; this phase is
+what first exercises and documents it. `listTimeSlotsWithLabels`
+degrades that slot's label to e.g. `"(deleted trackable item)"` rather
+than throwing. Verified both by a dedicated test
+(`time-slots.test.ts`) and manually against the running dev server:
+deleting a `Book` that had a `Time Slot` on a future week left the
+Weekly View rendering correctly, with only that one slot's label
+changed and every other slot untouched.
+
+Manually verified end-to-end in the browser for all five record kinds:
+create, edit, and delete each succeeded; an invalid `Routine` anchor for
+its cadence and an out-of-order `Fixed Commitment` time range each
+surfaced as a visible error with nothing created; setting a `Trackable
+Item` to `"in-progress"` within its type's `WIP Limit` succeeded (the
+rejection path itself is covered by `trackable-items.test.ts`, already
+passing before this phase).
+
 ### Repair (Phase 3 — Elastic Re-Scheduling & Ad-hoc Events)
 
 `src/scheduler/repair.ts`'s `repairSchedule(input, disruption)` locally
@@ -352,10 +428,9 @@ and the Phase-1 manual-edit guarantee (one edit never corrupts another
 - "Generate Schedule" re-placing a `Fixed Commitment`/`Routine` occurrence
   as a duplicate `Time Slot` on repeated clicks for the same week — see
   the Scheduler section above for why and the tradeoff behind it.
-- No creation UI yet for `Book`/`Course`/`Routine`/`Semester Commitment`
-  — only `Time Slot` placement (manual or via "Generate Schedule") and,
-  as of Phase 3, `Ad-hoc Event` creation (via the Weekly View's "Quick
-  Ad-hoc Event" form) have a UI.
+- No UI yet to configure a `WIP Limit` (`setWipLimit`) — it defaults to
+  `DEFAULT_WIP_LIMIT` (3) per type and is only adjustable via the service
+  layer or a test.
 
 ## Configuration / Environment Notes
 
