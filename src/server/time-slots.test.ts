@@ -8,9 +8,11 @@ import {
   createTimeSlot,
   getTimeSlot,
   listTimeSlots,
+  listTimeSlotsWithLabels,
   removeTimeSlot,
   updateTimeSlot,
 } from "./time-slots";
+import { removeTrackableItem } from "./trackable-items";
 
 afterEach(async () => {
   await prisma.timeSlot.deleteMany();
@@ -225,5 +227,28 @@ describe("listTimeSlots", () => {
     await createTimeSlot({ ...hourSlot(8), occupantType: "slack" });
     await createTimeSlot({ ...hourSlot(9), occupantType: "slack" });
     expect(await listTimeSlots()).toHaveLength(2);
+  });
+});
+
+describe("listTimeSlotsWithLabels — occupant deleted out from under a Time Slot", () => {
+  it("degrades to a placeholder label instead of throwing (Core Entity Creation UI's delete guarantee)", async () => {
+    const item = await createTrackableItem({
+      title: "Some book",
+      type: "book",
+      priority: 1,
+      unitCount: 10,
+      estimatedDays: 5,
+    });
+    const slot = await createTimeSlot({
+      ...hourSlot(9),
+      occupantType: "trackable-item",
+      occupantId: item.id,
+    });
+
+    await removeTrackableItem(item.id);
+
+    const labeled = await listTimeSlotsWithLabels();
+    const found = labeled.find((s) => s.id === slot.id);
+    expect(found?.occupantLabel).toBe("(deleted trackable item)");
   });
 });

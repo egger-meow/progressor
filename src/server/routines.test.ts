@@ -1,6 +1,12 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { prisma } from "./db";
-import { createRoutine, getRoutine, listRoutines, updateRoutine } from "./routines";
+import {
+  createRoutine,
+  getRoutine,
+  listRoutines,
+  removeRoutine,
+  updateRoutine,
+} from "./routines";
 
 afterEach(async () => {
   await prisma.routine.deleteMany();
@@ -167,5 +173,17 @@ describe("getRoutine / listRoutines", () => {
 
   it("returns null for a nonexistent routine", async () => {
     expect(await getRoutine("does-not-exist")).toBeNull();
+  });
+});
+
+describe("removeRoutine", () => {
+  it("deletes an existing routine", async () => {
+    const routine = await createRoutine({ title: "Gym", category: "gym", cadence: "daily" });
+    await removeRoutine(routine.id);
+    expect(await getRoutine(routine.id)).toBeNull();
+  });
+
+  it("throws rather than silently no-op-ing for an unknown id", async () => {
+    await expect(removeRoutine("does-not-exist")).rejects.toThrow(/not found/);
   });
 });

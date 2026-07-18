@@ -7,6 +7,8 @@ import {
   getFixedCommitment,
   listDeadlineTasks,
   listFixedCommitments,
+  removeDeadlineTask,
+  removeFixedCommitment,
   updateDeadlineTask,
   updateFixedCommitment,
 } from "./semester-commitments";
@@ -189,5 +191,33 @@ describe("get / list", () => {
   it("returns null for a nonexistent id", async () => {
     expect(await getFixedCommitment("does-not-exist")).toBeNull();
     expect(await getDeadlineTask("does-not-exist")).toBeNull();
+  });
+});
+
+describe("removeFixedCommitment / removeDeadlineTask", () => {
+  it("deletes an existing FixedCommitment", async () => {
+    const commitment = await createFixedCommitment({
+      title: "Class",
+      dayOfWeek: 1,
+      startTime: "09:00",
+      endTime: "10:00",
+    });
+    await removeFixedCommitment(commitment.id);
+    expect(await getFixedCommitment(commitment.id)).toBeNull();
+  });
+
+  it("deletes an existing DeadlineTask", async () => {
+    const task = await createDeadlineTask({
+      title: "Report",
+      dueAt: new Date("2026-08-01"),
+      estimatedDays: 1,
+    });
+    await removeDeadlineTask(task.id);
+    expect(await getDeadlineTask(task.id)).toBeNull();
+  });
+
+  it("throws rather than silently no-op-ing for an unknown id", async () => {
+    await expect(removeFixedCommitment("does-not-exist")).rejects.toThrow(/not found/);
+    await expect(removeDeadlineTask("does-not-exist")).rejects.toThrow(/not found/);
   });
 });

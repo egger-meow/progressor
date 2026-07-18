@@ -137,6 +137,14 @@ export async function createTrackableItem(input: CreateTrackableItemInput) {
   });
 }
 
+export async function removeTrackableItem(id: string): Promise<void> {
+  const existing = await prisma.trackableItem.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error(`TrackableItem not found: ${id}`);
+  }
+  await prisma.trackableItem.delete({ where: { id } });
+}
+
 export async function updateTrackableItem(
   id: string,
   input: UpdateTrackableItemInput,

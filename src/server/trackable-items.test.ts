@@ -6,6 +6,7 @@ import {
   DEFAULT_WIP_LIMIT,
   getWipLimit,
   listTrackableItems,
+  removeTrackableItem,
   setWipLimit,
   updateTrackableItem,
   WipLimitExceededError,
@@ -146,6 +147,18 @@ describe("WIP limit enforcement", () => {
     const updated = await updateTrackableItem(a.id, { unitsCompleted: 3 });
     expect(updated.unitsCompleted).toBe(3);
     expect(updated.status).toBe("in-progress");
+  });
+});
+
+describe("removeTrackableItem", () => {
+  it("deletes an existing item", async () => {
+    const book = await createTrackableItem(bookInput());
+    await removeTrackableItem(book.id);
+    expect(await listTrackableItems("book")).toEqual([]);
+  });
+
+  it("throws rather than silently no-op-ing for an unknown id", async () => {
+    await expect(removeTrackableItem("does-not-exist")).rejects.toThrow(/not found/);
   });
 });
 

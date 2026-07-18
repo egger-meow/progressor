@@ -93,6 +93,14 @@ export async function updateFixedCommitment(
   });
 }
 
+export async function removeFixedCommitment(id: string): Promise<void> {
+  const existing = await prisma.fixedCommitment.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error(`FixedCommitment not found: ${id}`);
+  }
+  await prisma.fixedCommitment.delete({ where: { id } });
+}
+
 export function getFixedCommitment(id: string) {
   return prisma.fixedCommitment.findUnique({ where: { id } });
 }
@@ -152,6 +160,14 @@ export async function updateDeadlineTask(
       estimatedDays: input.estimatedDays,
     },
   });
+}
+
+export async function removeDeadlineTask(id: string): Promise<void> {
+  const existing = await prisma.deadlineTask.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error(`DeadlineTask not found: ${id}`);
+  }
+  await prisma.deadlineTask.delete({ where: { id } });
 }
 
 export function getDeadlineTask(id: string) {

@@ -94,6 +94,14 @@ export async function createRoutine(input: CreateRoutineInput) {
   return withParsedAnchor(routine);
 }
 
+export async function removeRoutine(id: string): Promise<void> {
+  const existing = await prisma.routine.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error(`Routine not found: ${id}`);
+  }
+  await prisma.routine.delete({ where: { id } });
+}
+
 export async function updateRoutine(id: string, input: UpdateRoutineInput) {
   const existing = await prisma.routine.findUnique({ where: { id } });
   if (!existing) {
