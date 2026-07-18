@@ -24,9 +24,19 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   kinds, `FixedCommitment` and `DeadlineTask` (`src/server/
   semester-commitments.ts`), as deliberately separate, non-interchangeable
   models and service functions.
+- `Ad-hoc Event` (`src/server/ad-hoc-events.ts`) and `Time Slot`
+  (`src/server/time-slots.ts`), with occupant-existence validation across
+  all five referenceable occupant kinds plus `slack`.
 
 ### Changed
 
 ### Fixed
+
+- Vitest test files raced on the shared SQLite test database when run in
+  parallel, corrupting other files' in-progress assertions; disabled
+  `fileParallelism` in `vitest.config.ts`.
+- `updateTimeSlot` silently reused a `Time Slot`'s previous `occupantId`
+  when `occupantType` changed without a new id — now requires a fresh
+  `occupantId` whenever the type changes.
 
 ### Removed

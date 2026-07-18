@@ -20,7 +20,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
 | Auto-Scheduling Engine | Blocked | Intentionally deferred to Phase 2 (`../ROADMAP.md`) until the data layer is proven in Phase 1. |
-| Schedule View / Export | Planned | Manual Weekly View is Phase 1 scope; calendar export is Proposed, not authorized. |
+| Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented (`src/server/time-slots.ts`, `src/server/ad-hoc-events.ts`); Weekly View UI is the next `PRIORITIES.md` item. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
 
@@ -92,3 +92,23 @@ new entry correcting it and say so explicitly.
   immediately instead of producing a rejected `Promise`, which
   `expect(...).rejects.toThrow()` cannot observe; fixed by marking both
   `async`. Output inspected directly.
+- 2026-07-18: `PRIORITIES.md`'s `Ad-hoc Event`/`Time Slot` item completed.
+  Added `AdHocEvent` and `TimeSlot` to `prisma/schema.prisma` (migration
+  `20260718034135_ad_hoc_event_time_slot`) plus `src/server/
+  ad-hoc-events.ts` and `src/server/time-slots.ts`. `TimeSlot.occupantId`
+  is not a foreign key (no polymorphic relations in Prisma/sqlite);
+  existence is checked directly against the matching table instead —
+  tested for all five real occupant kinds plus a dangling-id rejection.
+  A dedicated neighbor-isolation test proves editing or removing one
+  `TimeSlot` never touches another (blocker #4). Two real bugs were caught
+  by the first `npm run verify` run and fixed before this was called
+  done: (1) 5 failures traced to Vitest running test files in parallel
+  against the single shared `prisma/test.db`, so one file's `afterEach`
+  cleanup was deleting rows another file's still-running test depended on
+  — fixed by setting `fileParallelism: false` in `vitest.config.ts`
+  (files now run sequentially; see that file's comment); (2)
+  `updateTimeSlot` silently reused the previous `occupantId` when
+  `occupantType` changed without a new id being supplied, which is wrong
+  — an id from the old occupant type has no meaning under the new one —
+  fixed to require a fresh `occupantId` whenever `occupantType` changes.
+  69 tests pass total (24 new). Output inspected directly.

@@ -78,3 +78,33 @@ model DeadlineTask {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// AdHocEvent implements docs/domain-model.md's "Ad-hoc Event". It has no
+// startAt/endAt of its own — those live on the TimeSlot(s) that reference
+// it, per that doc's Time Slot definition.
+model AdHocEvent {
+  id        String   @id @default(cuid())
+  title     String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// TimeSlot implements docs/domain-model.md's "Time Slot": the atomic
+// bookable unit, referencing one of six occupant kinds (or none, for
+// Slack). Prisma/sqlite has no polymorphic relation support, so the
+// occupant is a discriminator (`occupantType`) plus a loose id
+// (`occupantId`, not a foreign key) — src/server/time-slots.ts validates
+// that `occupantType` is one of the six kinds and, when it isn't "slack",
+// that `occupantId` actually exists in the corresponding table.
+model TimeSlot {
+  id           String   @id @default(cuid())
+  startAt      DateTime
+  endAt        DateTime
+  occupantType String
+  occupantId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([startAt, endAt])
+}

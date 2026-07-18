@@ -83,9 +83,23 @@ validated so `startTime < endTime`) and `DeadlineTask` (`dueAt`,
 `estimatedDays`). Passing one kind's shape to the other's create function
 is rejected at runtime, not just by the type checker.
 
-`Ad-hoc Event` and `Schedule` are not implemented yet — only their
-definitions in `domain-model.md`. The remaining `PRIORITIES.md` items build
-those up next.
+`Ad-hoc Event` (`src/server/ad-hoc-events.ts`) and `Time Slot`
+(`src/server/time-slots.ts`) are implemented. A `TimeSlot` has
+`occupantType` (one of `"routine" | "fixed-commitment" | "deadline-task" |
+"trackable-item" | "ad-hoc-event" | "slack"`) and `occupantId`; since
+sqlite/Prisma has no polymorphic relation support, `occupantId` isn't a
+foreign key — `createTimeSlot`/`updateTimeSlot` instead query the
+corresponding table directly to confirm the referenced record exists,
+rejecting a dangling reference rather than silently storing it.
+Overlapping `Time Slot`s are allowed on purpose: the charter's guardrail
+that an `Ad-hoc Event` always outranks flexible work, and that the user can
+always override a slot, both presuppose two things can want the same time
+— resolving that is a Phase 2 `Scheduler` concern, not a Phase 1 storage
+constraint. Editing or removing one `Time Slot` never touches another
+(verified directly by test, not just by the absence of a relation).
+
+`Schedule` (the Weekly View) is not implemented yet — that's the next
+`PRIORITIES.md` item.
 
 ## Known Limits
 
