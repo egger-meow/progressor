@@ -165,11 +165,31 @@ shared free-window search both `hard-constraints.ts` and
 `routine-placement.ts` use, so "find room in this window" behaves
 identically everywhere in the Scheduler.
 
-No flexible (`Trackable Item`) placement exists yet, and nothing in
-`src/scheduler/` is wired into the running app yet — both are upcoming
-`PRIORITIES.md` items. Deliberately no `@prisma/client` import anywhere
-under `src/scheduler/`; these types and functions mirror, but don't
-import, the shapes in `src/server/*`, per
+`src/scheduler/flexible-placement.ts`'s `placeFlexibleTrackableItems`
+places the last, most flexible layer: one work session per eligible
+`Trackable Item`, in `priority` order (lower number = higher priority,
+scheduled first). "Eligible" is every already-`in-progress` item plus
+`not-started`/`paused` items promoted up to each `type`'s remaining `WIP
+Limit` capacity (highest priority promoted first) — this doesn't persist
+any status change, it only decides who gets a proposed session, since the
+Scheduler never writes to the store. A `type` missing from the input's
+`wipLimits` is treated as zero remaining capacity, not unlimited, so
+incomplete input can't silently violate the limit. Each session searches
+the week's days in order for free time, skipping a day once placing the
+session would push that day's used time past a configured minimum daily
+`Slack` share (`MIN_SLACK_SHARE_PER_DAY` in `constants.ts`, currently 20%
+— an inferred placeholder, not a user decision, same status as
+`DEFAULT_WIP_LIMIT`) — deliberately leaving part of each day unscheduled
+rather than packing it solid. Like a `Routine` occurrence, an item with no
+room anywhere this week simply gets no session; no `SchedulerConflict` is
+raised for it.
+
+Nothing in `src/scheduler/` is wired into the running app yet, and there
+is no single `computeSchedule` entry point combining hard-constraint,
+`Routine`, and flexible placement into one `SchedulerOutput` — both are
+upcoming `PRIORITIES.md` items. Deliberately no `@prisma/client` import
+anywhere under `src/scheduler/`; these types and functions mirror, but
+don't import, the shapes in `src/server/*`, per
 `docs/system-direction.md`'s layering rule.
 
 **Scheduling parameters** (`src/scheduler/constants.ts`) — chosen by the

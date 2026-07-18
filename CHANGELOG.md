@@ -57,6 +57,11 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   preference, unlike `Fixed Commitment`/`Deadline Task`). Corrects an
   earlier `PRIORITIES.md` scoping error that assumed `Trackable Item`
   referenced a `Routine`, which the schema doesn't support.
+- Scheduler flexible Trackable Item placement
+  (`src/scheduler/flexible-placement.ts`): one session per eligible item
+  in `priority` order, WIP-Limit-aware promotion of `not-started`/`paused`
+  items, and a new `MIN_SLACK_SHARE_PER_DAY` (20%, an inferred default) so
+  flexible placement never packs a day solid.
 
 ### Changed
 

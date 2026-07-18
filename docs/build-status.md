@@ -19,7 +19,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
-| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). Data contracts, hard-constraint placement (Fixed Commitment + Deadline Task), and Routine occurrence placement implemented; flexible Trackable Item placement and app wiring still open. |
+| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). Data contracts, hard-constraint (Fixed Commitment + Deadline Task), Routine, and flexible Trackable Item placement all implemented; no combined `computeSchedule` entry point yet, no fixture end-to-end suite, no app wiring. |
 | Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
@@ -204,3 +204,27 @@ new entry correcting it and say so explicitly.
   double-booking between two Routines competing for the same window.
   `npm run verify` passes clean — 86 tests total (7 new), lint/typecheck/
   build all clean.
+- 2026-07-18: `PRIORITIES.md`'s "Implement priority-ordered flexible
+  placement for Trackable Item work sessions" item completed (Phase 2).
+  Added `src/scheduler/flexible-placement.ts`
+  (`placeFlexibleTrackableItems`): selects eligible items (already
+  `in-progress`, plus `not-started`/`paused` items promoted up to each
+  type's remaining `WIP Limit` capacity, highest priority first — a type
+  missing from `wipLimits` is treated as zero capacity, not unlimited),
+  places one session per eligible item in priority order, and enforces a
+  new `MIN_SLACK_SHARE_PER_DAY` constant (20%, `src/scheduler/
+  constants.ts`) that stops a day from being packed past that share even
+  when a technically-free interval still exists. `src/scheduler/
+  flexible-placement.test.ts` (8 tests) covers: an in-progress item always
+  getting a session; WIP-Limit promotion picking only the highest-priority
+  `not-started` item; `book`/`course` capacity being independent; already
+  in-progress items still getting sessions even if that exceeds a since-
+  lowered limit; priority order determining which item gets the earlier
+  slot; the Slack minimum pushing a session to the next day once a day is
+  packed enough; no double-booking against pre-existing busy time; and a
+  silent (no-conflict) skip when an item has no room anywhere in the week.
+  `npm run verify` passes clean — 94 tests total (8 new), lint/typecheck/
+  build all clean. Noted gap for the next item: there is still no single
+  `computeSchedule` function combining hard-constraint, Routine, and
+  flexible placement into one `SchedulerOutput` — each layer is tested and
+  callable independently, but nothing composes them yet.
