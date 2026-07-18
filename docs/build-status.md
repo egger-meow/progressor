@@ -19,7 +19,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
 | Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
-| Auto-Scheduling Engine | Planned | Phase 2 active (`../ROADMAP.md`). Pure data contracts defined (`src/scheduler/types.ts`); no placement logic yet. |
+| Auto-Scheduling Engine | Partial | Phase 2 active (`../ROADMAP.md`). Data contracts (`src/scheduler/types.ts`) and hard-constraint placement (`src/scheduler/hard-constraints.ts` — Fixed Commitment + Deadline Task) implemented; flexible Trackable Item placement and app wiring still open. |
 | Schedule View / Export | Partial | `Time Slot`/`Ad-hoc Event` storage implemented plus the manual Weekly View UI (`src/app/page.tsx`, `src/app/actions.ts`); no UI yet to create the records a `Time Slot` can reference. Calendar export is Proposed, not authorized. |
 
 ## Next Build Milestones
@@ -158,3 +158,26 @@ new entry correcting it and say so explicitly.
   an explanatory comment, not an actual import). `npm run verify` passes
   clean (still 69 tests — this item is types only, no runtime logic to
   test yet). No manual walkthrough needed for a types-only change.
+- 2026-07-18: `PRIORITIES.md`'s "Implement hard-constraint placement"
+  item completed (Phase 2). Before writing placement logic, stopped and
+  asked the human two scheduling-parameter questions that no doc answered
+  and that would have shaped every future schedule if guessed silently
+  (unlike `DEFAULT_WIP_LIMIT`): the daily window the Scheduler may place
+  flexible work in, and how `estimatedDays` becomes actual session hours.
+  Answers (`08:00`–`23:00`; one 2-hour session per scheduled day) recorded
+  in `src/scheduler/constants.ts`. Added `src/scheduler/time.ts` (pure
+  date helpers) and `src/scheduler/hard-constraints.ts`
+  (`placeFixedCommitments`, `placeDeadlineTasks`, `placeHardConstraints`).
+  `src/scheduler/hard-constraints.test.ts` (10 tests) covers: a `Fixed
+  Commitment` placed at its exact anchored time; two overlapping `Fixed
+  Commitment`s both still placed with a conflict flagged for each; a
+  `Fixed Commitment` overlapping an existing `Ad-hoc Event` slot still
+  placed but flagged; non-overlapping commitments producing no false-
+  positive conflict; a `Deadline Task` placed in the earliest free window;
+  a `Deadline Task` correctly skipping already-busy time within a day; an
+  already-past-deadline task producing a conflict with no fabricated
+  placement; two `Deadline Task`s never double-booking each other; and,
+  via `placeHardConstraints`, a genuine capacity conflict (a `Fixed
+  Commitment` filling the only day a `Deadline Task` could have used) and
+  a combined no-overlap placement. `npm run verify` passes clean — 79
+  tests total (10 new), lint/typecheck/build all clean.

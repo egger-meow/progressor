@@ -41,6 +41,14 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   (proposed `Time Slot`s plus an explicit conflict list), with no
   `@prisma/client` import anywhere under `src/scheduler/` — the first piece
   of Phase 2's Scheduler layer.
+- Scheduler hard-constraint placement (`src/scheduler/hard-constraints.ts`):
+  `Fixed Commitment` occurrences always place at their anchored time and
+  flag (never hide) a clash with another `Fixed Commitment` or an existing
+  `Ad-hoc Event` slot; `Deadline Task` sessions search for free time before
+  their deadline and report an explicit conflict, with nothing fabricated,
+  when none exists. Daily scheduling window (`08:00`–`23:00`) and session
+  length (2h/day) are configured in `src/scheduler/constants.ts` per the
+  project owner's explicit decision, not inferred.
 
 ### Changed
 

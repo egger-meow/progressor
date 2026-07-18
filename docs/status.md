@@ -124,17 +124,41 @@ placement has a UI, per this `PRIORITIES.md` item's specific "Done ="
 condition. Styling is intentionally plain (see `PRIORITIES.md`'s
 Non-Blocking section — Phase 1 needs this correct, not pretty).
 
-`Scheduler` (`src/scheduler/types.ts`) currently defines only the pure data
-contracts Phase 2 will compute against: `SchedulerInput` (a snapshot of
-`Trackable Item`s, `Routine`s, `Fixed Commitment`s, `Deadline Task`s,
-`Ad-hoc Event`s, `WIP Limit`s, and already-placed `Time Slot`s for a target
-week) and `SchedulerOutput` (proposed `Time Slot`s plus an explicit
-`SchedulerConflict` list for anything that couldn't be placed, so a `Fixed
-Commitment`/`Deadline Task` is never silently dropped). No placement logic
-exists yet — that's the next `PRIORITIES.md` items. Deliberately no
-`@prisma/client` import anywhere under `src/scheduler/`; the types mirror,
-but don't import, the shapes in `src/server/*`, per
+`Scheduler` (`src/scheduler/`) defines the pure data contracts
+(`types.ts`: `SchedulerInput`/`SchedulerOutput`, see below) and now the
+hard-constraint half of placement (`hard-constraints.ts`):
+`placeFixedCommitments` places every `Fixed Commitment` occurrence at its
+anchored day/time within the target week — this never fails to place
+(overlapping `Time Slot`s are allowed by design, see below), but it does
+detect and flag two `Fixed Commitment`s, or a `Fixed Commitment` and an
+existing `Ad-hoc Event` `Time Slot`, landing on the same time, as a
+`SchedulerConflict` (reason `"fixed-commitment-unplaceable"`) — surfaced,
+not silently hidden, per the charter's guardrail against silently dropping
+a fixed-deadline affair. `placeDeadlineTasks` searches each day of the
+target week, in order, for a free window (within the configured daily
+scheduling window, see Configuration below) before the task's `dueAt`
+(clamped to the week), and places one session there; if no day has room,
+it reports a `SchedulerConflict` (reason `"deadline-task-unplaceable"`)
+instead of fabricating an overlapping placement — unlike a `Fixed
+Commitment`, a `Deadline Task` session is flexible/movable, so a
+fabricated overlap would misrepresent real availability. A task already
+past its deadline (or due exactly at `weekStart`) naturally falls through
+to this same conflict path — no separate "is this overdue" branch exists.
+`placeHardConstraints` combines both and ensures a `Deadline Task` session
+never double-books a `Fixed Commitment` occurrence or an existing `Time
+Slot`. No flexible (`Trackable Item`) placement exists yet, and nothing in
+`src/scheduler/` is wired into the running app yet — both are upcoming
+`PRIORITIES.md` items. Deliberately no `@prisma/client` import anywhere
+under `src/scheduler/`; these types and functions mirror, but don't
+import, the shapes in `src/server/*`, per
 `docs/system-direction.md`'s layering rule.
+
+**Scheduling parameters** (`src/scheduler/constants.ts`) — chosen by the
+project owner on 2026-07-18 when the Scheduler needed them, not silently
+inferred: the daily window the Scheduler may place flexible work in is
+`08:00`–`23:00` (`Fixed Commitment`s outside this window still place as
+normal); one "day" of an item's `estimatedDays` becomes one 2-hour session
+per calendar day it's scheduled.
 
 ## Known Limits
 
