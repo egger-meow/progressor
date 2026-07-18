@@ -71,19 +71,14 @@ Everything else that's real work but doesn't meet this bar belongs under
 This is the decomposition of `ROADMAP.md`'s Active Phase, "Data Layer &
 Manual Weekly View."
 
-1. **Implement `Routine` and `Semester Commitment` (`Fixed Commitment` +
-   `Deadline Task`) data models.** Done = service-layer CRUD for both;
-   `Deadline Task` requires a `dueAt`, `Fixed Commitment` requires a
-   recurring slot — the two are not interchangeable in code; unit tests
-   cover creation and the validation difference.
-2. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
+1. **Implement `Ad-hoc Event` and `Time Slot` storage.** Done = a `Time
    Slot` can reference any occupant kind from `domain-model.md`; manual
    create/edit/remove of a `Time Slot` works without touching unrelated
    `Time Slot`s (blocker #4).
-3. **Build the manual Weekly View.** Done = renders 本週 from real stored
+2. **Build the manual Weekly View.** Done = renders 本週 from real stored
    data, navigates to 上週/下週, and every `Time Slot` on it can be added,
    edited, or removed by hand per `ROADMAP.md`'s exit condition.
-4. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
+3. **Write the Phase 1 walkthrough and close the phase gate.** Done = a
    `docs/audits/` entry recording actual verification of every bullet in
    `ROADMAP.md`'s Active Phase exit condition, per `docs/status.md`'s Phase
    Gate section.

@@ -65,9 +65,27 @@ limit (3, `DEFAULT_WIP_LIMIT`) is an inferred placeholder, not a value the
 user chose — `setWipLimit` overrides it per type. No UI exists yet for any
 of this (that's Weekly View, `PRIORITIES.md` item 3).
 
-`Routine`, `Semester Commitment`, `Ad-hoc Event`, and `Schedule` are not
-implemented yet — only their definitions in `domain-model.md`. The
-remaining `PRIORITIES.md` items build those up next.
+`Routine` is implemented (`src/server/routines.ts`): `cadence` is
+`"daily" | "weekly" | "monthly"`; `anchor` is a JSON-encoded array of
+integers whose valid range depends on `cadence` (weekday(s) 0-6 for
+weekly, day(s)-of-month 1-31 for monthly, unused for daily) — the service
+layer parses/serializes it so callers work with plain `number[]`.
+`timeOfDayPreference` is one of `"morning" | "afternoon" | "evening" |
+"night"`; an explicit hour-range alternative mentioned in
+`domain-model.md` is not implemented (Phase 1 doesn't require it — flagged
+as a scope-narrowing decision, not a user answer).
+
+`Semester Commitment`'s two kinds are implemented as separate models and
+separate service modules, deliberately not sharing a type or a
+create/update function (`src/server/semester-commitments.ts`):
+`FixedCommitment` (`dayOfWeek` 0-6, `startTime`/`endTime` as `"HH:mm"`,
+validated so `startTime < endTime`) and `DeadlineTask` (`dueAt`,
+`estimatedDays`). Passing one kind's shape to the other's create function
+is rejected at runtime, not just by the type checker.
+
+`Ad-hoc Event` and `Schedule` are not implemented yet — only their
+definitions in `domain-model.md`. The remaining `PRIORITIES.md` items build
+those up next.
 
 ## Known Limits
 

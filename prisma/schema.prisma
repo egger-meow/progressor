@@ -36,3 +36,45 @@ model WipLimit {
   type          String @id
   maxInProgress Int
 }
+
+// Routine implements docs/domain-model.md's "Routine". `cadence` and
+// `timeOfDayPreference` are plain strings for the same reason as
+// TrackableItem's `type`/`status` (no sqlite enum support). `anchor`'s
+// shape depends on `cadence` (weekday(s) for weekly, day(s)-of-month for
+// monthly, unused for daily), so it's stored as a JSON-encoded array of
+// integers and validated in src/server/routines.ts rather than as columns.
+model Routine {
+  id                  String   @id @default(cuid())
+  title               String
+  category            String
+  cadence             String
+  anchor              String?
+  timeOfDayPreference String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// FixedCommitment and DeadlineTask both implement docs/domain-model.md's
+// "Semester Commitment" umbrella — deliberately two separate models, not
+// one polymorphic table, because the two kinds are semantically
+// incompatible (hard constraint vs. flexible-before-a-deadline) and must
+// stay non-interchangeable in code, per that doc's Naming Conventions
+// section (the same rule that keeps Routine and Fixed Commitment apart).
+model FixedCommitment {
+  id        String   @id @default(cuid())
+  title     String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeadlineTask {
+  id            String   @id @default(cuid())
+  title         String
+  dueAt         DateTime
+  estimatedDays Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

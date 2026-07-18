@@ -17,7 +17,7 @@ commit. For fine-grained current behavior, see `status.md`.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Item Tracking | Partial | `Trackable Item` (`Book`/`Course`) + `WIP Limit` implemented at the data layer (`src/server/trackable-items.ts`); no UI yet. |
-| Routine & Commitment Management | Planned | Same — `Routine` and `Semester Commitment` concepts documented, not implemented. |
+| Routine & Commitment Management | Partial | `Routine`, `FixedCommitment`, `DeadlineTask` implemented at the data layer (`src/server/routines.ts`, `src/server/semester-commitments.ts`); no UI yet. |
 | Preference & Constraint Capture | Planned | `Time-of-Day Preference` and `WIP Limit` documented; enforcement not implemented. |
 | Auto-Scheduling Engine | Blocked | Intentionally deferred to Phase 2 (`../ROADMAP.md`) until the data layer is proven in Phase 1. |
 | Schedule View / Export | Planned | Manual Weekly View is Phase 1 scope; calendar export is Proposed, not authorized. |
@@ -75,3 +75,20 @@ new entry correcting it and say so explicitly.
   directly. Note: `DEFAULT_WIP_LIMIT = 3` is an inferred placeholder, not a
   value the human chose — flagged in `src/server/trackable-items.ts` and
   `docs/status.md`.
+- 2026-07-18: `PRIORITIES.md`'s `Routine`/`Semester Commitment` item
+  completed. Added `Routine`, `FixedCommitment`, `DeadlineTask` to
+  `prisma/schema.prisma` (migration
+  `20260718033624_routine_semester_commitment`) plus
+  `src/server/routines.ts` and `src/server/semester-commitments.ts`. Ran
+  `npm run verify` — 45 tests pass total (30 new), including
+  cadence-dependent anchor validation (weekly/monthly require a
+  non-empty, range-checked anchor; daily forbids one and clears it on a
+  cadence change) and, for the two Semester Commitment kinds, both a
+  type-level and a runtime check that one kind's fields are rejected by
+  the other's create function. Worth recording: the first `npm run
+  verify` run caught a real bug via 6 failing tests —
+  `createFixedCommitment`/`createDeadlineTask` were initially plain
+  (non-`async`) functions, so their synchronous validation threw
+  immediately instead of producing a rejected `Promise`, which
+  `expect(...).rejects.toThrow()` cannot observe; fixed by marking both
+  `async`. Output inspected directly.

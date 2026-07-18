@@ -20,6 +20,10 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 - `Trackable Item` (`Book`/`Course`) data model and `WIP Limit` enforcement
   (`prisma/schema.prisma`, `src/server/trackable-items.ts`), enforced
   independently per type on both creation and status updates.
+- `Routine` (`src/server/routines.ts`) and `Semester Commitment`'s two
+  kinds, `FixedCommitment` and `DeadlineTask` (`src/server/
+  semester-commitments.ts`), as deliberately separate, non-interchangeable
+  models and service functions.
 
 ### Changed
 
