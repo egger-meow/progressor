@@ -291,3 +291,25 @@ new entry correcting it and say so explicitly.
   bug — deduplication was not part of this item's scope and the human
   chose the simplest of the three re-run policies knowing it was the
   safest, not the most polished.
+- 2026-07-20: two task-level items from `INBOX.md` ("books and course
+  different kind, sorted books only books and course are course... a
+  block on time table should also have book detail (which chapter)")
+  completed directly (small enough not to need a `ROADMAP.md` phase).
+  (1) `/items` (`src/app/items/priority-list.tsx`) now renders separate
+  drag-and-drop lists for `Book` and `Course`, each with its own rank
+  badge; a new pure helper, `reorderWithinType`
+  (`src/app/items/priority-order.ts`, 2 new unit tests), splices only the
+  dragged type's subsequence back into the full priority order so the
+  other type's items and the Scheduler's existing cross-type interleave
+  are untouched — no Scheduler change needed. (2) `occupantLabel`
+  (`src/server/time-slots.ts`) now includes which `Chapter`/`Video` a
+  `Trackable Item` session is for (`unitsCompleted + 1` capped at
+  `unitCount`), and, closing a leftover Phase 5 gap, is fully Traditional
+  Chinese for every occupant kind (it was still English before this).
+  `npm run verify` passes — 131 tests (2 new), lint/typecheck/build all
+  clean. Manually verified against the running dev server: added a `Book`
+  and a `Course`, confirmed each ranked independently at 1 in its own
+  section; generated the schedule and confirmed the resulting blocks read
+  `書籍：Deep Work（第 1 章／共 12 章）` and `課程：Algorithms
+  Course（第 1 支影片／共 30 支影片）`. Test/seed data cleared from
+  `prisma/dev.db` afterward.

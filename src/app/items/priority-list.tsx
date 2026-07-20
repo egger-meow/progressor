@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteTrackableItemAction, reorderItemsAction } from "./actions";
+import { reorderWithinType } from "./priority-order";
 import styles from "../page.module.css";
 
 export interface PriorityListItem {
@@ -60,7 +61,7 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  function handleDrop(targetId: string) {
+  function handleDrop(type: PriorityListItem["type"], targetId: string) {
     const draggedId = dragId;
     setDragId(null);
     setOverId(null);
@@ -68,14 +69,17 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
       return;
     }
 
-    const next = [...order];
-    const fromIndex = next.findIndex((item) => item.id === draggedId);
-    const toIndex = next.findIndex((item) => item.id === targetId);
+    const typeItems = order.filter((item) => item.type === type);
+    const fromIndex = typeItems.findIndex((item) => item.id === draggedId);
+    const toIndex = typeItems.findIndex((item) => item.id === targetId);
     if (fromIndex === -1 || toIndex === -1) {
       return;
     }
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
+    const nextTypeItems = [...typeItems];
+    const [moved] = nextTypeItems.splice(fromIndex, 1);
+    nextTypeItems.splice(toIndex, 0, moved);
+
+    const next = reorderWithinType(order, type, nextTypeItems);
     setOrder(next);
     setStatusMessage("正在重新排程…");
 
@@ -94,10 +98,15 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
     return <p className={styles.empty}>尚未新增任何書籍或課程。</p>;
   }
 
-  return (
-    <div>
+  function renderGroup(type: PriorityListItem["type"]) {
+    const groupItems = order.filter((item) => item.type === type);
+    if (groupItems.length === 0) {
+      return <p className={styles.empty}>尚未新增任何{TYPE_LABELS[type]}。</p>;
+    }
+
+    return (
       <ul className={styles.priorityList}>
-        {order.map((item, index) => {
+        {groupItems.map((item, index) => {
           const isDragging = dragId === item.id;
           const isOver = overId === item.id && dragId !== null && dragId !== item.id;
           const className = isDragging
@@ -118,7 +127,7 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
               }}
               onDrop={(event) => {
                 event.preventDefault();
-                handleDrop(item.id);
+                handleDrop(type, item.id);
               }}
               onDragEnd={() => {
                 setDragId(null);
@@ -132,8 +141,8 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
               <span className={styles.recordMain}>
                 <span className={styles.recordTitle}>{item.title}</span>
                 <span className={styles.recordMeta}>
-                  {TYPE_LABELS[item.type]} · {STATUS_LABELS[item.status] ?? item.status} ·{" "}
-                  {item.unitsCompleted}/{item.unitCount} 單元 · 預估 {item.estimatedDays} 天
+                  {STATUS_LABELS[item.status] ?? item.status} · {item.unitsCompleted}/
+                  {item.unitCount} 單元 · 預估 {item.estimatedDays} 天
                 </span>
               </span>
               <span className={styles.slotActions}>
@@ -151,6 +160,15 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
           );
         })}
       </ul>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className={styles.priorityGroupHeading}>書籍</h2>
+      {renderGroup("book")}
+      <h2 className={styles.priorityGroupHeading}>課程</h2>
+      {renderGroup("course")}
       <p className={styles.priorityStatus} role="status" aria-live="polite">
         {isPending ? "正在重新排程…" : statusMessage}
       </p>

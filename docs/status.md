@@ -509,6 +509,42 @@ simulation — this session's Browser-pane screenshot/pointer tooling was
 unavailable (timed out) independent of the app itself (server logs and
 console stayed clean throughout); see Exceptions in this phase's audit.
 
+### Per-Type Priority Lists & Trackable Item Time Slot Detail (2026-07-20)
+
+Two small fixes from direct human feedback via `INBOX.md`
+("books and course different kind... and a block on time table should also
+have books like detail (which chapter)"), not phase-sized:
+
+**Separate Book/Course priority lists:** `/items` (`src/app/items/
+priority-list.tsx`) now renders two independent drag-and-drop lists — 書籍
+and 課程 — each with its own rank badge starting at 1, instead of one
+merged list. `TrackableItem.priority` is still one flat, shared column
+(unchanged — it's also what fixes the relative book/course interleave the
+Scheduler uses when both types compete for the same week's Slack time);
+dropping within one type's section only splices that type's subsequence
+and leaves every other-type item in its existing slot
+(`src/app/items/priority-order.ts`'s `reorderWithinType`, unit-tested),
+then hands the merged full order to the unchanged `reorderItemsAction` /
+`reorderTrackableItems`. No Scheduler change was needed.
+
+**Trackable Item Time Slot detail:** a Weekly View block occupied by a
+`Book`/`Course` session now shows which unit it's for, e.g. `書籍：Deep
+Work（第 1 章／共 12 章）` or `課程：Algorithms Course（第 1 支影片／共 30
+支影片）` — `Chapter` for `Book`, `Video` for `Course`, per
+`docs/domain-model.md`'s unit vocabulary, computed as `unitsCompleted + 1`
+capped at `unitCount` (`occupantLabel` in `src/server/time-slots.ts`).
+This also closed a leftover Phase 5 gap: `occupantLabel`'s output for
+every occupant kind (not just `Trackable Item`) was still in English —
+now Traditional Chinese throughout (e.g. `常規事件：`, `固定事務：`,
+`（已刪除）` placeholders).
+
+Manually verified against the running dev server: added a `Book` (0/12
+units) and a `Course` (0/30 units), confirmed each landed in its own
+section ranked 1; clicked "產生課表" and confirmed the resulting blocks
+read `書籍：Deep Work（第 1 章／共 12 章）` and `課程：Algorithms
+Course（第 1 支影片／共 30 支影片）`. `npm run verify` passes — 131 tests
+(2 new for `reorderWithinType`), lint/typecheck/build all clean.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all

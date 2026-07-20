@@ -383,6 +383,19 @@
 
 /* --- Drag-and-drop priority list (see /items priority-list.tsx) --- */
 
+.priorityGroupHeading {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+.priorityGroupHeading:first-child {
+  margin-top: 0;
+}
+
 .priorityList {
   display: flex;
   flex-direction: column;

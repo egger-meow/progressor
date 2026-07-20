@@ -186,30 +186,40 @@ async function occupantLabel(
   occupantId: string | null,
 ): Promise<string> {
   if (occupantType === "slack" || !occupantId) {
-    return "Slack";
+    return "留白";
   }
   switch (occupantType) {
     case "routine": {
       const routine = await prisma.routine.findUnique({ where: { id: occupantId } });
-      return routine ? `Routine: ${routine.title}` : "(deleted routine)";
+      return routine ? `常規事件：${routine.title}` : "（常規事件已刪除）";
     }
     case "fixed-commitment": {
       const commitment = await prisma.fixedCommitment.findUnique({
         where: { id: occupantId },
       });
-      return commitment ? `Fixed Commitment: ${commitment.title}` : "(deleted fixed commitment)";
+      return commitment ? `固定事務：${commitment.title}` : "（固定事務已刪除）";
     }
     case "deadline-task": {
       const task = await prisma.deadlineTask.findUnique({ where: { id: occupantId } });
-      return task ? `Deadline Task: ${task.title}` : "(deleted deadline task)";
+      return task ? `截止任務：${task.title}` : "（截止任務已刪除）";
     }
     case "trackable-item": {
       const item = await prisma.trackableItem.findUnique({ where: { id: occupantId } });
-      return item ? `${item.type === "book" ? "Book" : "Course"}: ${item.title}` : "(deleted trackable item)";
+      if (!item) {
+        return "（書籍／課程已刪除）";
+      }
+      // Domain-model.md: Book's unit is Chapter, Course's unit is Video —
+      // surfaced here (not just the title) so a Weekly View block tells you
+      // which chapter/video this session is actually for, per INBOX.md's
+      // 2026-07-20 request.
+      const typeLabel = item.type === "book" ? "書籍" : "課程";
+      const unitLabel = item.type === "book" ? "章" : "支影片";
+      const currentUnit = Math.min(item.unitsCompleted + 1, item.unitCount);
+      return `${typeLabel}：${item.title}（第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}）`;
     }
     case "ad-hoc-event": {
       const event = await prisma.adHocEvent.findUnique({ where: { id: occupantId } });
-      return event ? `Ad-hoc Event: ${event.title}` : "(deleted ad-hoc event)";
+      return event ? `臨時事件：${event.title}` : "（臨時事件已刪除）";
     }
   }
 }

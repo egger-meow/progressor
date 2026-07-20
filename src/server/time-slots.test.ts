@@ -249,6 +249,6 @@ describe("listTimeSlotsWithLabels — occupant deleted out from under a Time Slo
 
     const labeled = await listTimeSlotsWithLabels();
     const found = labeled.find((s) => s.id === slot.id);
-    expect(found?.occupantLabel).toBe("(deleted trackable item)");
+    expect(found?.occupantLabel).toBe("（書籍／課程已刪除）");
   });
 });

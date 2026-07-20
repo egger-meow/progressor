@@ -151,10 +151,25 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 - Phase 5 closed: completion audit at
   `docs/audits/ui-ux-overhaul-and-live-priority-reordering-audit.md`;
   removed from `ROADMAP.md`. No phase is currently authorized.
+- `/items` now shows two independent drag-and-drop priority lists (書籍,
+  課程) instead of one merged list, per `INBOX.md` (2026-07-20). Dropping
+  within one type's section only reorders that type's items
+  (`src/app/items/priority-order.ts`'s `reorderWithinType`); the other
+  type's items and the shared `priority` column's cross-type interleave
+  are untouched.
+- A Weekly View block for a `Trackable Item` session now shows which unit
+  it's for — `Chapter` for `Book`, `Video` for `Course` — e.g. `書籍：Deep
+  Work（第 1 章／共 12 章）` (`occupantLabel` in `src/server/time-slots.ts`),
+  per the same `INBOX.md` request.
 
 ### Changed
 
 ### Fixed
+
+- `occupantLabel` (`src/server/time-slots.ts`) — the Weekly View's per-slot
+  occupant text for every occupant kind, not just `Trackable Item` — was
+  still in English, a leftover gap from Phase 5's translation pass; now
+  Traditional Chinese throughout.
 
 - `placeFixedCommitments`/`placeRoutines`/`placeFlexibleTrackableItems`
   (`src/scheduler/`) re-placed a duplicate `Time Slot` for an
