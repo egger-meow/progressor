@@ -68,12 +68,33 @@ Everything else that's real work but doesn't meet this bar belongs under
 
 ## Current Priorities
 
-Empty. `ROADMAP.md` has no Active Phase and no further Authorized Phases
-— every proposal left under "Proposed — Not Yet Authorized" (calendar
-export/sync, notifications/reminders, a mobile companion view) needs a
-human to write its goal and exit condition before the phase loop can
-activate it. Per `ROADMAP.md`'s own rules, this is the correct end state
-to stop and wait in, not a failure.
+Decomposition of `ROADMAP.md`'s active "UI/UX Overhaul & Live Priority
+Reordering" phase:
+
+1. Design a warm, high-interactivity visual design system (palette,
+   typography, spacing, component states) using the project's available
+   UI/UX design skill; keep it as reusable tokens/CSS, not one-off
+   inline styles.
+2. Translate all UI copy to Traditional Chinese and apply the new design
+   system across the Weekly View, `/items`, `/routines`, and
+   `/commitments`.
+3. Streamline the add/edit flows for `Book`, `Course`, and `Routine`
+   within the new design (clear primary action, less visual noise; no
+   validation removed).
+4. Fix "Generate Schedule" re-run duplication of `Fixed
+   Commitment`/`Routine` `Time Slot`s (prerequisite for item 5).
+5. Add drag-and-drop `priority` reordering on `/items`, wired to persist
+   via the existing service layer and instantly regenerate + re-render
+   the current week's Schedule on drop.
+6. Run `npm run verify`, fix failures.
+7. Manually test the whole flow against the running dev server
+   (Traditional Chinese copy, visual design, streamlined add flows,
+   drag-reorder with live reschedule, no duplicate slots) and record
+   findings.
+8. Update `docs/status.md` + `CHANGELOG.md`, retire completed priorities,
+   commit.
+9. Write the phase completion audit, close the phase in `ROADMAP.md`,
+   commit.
 
 ## Non-Blocking / Later
 

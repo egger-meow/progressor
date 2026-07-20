@@ -109,10 +109,11 @@ Authorized" section for what's left to authorize.
 
 ## Current Behavior
 
-The Next.js app scaffold exists (`src/app/`, default starter page, no
-Progressor-specific UI yet). Prisma is wired to a local SQLite file via
-`src/server/db.ts` (a cached client singleton, safe under Next.js dev-mode
-hot reload).
+The Next.js app scaffold exists (`src/app/`). Prisma is wired to a local
+SQLite file via `src/server/db.ts` (a cached client singleton, safe under
+Next.js dev-mode hot reload). Real Progressor-specific UI now exists at
+`/` (Weekly View), `/items`, `/routines`, and `/commitments` — see "Core
+Entity Creation UI (Phase 4)" below for the latter three.
 
 `Trackable Item` (`Book`/`Course`) is implemented end-to-end at the data
 layer: `prisma/schema.prisma`'s `TrackableItem` model plus

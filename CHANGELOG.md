@@ -128,6 +128,13 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   "Proposed" entry (calendar export/sync, notifications/reminders,
   mobile companion view) needs a human-written goal and exit condition
   before the phase loop can continue.
+- Phase 5 ("UI/UX Overhaul & Live Priority Reordering") authorized by the
+  project owner via `INBOX.md` (2026-07-20), overriding Phase 1's
+  "correct, not pretty" styling deferral: a warm, high-interactivity,
+  Traditional-Chinese redesign of every page, streamlined create flows,
+  and drag-and-drop `priority` reordering on `/items` that instantly
+  regenerates the current week's Schedule. Activated in `ROADMAP.md` and
+  decomposed into `PRIORITIES.md`.
 
 ### Changed
 
