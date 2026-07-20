@@ -42,7 +42,7 @@ export async function createTimeSlotAction(formData: FormData): Promise<void> {
     const endAt = combineDateAndTime(date, endTime);
     await createTimeSlot({ startAt, endAt, ...occupant });
   } catch (error) {
-    redirectToWeek(week, error instanceof Error ? error.message : "Failed to create Time Slot");
+    redirectToWeek(week, error instanceof Error ? error.message : "新增時段失敗");
   }
 
   redirectToWeek(week);
@@ -61,7 +61,7 @@ export async function updateTimeSlotAction(formData: FormData): Promise<void> {
     const endAt = combineDateAndTime(date, endTime);
     await updateTimeSlot(id, { startAt, endAt, ...occupant });
   } catch (error) {
-    redirectToWeek(week, error instanceof Error ? error.message : "Failed to update Time Slot");
+    redirectToWeek(week, error instanceof Error ? error.message : "更新時段失敗");
   }
 
   redirectToWeek(week);
@@ -74,7 +74,7 @@ export async function deleteTimeSlotAction(formData: FormData): Promise<void> {
   try {
     await removeTimeSlot(id);
   } catch (error) {
-    redirectToWeek(week, error instanceof Error ? error.message : "Failed to remove Time Slot");
+    redirectToWeek(week, error instanceof Error ? error.message : "移除時段失敗");
   }
 
   redirectToWeek(week);
@@ -95,7 +95,7 @@ export async function generateScheduleAction(formData: FormData): Promise<void> 
       message = result.output.conflicts.map((c) => c.message).join("; ");
     }
   } catch (error) {
-    message = error instanceof Error ? error.message : "Failed to generate schedule";
+    message = error instanceof Error ? error.message : "產生課表失敗";
   }
 
   redirectToWeek(week, message);
@@ -119,7 +119,7 @@ export async function skipSessionAction(formData: FormData): Promise<void> {
     const result = await skipSession(weekStart, weekEnd, slotId);
     message = conflictMessage(result.conflicts);
   } catch (error) {
-    message = error instanceof Error ? error.message : "Failed to skip session";
+    message = error instanceof Error ? error.message : "跳過時段失敗";
   }
 
   redirectToWeek(week, message);
@@ -136,7 +136,7 @@ export async function completeItemAction(formData: FormData): Promise<void> {
     const result = await completeItemEarly(weekStart, weekEnd, itemId);
     message = conflictMessage(result.conflicts);
   } catch (error) {
-    message = error instanceof Error ? error.message : "Failed to mark item done";
+    message = error instanceof Error ? error.message : "標記完成失敗";
   }
 
   redirectToWeek(week, message);
@@ -164,7 +164,7 @@ export async function insertAdHocEventAction(formData: FormData): Promise<void> 
     });
     message = conflictMessage(result.conflicts);
   } catch (error) {
-    message = error instanceof Error ? error.message : "Failed to insert Ad-hoc Event";
+    message = error instanceof Error ? error.message : "新增臨時事件失敗";
   }
 
   redirectToWeek(week, message);

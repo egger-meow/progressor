@@ -90,6 +90,27 @@ describe("placeFixedCommitments", () => {
     ]);
   });
 
+  it("does not re-place a commitment that already has an occurrence Time Slot on that day (re-run idempotency)", () => {
+    const input = baseInput({
+      fixedCommitments: [
+        { id: "fc-1", title: "Algorithms Lecture", dayOfWeek: 1, startTime: "10:00", endTime: "11:00" },
+      ],
+      existingSlots: [
+        {
+          id: "ts-1",
+          startAt: new Date("2026-07-13T10:00:00"),
+          endAt: new Date("2026-07-13T11:00:00"),
+          occupantType: "fixed-commitment",
+          occupantId: "fc-1",
+        },
+      ],
+    });
+
+    const result = placeFixedCommitments(input);
+
+    expect(result.slots).toEqual([]);
+  });
+
   it("does not flag a conflict for non-overlapping commitments", () => {
     const input = baseInput({
       fixedCommitments: [

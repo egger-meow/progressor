@@ -6,10 +6,10 @@
 
 ## Status
 
-Phase 1-4 已完成並關閉（資料層、自動排程引擎、彈性修正/臨時事件、核心物件的
-建立/編輯/刪除 UI）。目前 active phase 是 Phase 5「UI/UX Overhaul & Live
-Priority Reordering」——把介面改成中文、重新設計視覺風格、並加入拖曳排序
-優先度即時重新排程。詳見 `ROADMAP.md`。
+Phase 1-5 已完成並關閉（資料層、自動排程引擎、彈性修正/臨時事件、核心物件的
+建立/編輯/刪除 UI、中文化與拖曳排序優先度即時重新排程）。目前沒有 active
+phase——`ROADMAP.md` 剩下三個尚未授權的提案（行事曆匯出、通知提醒、行動裝置
+檢視）在等人類撰寫 goal/exit condition。
 專案用 [`LOOP_ENGINEERING.md`](LOOP_ENGINEERING.md) 這套 loop-engineering
 框架管理方向與優先序：人類在書面文件裡一次性授權，agent 依照
 `PRIORITIES.md` / `ROADMAP.md` 自主推進，不用每一步都問。

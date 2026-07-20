@@ -39,23 +39,23 @@ async function loadOccupantOptions(): Promise<OccupantOption[]> {
     ]);
 
   return [
-    { value: "slack|", label: "Slack (leave unassigned)" },
-    ...routines.map((r) => ({ value: `routine|${r.id}`, label: `Routine: ${r.title}` })),
+    { value: "slack|", label: "留白（不指定）" },
+    ...routines.map((r) => ({ value: `routine|${r.id}`, label: `常規事件：${r.title}` })),
     ...fixedCommitments.map((c) => ({
       value: `fixed-commitment|${c.id}`,
-      label: `Fixed Commitment: ${c.title}`,
+      label: `固定事務：${c.title}`,
     })),
     ...deadlineTasks.map((t) => ({
       value: `deadline-task|${t.id}`,
-      label: `Deadline Task: ${t.title}`,
+      label: `截止任務：${t.title}`,
     })),
     ...trackableItems.map((i) => ({
       value: `trackable-item|${i.id}`,
-      label: `${i.type === "book" ? "Book" : "Course"}: ${i.title}`,
+      label: `${i.type === "book" ? "書籍" : "課程"}：${i.title}`,
     })),
     ...adHocEvents.map((e) => ({
       value: `ad-hoc-event|${e.id}`,
-      label: `Ad-hoc Event: ${e.title}`,
+      label: `臨時事件：${e.title}`,
     })),
   ];
 }
@@ -102,25 +102,42 @@ export default async function WeeklyView({
 
   return (
     <main className={styles.page}>
-      <h1>課表 Weekly View</h1>
+      <div className={styles.pageHeader}>
+        <h1>每週課表</h1>
+        <p className={styles.pageSubtitle}>持續更新、可隨時手動調整的每週時間表。</p>
+      </div>
 
       <nav className={styles.weekNav}>
-        <a href={`/?week=${prevWeekParam}`}>&larr; 上週</a>
-        <a href={`/?week=${todayWeekParam}`}>本週</a>
-        <a href={`/?week=${nextWeekParam}`}>下週 &rarr;</a>
+        <a href={`/?week=${prevWeekParam}`} className={styles.navLink}>
+          &larr; 上週
+        </a>
+        <a href={`/?week=${todayWeekParam}`} className={styles.navLink}>
+          本週
+        </a>
+        <a href={`/?week=${nextWeekParam}`} className={styles.navLink}>
+          下週 &rarr;
+        </a>
         <span className={styles.weekLabel}>
           {formatDateLabel(weekStart)} – {formatDateLabel(addDays(weekStart, 6))}
         </span>
         <form action={generateScheduleAction} className={styles.inlineForm}>
           <input type="hidden" name="week" value={weekParam} />
-          <button type="submit">Generate Schedule</button>
+          <button type="submit" className={styles.button}>
+            產生課表
+          </button>
         </form>
       </nav>
 
       <nav className={styles.weekNav}>
-        <a href="/items">Trackable Items</a>
-        <a href="/routines">Routines</a>
-        <a href="/commitments">Semester Commitments</a>
+        <a href="/items" className={styles.navLink}>
+          書籍與課程
+        </a>
+        <a href="/routines" className={styles.navLink}>
+          常規事件
+        </a>
+        <a href="/commitments" className={styles.navLink}>
+          學期事務
+        </a>
       </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
@@ -142,7 +159,7 @@ export default async function WeeklyView({
                 {DAY_LABELS[index]} <span className={styles.dayDate}>{formatDateLabel(day)}</span>
               </h2>
               {daySlots.length === 0 ? (
-                <p className={styles.empty}>No Time Slots</p>
+                <p className={styles.empty}>沒有時段</p>
               ) : (
                 <ul className={styles.slotList}>
                   {daySlots.map((slot) => {
@@ -174,8 +191,14 @@ export default async function WeeklyView({
                               options={occupantOptions}
                               selected={`${slot.occupantType}|${slot.occupantId ?? ""}`}
                             />
-                            <button type="submit">Save</button>
-                            <a href={`/?week=${weekParam}`}>Cancel</a>
+                            <div className={styles.slotFormActions}>
+                              <button type="submit" className={styles.button}>
+                                儲存
+                              </button>
+                              <a href={`/?week=${weekParam}`} className={styles.linkAction}>
+                                取消
+                              </a>
+                            </div>
                           </form>
                         </li>
                       );
@@ -188,26 +211,36 @@ export default async function WeeklyView({
                           {formatTimeLabel(new Date(slot.endAt))}
                         </span>
                         <span className={styles.slotOccupant}>{slot.occupantLabel}</span>
-                        <a href={`/?week=${weekParam}&edit=${slot.id}`}>Edit</a>
-                        <form action={deleteTimeSlotAction} className={styles.inlineForm}>
-                          <input type="hidden" name="id" value={slot.id} />
-                          <input type="hidden" name="week" value={weekParam} />
-                          <button type="submit">Remove</button>
-                        </form>
-                        {slot.occupantType === "trackable-item" && slot.occupantId ? (
-                          <>
-                            <form action={skipSessionAction} className={styles.inlineForm}>
-                              <input type="hidden" name="slotId" value={slot.id} />
-                              <input type="hidden" name="week" value={weekParam} />
-                              <button type="submit">Skip</button>
-                            </form>
-                            <form action={completeItemAction} className={styles.inlineForm}>
-                              <input type="hidden" name="itemId" value={slot.occupantId} />
-                              <input type="hidden" name="week" value={weekParam} />
-                              <button type="submit">Mark done</button>
-                            </form>
-                          </>
-                        ) : null}
+                        <span className={styles.slotActions}>
+                          <a href={`/?week=${weekParam}&edit=${slot.id}`} className={styles.linkAction}>
+                            編輯
+                          </a>
+                          <form action={deleteTimeSlotAction} className={styles.inlineForm}>
+                            <input type="hidden" name="id" value={slot.id} />
+                            <input type="hidden" name="week" value={weekParam} />
+                            <button type="submit" className={styles.buttonDanger}>
+                              移除
+                            </button>
+                          </form>
+                          {slot.occupantType === "trackable-item" && slot.occupantId ? (
+                            <>
+                              <form action={skipSessionAction} className={styles.inlineForm}>
+                                <input type="hidden" name="slotId" value={slot.id} />
+                                <input type="hidden" name="week" value={weekParam} />
+                                <button type="submit" className={styles.buttonSecondary}>
+                                  跳過
+                                </button>
+                              </form>
+                              <form action={completeItemAction} className={styles.inlineForm}>
+                                <input type="hidden" name="itemId" value={slot.occupantId} />
+                                <input type="hidden" name="week" value={weekParam} />
+                                <button type="submit" className={styles.buttonAccent}>
+                                  標記完成
+                                </button>
+                              </form>
+                            </>
+                          ) : null}
+                        </span>
                       </li>
                     );
                   })}
@@ -219,56 +252,58 @@ export default async function WeeklyView({
       </div>
 
       <section className={styles.addForm}>
-        <h2>Add Time Slot</h2>
+        <h2>新增時段</h2>
         <form action={createTimeSlotAction} className={styles.slotForm}>
           <input type="hidden" name="week" value={weekParam} />
           <label>
-            Date
+            日期
             <input type="date" name="date" defaultValue={weekParam} required />
           </label>
           <label>
-            Start
+            開始
             <input type="time" name="startTime" required />
           </label>
           <label>
-            End
+            結束
             <input type="time" name="endTime" required />
           </label>
           <label>
-            Occupant
+            內容
             <OccupantSelect options={occupantOptions} />
           </label>
-          <button type="submit">Add</button>
+          <button type="submit" className={styles.button}>
+            新增
+          </button>
         </form>
       </section>
 
       <section className={styles.addForm}>
-        <h2>Quick Ad-hoc Event</h2>
+        <h2>快速新增臨時事件</h2>
         <p className={styles.hint}>
-          Declares a new Ad-hoc Event and places it right away — an
-          overlapping flexible Book/Course session is moved elsewhere in
-          the week rather than double-booked (Phase 3 repair, not a full
-          Generate Schedule re-run).
+          立即建立一個臨時事件並直接排入課表——若與某本書/課程的彈性時段重疊，
+          該時段會被移到本週其他空檔，而不是被覆蓋（Phase 3 局部修正，不是整份重新產生）。
         </p>
         <form action={insertAdHocEventAction} className={styles.slotForm}>
           <input type="hidden" name="week" value={weekParam} />
           <label>
-            Title
+            標題
             <input type="text" name="title" required />
           </label>
           <label>
-            Date
+            日期
             <input type="date" name="date" defaultValue={weekParam} required />
           </label>
           <label>
-            Start
+            開始
             <input type="time" name="startTime" required />
           </label>
           <label>
-            End
+            結束
             <input type="time" name="endTime" required />
           </label>
-          <button type="submit">Insert</button>
+          <button type="submit" className={styles.button}>
+            加入
+          </button>
         </form>
       </section>
     </main>

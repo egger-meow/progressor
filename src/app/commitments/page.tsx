@@ -12,13 +12,13 @@ import { formatDateParam } from "../week";
 import styles from "../page.module.css";
 
 const DAY_OPTIONS = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
+  { value: 0, label: "星期日" },
+  { value: 1, label: "星期一" },
+  { value: 2, label: "星期二" },
+  { value: 3, label: "星期三" },
+  { value: 4, label: "星期四" },
+  { value: 5, label: "星期五" },
+  { value: 6, label: "星期六" },
 ];
 
 export default async function CommitmentsPage({
@@ -40,32 +40,42 @@ export default async function CommitmentsPage({
 
   return (
     <main className={styles.page}>
-      <h1>Semester Commitments</h1>
+      <div className={styles.pageHeader}>
+        <h1>學期事務</h1>
+        <p className={styles.pageSubtitle}>固定不可移動的課程／會議，以及有截止日但時段可彈性安排的作業／考試準備。</p>
+      </div>
+
       <nav className={styles.weekNav}>
-        <Link href="/">&larr; Weekly View</Link>
-        <a href="/items">Trackable Items</a>
-        <a href="/routines">Routines</a>
+        <Link href="/" className={styles.navLink}>
+          &larr; 每週課表
+        </Link>
+        <a href="/items" className={styles.navLink}>
+          書籍與課程
+        </a>
+        <a href="/routines" className={styles.navLink}>
+          常規事件
+        </a>
       </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 
-      <h2>Fixed Commitments</h2>
+      <h2>固定事務</h2>
       {fixedCommitments.length === 0 ? (
-        <p className={styles.empty}>No Fixed Commitments yet.</p>
+        <p className={styles.empty}>尚未新增任何固定事務。</p>
       ) : (
-        <ul className={styles.slotList}>
+        <ul className={styles.recordList}>
           {fixedCommitments.map((c) => {
             if (editingFC && editingFC.id === c.id) {
               return (
-                <li key={c.id} className={styles.slotItem}>
+                <li key={c.id} className={styles.addForm}>
                   <form action={updateFixedCommitmentAction} className={styles.slotForm}>
                     <input type="hidden" name="id" value={c.id} />
                     <label>
-                      Title
+                      標題
                       <input type="text" name="title" defaultValue={c.title} required />
                     </label>
                     <label>
-                      Day of week
+                      星期
                       <select name="dayOfWeek" defaultValue={c.dayOfWeek} required>
                         {DAY_OPTIONS.map((d) => (
                           <option key={d.value} value={d.value}>
@@ -75,45 +85,59 @@ export default async function CommitmentsPage({
                       </select>
                     </label>
                     <label>
-                      Start
+                      開始
                       <input type="time" name="startTime" defaultValue={c.startTime} required />
                     </label>
                     <label>
-                      End
+                      結束
                       <input type="time" name="endTime" defaultValue={c.endTime} required />
                     </label>
-                    <button type="submit">Save</button>
-                    <a href="/commitments">Cancel</a>
+                    <div className={styles.slotFormActions}>
+                      <button type="submit" className={styles.button}>
+                        儲存
+                      </button>
+                      <a href="/commitments" className={styles.linkAction}>
+                        取消
+                      </a>
+                    </div>
                   </form>
                 </li>
               );
             }
 
             return (
-              <li key={c.id} className={styles.slotItem}>
-                <span className={styles.slotTime}>{c.title}</span>
-                <span className={styles.slotOccupant}>
-                  {DAY_OPTIONS[c.dayOfWeek].label} {c.startTime}–{c.endTime}
+              <li key={c.id} className={styles.recordCard}>
+                <span className={styles.recordMain}>
+                  <span className={styles.recordTitle}>{c.title}</span>
+                  <span className={styles.recordMeta}>
+                    {DAY_OPTIONS[c.dayOfWeek].label} {c.startTime}–{c.endTime}
+                  </span>
                 </span>
-                <a href={`/commitments?editFC=${c.id}`}>Edit</a>
-                <form action={deleteFixedCommitmentAction} className={styles.inlineForm}>
-                  <input type="hidden" name="id" value={c.id} />
-                  <button type="submit">Remove</button>
-                </form>
+                <span className={styles.slotActions}>
+                  <a href={`/commitments?editFC=${c.id}`} className={styles.linkAction}>
+                    編輯
+                  </a>
+                  <form action={deleteFixedCommitmentAction} className={styles.inlineForm}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <button type="submit" className={styles.buttonDanger}>
+                      刪除
+                    </button>
+                  </form>
+                </span>
               </li>
             );
           })}
         </ul>
       )}
       <section className={styles.addForm}>
-        <h3>Add Fixed Commitment</h3>
+        <h3>新增固定事務</h3>
         <form action={createFixedCommitmentAction} className={styles.slotForm}>
           <label>
-            Title
+            標題
             <input type="text" name="title" required />
           </label>
           <label>
-            Day of week
+            星期
             <select name="dayOfWeek" defaultValue={1} required>
               {DAY_OPTIONS.map((d) => (
                 <option key={d.value} value={d.value}>
@@ -123,34 +147,36 @@ export default async function CommitmentsPage({
             </select>
           </label>
           <label>
-            Start
+            開始
             <input type="time" name="startTime" required />
           </label>
           <label>
-            End
+            結束
             <input type="time" name="endTime" required />
           </label>
-          <button type="submit">Add</button>
+          <button type="submit" className={styles.button}>
+            新增
+          </button>
         </form>
       </section>
 
-      <h2>Deadline Tasks</h2>
+      <h2>截止任務</h2>
       {deadlineTasks.length === 0 ? (
-        <p className={styles.empty}>No Deadline Tasks yet.</p>
+        <p className={styles.empty}>尚未新增任何截止任務。</p>
       ) : (
-        <ul className={styles.slotList}>
+        <ul className={styles.recordList}>
           {deadlineTasks.map((t) => {
             if (editingDT && editingDT.id === t.id) {
               return (
-                <li key={t.id} className={styles.slotItem}>
+                <li key={t.id} className={styles.addForm}>
                   <form action={updateDeadlineTaskAction} className={styles.slotForm}>
                     <input type="hidden" name="id" value={t.id} />
                     <label>
-                      Title
+                      標題
                       <input type="text" name="title" defaultValue={t.title} required />
                     </label>
                     <label>
-                      Due date
+                      截止日期
                       <input
                         type="date"
                         name="dueAt"
@@ -159,7 +185,7 @@ export default async function CommitmentsPage({
                       />
                     </label>
                     <label>
-                      Estimated days
+                      預估天數
                       <input
                         type="number"
                         name="estimatedDays"
@@ -167,45 +193,61 @@ export default async function CommitmentsPage({
                         required
                       />
                     </label>
-                    <button type="submit">Save</button>
-                    <a href="/commitments">Cancel</a>
+                    <div className={styles.slotFormActions}>
+                      <button type="submit" className={styles.button}>
+                        儲存
+                      </button>
+                      <a href="/commitments" className={styles.linkAction}>
+                        取消
+                      </a>
+                    </div>
                   </form>
                 </li>
               );
             }
 
             return (
-              <li key={t.id} className={styles.slotItem}>
-                <span className={styles.slotTime}>{t.title}</span>
-                <span className={styles.slotOccupant}>
-                  due {formatDateParam(new Date(t.dueAt))} · {t.estimatedDays}d estimated
+              <li key={t.id} className={styles.recordCard}>
+                <span className={styles.recordMain}>
+                  <span className={styles.recordTitle}>{t.title}</span>
+                  <span className={styles.recordMeta}>
+                    截止 {formatDateParam(new Date(t.dueAt))} · 預估 {t.estimatedDays} 天
+                  </span>
                 </span>
-                <a href={`/commitments?editDT=${t.id}`}>Edit</a>
-                <form action={deleteDeadlineTaskAction} className={styles.inlineForm}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <button type="submit">Remove</button>
-                </form>
+                <span className={styles.slotActions}>
+                  <a href={`/commitments?editDT=${t.id}`} className={styles.linkAction}>
+                    編輯
+                  </a>
+                  <form action={deleteDeadlineTaskAction} className={styles.inlineForm}>
+                    <input type="hidden" name="id" value={t.id} />
+                    <button type="submit" className={styles.buttonDanger}>
+                      刪除
+                    </button>
+                  </form>
+                </span>
               </li>
             );
           })}
         </ul>
       )}
       <section className={styles.addForm}>
-        <h3>Add Deadline Task</h3>
+        <h3>新增截止任務</h3>
         <form action={createDeadlineTaskAction} className={styles.slotForm}>
           <label>
-            Title
+            標題
             <input type="text" name="title" required />
           </label>
           <label>
-            Due date
+            截止日期
             <input type="date" name="dueAt" required />
           </label>
           <label>
-            Estimated days
+            預估天數
             <input type="number" name="estimatedDays" required />
           </label>
-          <button type="submit">Add</button>
+          <button type="submit" className={styles.button}>
+            新增
+          </button>
         </form>
       </section>
     </main>

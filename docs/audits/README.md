@@ -56,3 +56,9 @@ once fixed, either a new audit or a correction note added to
   — Phase 4, "Core Entity Creation UI." Complete with noted exceptions
   (`Routine` anchor input is a simple comma-separated field, not a
   picker grid; no UI yet to configure a `WIP Limit`).
+- [`ui-ux-overhaul-and-live-priority-reordering-audit.md`](ui-ux-overhaul-and-live-priority-reordering-audit.md)
+  — Phase 5, "UI/UX Overhaul & Live Priority Reordering." Complete with
+  noted exceptions (service-layer error messages remain English; no
+  touch/mobile drag fallback; native drag gesture verified via a
+  permanent integration test rather than a live pointer simulation, due
+  to Browser-pane tooling timeouts that session).

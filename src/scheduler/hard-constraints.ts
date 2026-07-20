@@ -14,6 +14,7 @@ import {
   combineDateAndTime,
   overlaps,
   findFreeInterval,
+  sameCalendarDay,
   type Interval,
 } from "./time";
 import {
@@ -36,6 +37,25 @@ export interface HardConstraintResult {
 // user's own data that should be visible, not silently rendered as an
 // unexplained overlap (charter guardrail: never silently drop or hide a
 // fixed-deadline affair).
+// A re-run of the Scheduler for the same week must be idempotent: if this
+// exact Fixed Commitment/Routine already has an occurrence Time Slot on
+// this calendar day (from a prior run, per the re-run policy in
+// scheduler-runs.ts), placing another one would create a visible
+// duplicate rather than recognizing it's already scheduled.
+export function hasExistingOccurrence(
+  existingSlots: SchedulerInput["existingSlots"],
+  occupantType: "fixed-commitment" | "routine",
+  occupantId: string,
+  day: Date,
+): boolean {
+  return existingSlots.some(
+    (slot) =>
+      slot.occupantType === occupantType &&
+      slot.occupantId === occupantId &&
+      sameCalendarDay(slot.startAt, day),
+  );
+}
+
 export function placeFixedCommitments(input: SchedulerInput): HardConstraintResult {
   const occurrences = input.fixedCommitments.map((commitment) => {
     const day = addDays(input.weekStart, offsetFromMonday(commitment.dayOfWeek));
@@ -46,12 +66,22 @@ export function placeFixedCommitments(input: SchedulerInput): HardConstraintResu
     };
   });
 
-  const slots: ScheduledTimeSlot[] = occurrences.map((occurrence) => ({
-    startAt: occurrence.startAt,
-    endAt: occurrence.endAt,
-    occupantType: "fixed-commitment",
-    occupantId: occurrence.commitment.id,
-  }));
+  const slots: ScheduledTimeSlot[] = occurrences
+    .filter(
+      (occurrence) =>
+        !hasExistingOccurrence(
+          input.existingSlots,
+          "fixed-commitment",
+          occurrence.commitment.id,
+          occurrence.startAt,
+        ),
+    )
+    .map((occurrence) => ({
+      startAt: occurrence.startAt,
+      endAt: occurrence.endAt,
+      occupantType: "fixed-commitment",
+      occupantId: occurrence.commitment.id,
+    }));
 
   const conflicts: SchedulerConflict[] = [];
 

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { listTrackableItems } from "@/server/trackable-items";
-import {
-  createTrackableItemAction,
-  deleteTrackableItemAction,
-  updateTrackableItemAction,
-} from "./actions";
+import { createTrackableItemAction, updateTrackableItemAction } from "./actions";
+import { PriorityList } from "./priority-list";
 import styles from "../page.module.css";
 
-const STATUSES = ["not-started", "in-progress", "paused", "done"] as const;
+const STATUSES = [
+  { value: "not-started", label: "尚未開始" },
+  { value: "in-progress", label: "進行中" },
+  { value: "paused", label: "暫停" },
+  { value: "done", label: "已完成" },
+] as const;
 
 export default async function ItemsPage({
   searchParams,
@@ -20,129 +22,127 @@ export default async function ItemsPage({
 
   return (
     <main className={styles.page}>
-      <h1>Trackable Items — Book / Course</h1>
+      <div className={styles.pageHeader}>
+        <h1>書籍與課程</h1>
+        <p className={styles.pageSubtitle}>
+          新增後直接拖曳排序優先度 — 放開就會立即重新排程本週課表。
+        </p>
+      </div>
+
       <nav className={styles.weekNav}>
-        <Link href="/">&larr; Weekly View</Link>
-        <a href="/routines">Routines</a>
-        <a href="/commitments">Semester Commitments</a>
+        <Link href="/" className={styles.navLink}>
+          &larr; 每週課表
+        </Link>
+        <a href="/routines" className={styles.navLink}>
+          常規事件
+        </a>
+        <a href="/commitments" className={styles.navLink}>
+          學期事務
+        </a>
       </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 
-      {items.length === 0 ? (
-        <p className={styles.empty}>No Trackable Items yet.</p>
-      ) : (
-        <ul className={styles.slotList}>
-          {items.map((item) => {
-            if (editingItem && editingItem.id === item.id) {
-              return (
-                <li key={item.id} className={styles.slotItem}>
-                  <form action={updateTrackableItemAction} className={styles.slotForm}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <label>
-                      Title
-                      <input type="text" name="title" defaultValue={item.title} required />
-                    </label>
-                    <label>
-                      Priority
-                      <input type="number" name="priority" defaultValue={item.priority} required />
-                    </label>
-                    <label>
-                      Unit count
-                      <input type="number" name="unitCount" defaultValue={item.unitCount} required />
-                    </label>
-                    <label>
-                      Units completed
-                      <input
-                        type="number"
-                        name="unitsCompleted"
-                        defaultValue={item.unitsCompleted}
-                        required
-                      />
-                    </label>
-                    <label>
-                      Estimated days
-                      <input
-                        type="number"
-                        name="estimatedDays"
-                        defaultValue={item.estimatedDays}
-                        required
-                      />
-                    </label>
-                    <label>
-                      Status
-                      <select name="status" defaultValue={item.status} required>
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button type="submit">Save</button>
-                    <a href="/items">Cancel</a>
-                  </form>
-                </li>
-              );
-            }
+      {editingItem ? (
+        <section className={styles.addForm}>
+          <h2>編輯「{editingItem.title}」</h2>
+          <form action={updateTrackableItemAction} className={styles.slotForm}>
+            <input type="hidden" name="id" value={editingItem.id} />
+            <label>
+              標題
+              <input type="text" name="title" defaultValue={editingItem.title} required />
+            </label>
+            <label>
+              單元總數
+              <input type="number" name="unitCount" defaultValue={editingItem.unitCount} required />
+            </label>
+            <label>
+              已完成單元
+              <input
+                type="number"
+                name="unitsCompleted"
+                defaultValue={editingItem.unitsCompleted}
+                required
+              />
+            </label>
+            <label>
+              預估天數
+              <input
+                type="number"
+                name="estimatedDays"
+                defaultValue={editingItem.estimatedDays}
+                required
+              />
+            </label>
+            <label>
+              狀態
+              <select name="status" defaultValue={editingItem.status} required>
+                {STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className={styles.slotFormActions}>
+              <button type="submit" className={styles.button}>
+                儲存
+              </button>
+              <a href="/items" className={styles.linkAction}>
+                取消
+              </a>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
-            return (
-              <li key={item.id} className={styles.slotItem}>
-                <span className={styles.slotTime}>
-                  {item.type === "book" ? "Book" : "Course"}: {item.title}
-                </span>
-                <span className={styles.slotOccupant}>
-                  priority {item.priority} · {item.status} · {item.unitsCompleted}/
-                  {item.unitCount} units · {item.estimatedDays}d estimated
-                </span>
-                <a href={`/items?edit=${item.id}`}>Edit</a>
-                <form action={deleteTrackableItemAction} className={styles.inlineForm}>
-                  <input type="hidden" name="id" value={item.id} />
-                  <button type="submit">Remove</button>
-                </form>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <PriorityList
+        items={items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          type: item.type as "book" | "course",
+          status: item.status,
+          unitsCompleted: item.unitsCompleted,
+          unitCount: item.unitCount,
+          estimatedDays: item.estimatedDays,
+        }))}
+      />
 
       <section className={styles.addForm}>
-        <h2>Add Trackable Item</h2>
+        <h2>新增書籍或課程</h2>
         <form action={createTrackableItemAction} className={styles.slotForm}>
           <label>
-            Title
+            標題
             <input type="text" name="title" required />
           </label>
           <label>
-            Type
+            類型
             <select name="type" required defaultValue="book">
-              <option value="book">Book</option>
-              <option value="course">Course</option>
+              <option value="book">書籍</option>
+              <option value="course">課程</option>
             </select>
           </label>
           <label>
-            Priority
-            <input type="number" name="priority" defaultValue={1} required />
-          </label>
-          <label>
-            Unit count
+            單元總數
             <input type="number" name="unitCount" required />
           </label>
           <label>
-            Estimated days
+            預估天數
             <input type="number" name="estimatedDays" required />
           </label>
           <label>
-            Status
+            狀態
             <select name="status" defaultValue="not-started" required>
               {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+                <option key={s.value} value={s.value}>
+                  {s.label}
                 </option>
               ))}
             </select>
           </label>
-          <button type="submit">Add</button>
+          <button type="submit" className={styles.button}>
+            新增
+          </button>
         </form>
       </section>
     </main>

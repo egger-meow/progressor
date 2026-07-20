@@ -7,6 +7,7 @@ import {
   getWipLimit,
   listTrackableItems,
   removeTrackableItem,
+  reorderTrackableItems,
   setWipLimit,
   updateTrackableItem,
   WipLimitExceededError,
@@ -71,6 +72,35 @@ describe("createTrackableItem", () => {
     await expect(createTrackableItem(bookInput({ estimatedDays: 0 }))).rejects.toThrow(
       /estimatedDays must be > 0/,
     );
+  });
+
+  it("defaults priority to last place (max existing priority + 1) when omitted", async () => {
+    await createTrackableItem(bookInput({ title: "First", priority: 5 }));
+    const { priority: _omit, ...withoutPriority } = bookInput({ title: "Second" });
+    void _omit;
+    const second = await createTrackableItem(withoutPriority);
+    expect(second.priority).toBe(6);
+  });
+
+  it("defaults the very first item's priority to 1 when omitted", async () => {
+    const { priority: _omit, ...withoutPriority } = bookInput({ title: "Only" });
+    void _omit;
+    const item = await createTrackableItem(withoutPriority);
+    expect(item.priority).toBe(1);
+  });
+});
+
+describe("reorderTrackableItems", () => {
+  it("persists a full drag-and-drop reorder as sequential 1-indexed priorities", async () => {
+    const a = await createTrackableItem(bookInput({ title: "A", priority: 1 }));
+    const b = await createTrackableItem(bookInput({ title: "B", priority: 2 }));
+    const c = await createTrackableItem(bookInput({ title: "C", priority: 3 }));
+
+    await reorderTrackableItems([c.id, a.id, b.id]);
+
+    const items = await listTrackableItems("book");
+    expect(items.map((i) => i.title)).toEqual(["C", "A", "B"]);
+    expect(items.map((i) => i.priority)).toEqual([1, 2, 3]);
   });
 });
 

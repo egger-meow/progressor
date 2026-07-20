@@ -49,7 +49,7 @@ export async function createRoutineAction(formData: FormData): Promise<void> {
   try {
     await createRoutine(readEditableFields(formData));
   } catch (error) {
-    redirectToRoutines(error instanceof Error ? error.message : "Failed to create routine");
+    redirectToRoutines(error instanceof Error ? error.message : "新增常規事件失敗");
   }
   redirectToRoutines();
 }
@@ -66,7 +66,7 @@ export async function updateRoutineAction(formData: FormData): Promise<void> {
       timeOfDayPreference: timeOfDayRaw ? (timeOfDayRaw as TimeOfDayPreference) : null,
     });
   } catch (error) {
-    redirectToRoutines(error instanceof Error ? error.message : "Failed to update routine");
+    redirectToRoutines(error instanceof Error ? error.message : "更新常規事件失敗");
   }
   redirectToRoutines();
 }
@@ -76,7 +76,7 @@ export async function deleteRoutineAction(formData: FormData): Promise<void> {
   try {
     await removeRoutine(id);
   } catch (error) {
-    redirectToRoutines(error instanceof Error ? error.message : "Failed to delete routine");
+    redirectToRoutines(error instanceof Error ? error.message : "刪除常規事件失敗");
   }
   redirectToRoutines();
 }

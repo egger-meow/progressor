@@ -14,6 +14,7 @@
 import { SchedulerInput, ScheduledTimeSlot, SchedulerRoutine, TimeOfDayPreference } from "./types";
 import { addDays, offsetFromMonday, combineDateAndTime, findFreeInterval, type Interval } from "./time";
 import { DAILY_WINDOW_START, DAILY_WINDOW_END, SESSION_DURATION_MS } from "./constants";
+import { hasExistingOccurrence } from "./hard-constraints";
 
 export interface RoutinePlacementResult {
   slots: ScheduledTimeSlot[];
@@ -53,6 +54,13 @@ export function placeRoutines(input: SchedulerInput, busy: Interval[]): RoutineP
   for (const routine of input.routines) {
     for (const offset of occurrenceDayOffsets(routine, input.weekStart)) {
       const day = addDays(input.weekStart, offset);
+
+      // Re-run idempotency (see hard-constraints.ts's hasExistingOccurrence):
+      // don't add a second occurrence Time Slot for a day that already has
+      // one from a prior run.
+      if (hasExistingOccurrence(input.existingSlots, "routine", routine.id, day)) {
+        continue;
+      }
 
       // Try the Time-of-Day Preference's narrower window first ("leans
       // toward" it); fall back to the full daily window rather than

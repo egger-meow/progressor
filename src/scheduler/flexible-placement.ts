@@ -90,14 +90,30 @@ export function selectEligibleItems(input: SchedulerInput): SchedulerTrackableIt
   return eligible.sort((a, b) => a.priority - b.priority);
 }
 
+// Re-run idempotency (see hard-constraints.ts's hasExistingOccurrence for
+// the Fixed Commitment/Routine equivalent): an item that already has a
+// session Time Slot this week from a prior run must not get a second one
+// stacked on top of it.
+function itemIdsWithSessionThisWeek(existingSlots: SchedulerInput["existingSlots"]): Set<string> {
+  return new Set(
+    existingSlots
+      .filter((slot) => slot.occupantType === "trackable-item" && slot.occupantId)
+      .map((slot) => slot.occupantId as string),
+  );
+}
+
 export function placeFlexibleTrackableItems(
   input: SchedulerInput,
   busy: Interval[],
 ): FlexiblePlacementResult {
   const allBusy = [...busy];
   const slots: ScheduledTimeSlot[] = [];
+  const alreadyScheduled = itemIdsWithSessionThisWeek(input.existingSlots);
 
   for (const item of selectEligibleItems(input)) {
+    if (alreadyScheduled.has(item.id)) {
+      continue;
+    }
     for (let offset = 0; offset < 7; offset++) {
       const day = addDays(input.weekStart, offset);
       const slackBudget = dailyWindowMs(day) * (1 - MIN_SLACK_SHARE_PER_DAY);

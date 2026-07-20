@@ -13,11 +13,13 @@ manual Weekly View (`Schedule`) is the primary UI-layer surface, and the
 (`computeSchedule`, Phase 2) and locally repairs one for a disruption
 (`repairSchedule`, Phase 3 — see "Repair" below). Every domain record
 (`Book`/`Course`, `Routine`, `Fixed Commitment`, `Deadline Task`,
-`Ad-hoc Event`) now has real creation/edit/delete UI (Phase 4, active —
-see "Core Entity Creation UI" below), closing the gap that previously
-forced every phase's manual walkthrough to rely on a temporary,
-non-shipped seed route. Phases 1, 2, and 3
-are closed; see `docs/audits/` for their completion evidence.
+`Ad-hoc Event`) now has real creation/edit/delete UI (Phase 4), closing
+the gap that previously forced every phase's manual walkthrough to rely
+on a temporary, non-shipped seed route. The UI is now Traditional
+Chinese with a warm, interactive visual design and live drag-and-drop
+priority reordering (Phase 5 — see "UI/UX Overhaul & Live Priority
+Reordering" below). Phases 1-5 are closed; see `docs/audits/` for their
+completion evidence.
 
 ## Verification Gates
 
@@ -103,6 +105,26 @@ walkthrough had relied on a throwaway `src/app/api/dev-seed/` route.
 
 Passed; see
 [`docs/audits/core-entity-creation-ui-audit.md`](audits/core-entity-creation-ui-audit.md).
+
+#### Phase 5 — UI/UX Overhaul & Live Priority Reordering (closed)
+
+Authorized by the project owner via `INBOX.md` (2026-07-20), overriding
+Phase 1's "correct, not pretty" styling deferral.
+
+1. Every page's UI copy is Traditional Chinese.
+2. A cohesive warm, high-interactivity visual design is applied
+   consistently across all four pages.
+3. The `Book`/`Course`/`Routine` add/edit flows are visibly streamlined.
+4. `/items` supports drag-and-drop `priority` reordering that instantly
+   regenerates the current week's Schedule on drop.
+5. Re-running schedule generation no longer creates duplicate `Time
+   Slot`s for an already-placed `Fixed Commitment`/`Routine`/`Trackable
+   Item` occurrence this week.
+6. `npm run verify` passes.
+7. A written manual walkthrough, recorded in `docs/audits/`.
+
+Passed; see
+[`docs/audits/ui-ux-overhaul-and-live-priority-reordering-audit.md`](audits/ui-ux-overhaul-and-live-priority-reordering-audit.md).
 
 No phase is currently active — see `../ROADMAP.md`'s "Proposed — Not Yet
 Authorized" section for what's left to authorize.
@@ -423,18 +445,87 @@ eligible item in the same window — confirming both the backfill policy
 and the Phase-1 manual-edit guarantee (one edit never corrupts another
 `Time Slot`) hold through the real app, not just fixtures.
 
+### UI/UX Overhaul & Live Priority Reordering (Phase 5)
+
+**Design system** (`src/app/globals.css`): warm coral/amber/teal CSS
+custom properties (color, spacing, radius, shadow, typography, motion
+tokens) replace the prior black/white default look, applied consistently
+via `src/app/page.module.css` (shared by all four pages) — project
+owner's explicit design direction, 2026-07-20 ("warm motivated high
+interactive vibe"), chosen and generated with the ui-ux-pro-max design
+skill. `Noto Sans TC` is the sole typeface (headings and body), chosen
+for Traditional Chinese + Latin coverage in one family rather than
+pairing a Latin display font that can't render the primary language.
+
+**Localization:** every page's UI copy (labels, buttons, headings, nav,
+hint text, and the UI-layer's own error-fallback strings) is Traditional
+Chinese. Service-layer thrown error messages (e.g. `WipLimitExceededError`,
+`Routine`/`Fixed Commitment` validation errors) remain in English — an
+explicit scope boundary, not an oversight, since translating them would
+touch business-logic strings asserted on by existing tests; see
+Exceptions in this phase's audit.
+
+**Streamlined create flow:** the `priority` field was removed from
+`/items`' add and edit forms entirely. `createTrackableItem` now defaults
+an omitted `priority` to "last place" (current max + 1,
+`src/server/trackable-items.ts`'s `nextPriority`) — a new item is simply
+appended, and priority from then on is managed exclusively by dragging.
+
+**Drag-and-drop priority reordering** (`src/app/items/priority-list.tsx`,
+a client component): native HTML5 drag-and-drop reorders the `/items`
+list; on drop, `reorderItemsAction`
+(`src/app/items/actions.ts`) persists the full new order via
+`reorderTrackableItems` (sequential 1-indexed priorities in one
+`prisma.$transaction`) and immediately calls `runScheduler` for the
+current calendar week — the project owner's explicit decision,
+2026-07-20 ("instantly regenerate"), not deferred to a manual "Generate
+Schedule" click. The list shows a live status line (slots added / already
+up to date) and a rank badge per item.
+
+**Re-run idempotency (new Scheduler fix, prerequisite for the above):**
+`placeFixedCommitments`/`placeRoutines`
+(`src/scheduler/hard-constraints.ts`, `routine-placement.ts`) now skip an
+occurrence that already has a Time Slot on that calendar day in
+`existingSlots` (`hasExistingOccurrence`), and
+`placeFlexibleTrackableItems` (`src/scheduler/flexible-placement.ts`)
+skips an item that already has a session this week — closing the
+previously-documented "Generate Schedule re-placing a duplicate on
+repeated clicks" limit, and additionally covering flexible `Trackable
+Item` sessions (a duplication case not previously documented but
+required for instant regenerate-on-every-drag to be safe). Covered by
+new tests in `hard-constraints.test.ts`, `routine-placement.test.ts`,
+and `flexible-placement.test.ts`.
+
+Manually verified against the running dev server: translated all four
+pages; created and deleted a `Book` through the streamlined flow
+(appended at the end, no priority prompt); clicked "產生課表" (Generate
+Schedule) twice in a row for the same week and confirmed byte-identical
+output — no new duplicate slots. The native drag *gesture* itself was
+verified via a new permanent integration test
+(`src/app/items/actions.test.ts`) exercising `reorderItemsAction`'s
+actual code path end-to-end (persist + instant regenerate, and a second
+call producing zero additional slots) rather than a live mouse
+simulation — this session's Browser-pane screenshot/pointer tooling was
+unavailable (timed out) independent of the app itself (server logs and
+console stayed clean throughout); see Exceptions in this phase's audit.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
   intentionally out of scope; see `../ROADMAP.md`'s Proposed section.
 - Single-user only; no auth, no multi-device sync beyond the local SQLite
   file.
-- "Generate Schedule" re-placing a `Fixed Commitment`/`Routine` occurrence
-  as a duplicate `Time Slot` on repeated clicks for the same week — see
-  the Scheduler section above for why and the tradeoff behind it.
 - No UI yet to configure a `WIP Limit` (`setWipLimit`) — it defaults to
   `DEFAULT_WIP_LIMIT` (3) per type and is only adjustable via the service
   layer or a test.
+- Service-layer error messages (validation errors, `WipLimitExceededError`)
+  still surface in English in `?error=` banners — only UI-authored copy
+  was translated to Traditional Chinese this phase (Phase 5); see that
+  phase's Current Behavior notes above.
+- Drag-and-drop priority reordering (`/items`) uses native HTML5
+  drag-and-drop with no touch/mobile fallback — a desktop-first
+  interaction, consistent with the bootstrap platform decision (local web
+  app first, see `../ROADMAP.md`'s Proposed section on a mobile view).
 
 ## Configuration / Environment Notes
 

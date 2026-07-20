@@ -4,10 +4,13 @@ import { redirect } from "next/navigation";
 import {
   createTrackableItem,
   removeTrackableItem,
+  reorderTrackableItems,
   updateTrackableItem,
   type TrackableItemStatus,
   type TrackableItemType,
 } from "@/server/trackable-items";
+import { runScheduler } from "@/server/scheduler-runs";
+import { addDays, startOfWeek } from "../week";
 
 function redirectToItems(error?: string): never {
   const params = new URLSearchParams();
@@ -21,7 +24,6 @@ function redirectToItems(error?: string): never {
 function readEditableFields(formData: FormData) {
   return {
     title: String(formData.get("title")),
-    priority: Number(formData.get("priority")),
     unitCount: Number(formData.get("unitCount")),
     unitsCompleted: Number(formData.get("unitsCompleted") ?? 0),
     estimatedDays: Number(formData.get("estimatedDays")),
@@ -36,7 +38,7 @@ export async function createTrackableItemAction(formData: FormData): Promise<voi
       type: String(formData.get("type")) as TrackableItemType,
     });
   } catch (error) {
-    redirectToItems(error instanceof Error ? error.message : "Failed to create item");
+    redirectToItems(error instanceof Error ? error.message : "新增失敗");
   }
   redirectToItems();
 }
@@ -44,11 +46,11 @@ export async function createTrackableItemAction(formData: FormData): Promise<voi
 export async function updateTrackableItemAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
   try {
-    // type is immutable once created — UpdateTrackableItemInput has no
-    // "type" field, so it's simply never read from the edit form.
+    // type and priority are not part of the edit form: type is immutable
+    // once created, priority is managed exclusively via drag-and-drop.
     await updateTrackableItem(id, readEditableFields(formData));
   } catch (error) {
-    redirectToItems(error instanceof Error ? error.message : "Failed to update item");
+    redirectToItems(error instanceof Error ? error.message : "更新失敗");
   }
   redirectToItems();
 }
@@ -58,7 +60,27 @@ export async function deleteTrackableItemAction(formData: FormData): Promise<voi
   try {
     await removeTrackableItem(id);
   } catch (error) {
-    redirectToItems(error instanceof Error ? error.message : "Failed to delete item");
+    redirectToItems(error instanceof Error ? error.message : "刪除失敗");
   }
   redirectToItems();
+}
+
+// Called directly from the PriorityList client component (not bound to a
+// <form>), per the project owner's explicit decision that dragging to
+// reorder priority should instantly regenerate the current week's
+// Schedule (INBOX.md, 2026-07-20) rather than waiting for a manual
+// "Generate Schedule" click. Relies on the Scheduler's re-run idempotency
+// fix (src/scheduler/hard-constraints.ts, flexible-placement.ts) so this
+// can safely be called on every drop without duplicating anything already
+// on the board.
+export async function reorderItemsAction(
+  orderedIds: string[],
+): Promise<{ addedSlotCount: number }> {
+  await reorderTrackableItems(orderedIds);
+
+  const weekStart = startOfWeek(new Date());
+  const weekEnd = addDays(weekStart, 7);
+  const { createdSlotIds } = await runScheduler(weekStart, weekEnd);
+
+  return { addedSlotCount: createdSlotIds.length };
 }

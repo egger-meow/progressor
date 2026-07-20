@@ -28,7 +28,7 @@ export async function createFixedCommitmentAction(formData: FormData): Promise<v
       endTime: String(formData.get("endTime")),
     });
   } catch (error) {
-    redirectToCommitments(error instanceof Error ? error.message : "Failed to create Fixed Commitment");
+    redirectToCommitments(error instanceof Error ? error.message : "新增固定事務失敗");
   }
   redirectToCommitments();
 }
@@ -43,7 +43,7 @@ export async function updateFixedCommitmentAction(formData: FormData): Promise<v
       endTime: String(formData.get("endTime")),
     });
   } catch (error) {
-    redirectToCommitments(error instanceof Error ? error.message : "Failed to update Fixed Commitment");
+    redirectToCommitments(error instanceof Error ? error.message : "更新固定事務失敗");
   }
   redirectToCommitments();
 }
@@ -53,7 +53,7 @@ export async function deleteFixedCommitmentAction(formData: FormData): Promise<v
   try {
     await removeFixedCommitment(id);
   } catch (error) {
-    redirectToCommitments(error instanceof Error ? error.message : "Failed to delete Fixed Commitment");
+    redirectToCommitments(error instanceof Error ? error.message : "刪除固定事務失敗");
   }
   redirectToCommitments();
 }
@@ -66,7 +66,7 @@ export async function createDeadlineTaskAction(formData: FormData): Promise<void
       estimatedDays: Number(formData.get("estimatedDays")),
     });
   } catch (error) {
-    redirectToCommitments(error instanceof Error ? error.message : "Failed to create Deadline Task");
+    redirectToCommitments(error instanceof Error ? error.message : "新增截止任務失敗");
   }
   redirectToCommitments();
 }
@@ -80,7 +80,7 @@ export async function updateDeadlineTaskAction(formData: FormData): Promise<void
       estimatedDays: Number(formData.get("estimatedDays")),
     });
   } catch (error) {
-    redirectToCommitments(error instanceof Error ? error.message : "Failed to update Deadline Task");
+    redirectToCommitments(error instanceof Error ? error.message : "更新截止任務失敗");
   }
   redirectToCommitments();
 }
@@ -90,7 +90,7 @@ export async function deleteDeadlineTaskAction(formData: FormData): Promise<void
   try {
     await removeDeadlineTask(id);
   } catch (error) {
-    redirectToCommitments(error instanceof Error ? error.message : "Failed to delete Deadline Task");
+    redirectToCommitments(error instanceof Error ? error.message : "刪除截止任務失敗");
   }
   redirectToCommitments();
 }

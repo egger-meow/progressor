@@ -1,7 +1,7 @@
 // Pure date math for the Weekly View. No Prisma access here — this is UI
 // layer, so it only shapes dates for src/server/time-slots.ts to consume.
 
-export const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+export const DAY_LABELS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
 
 function toDateOnly(date: Date): Date {
   const d = new Date(date);

@@ -29,7 +29,10 @@ export class WipLimitExceededError extends Error {
 export interface CreateTrackableItemInput {
   title: string;
   type: TrackableItemType;
-  priority: number;
+  // Optional: defaults to "last place" (current max priority + 1) so the
+  // Add form no longer needs a raw priority number — priority is now
+  // managed exclusively by dragging on /items (see reorderTrackableItems).
+  priority?: number;
   unitCount: number;
   estimatedDays: number;
   status?: TrackableItemStatus;
@@ -110,6 +113,11 @@ export function getTrackableItem(id: string) {
   return prisma.trackableItem.findUnique({ where: { id } });
 }
 
+async function nextPriority(): Promise<number> {
+  const result = await prisma.trackableItem.aggregate({ _max: { priority: true } });
+  return (result._max.priority ?? 0) + 1;
+}
+
 export async function createTrackableItem(input: CreateTrackableItemInput) {
   assertValidType(input.type);
   const status = input.status ?? "not-started";
@@ -124,17 +132,31 @@ export async function createTrackableItem(input: CreateTrackableItemInput) {
     await assertWipLimitNotExceeded(input.type);
   }
 
+  const priority = input.priority ?? (await nextPriority());
+
   return prisma.trackableItem.create({
     data: {
       title: input.title,
       type: input.type,
-      priority: input.priority,
+      priority,
       status,
       unitCount: input.unitCount,
       unitsCompleted,
       estimatedDays: input.estimatedDays,
     },
   });
+}
+
+// Persists a full drag-and-drop reorder in one go: `orderedIds` is every
+// Trackable Item id in its new top-to-bottom priority order (1-indexed).
+// Used by /items' drag-and-drop priority list — see
+// src/app/items/priority-list.tsx.
+export async function reorderTrackableItems(orderedIds: string[]): Promise<void> {
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.trackableItem.update({ where: { id }, data: { priority: index + 1 } }),
+    ),
+  );
 }
 
 export async function removeTrackableItem(id: string): Promise<void> {

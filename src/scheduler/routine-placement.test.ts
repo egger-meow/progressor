@@ -79,6 +79,26 @@ describe("placeRoutines", () => {
     expect(placeRoutines(outsideWeek, []).slots).toEqual([]);
   });
 
+  it("does not re-place a Routine occurrence that already has a Time Slot on that day (re-run idempotency)", () => {
+    const input = baseInput({
+      routines: [routine({ cadence: "weekly", anchor: [1, 3] })], // Mon, Wed
+      existingSlots: [
+        {
+          id: "ts-1",
+          startAt: new Date("2026-07-13T08:00:00"),
+          endAt: new Date("2026-07-13T10:00:00"),
+          occupantType: "routine",
+          occupantId: "r-1",
+        },
+      ],
+    });
+
+    const result = placeRoutines(input, []);
+
+    expect(result.slots).toHaveLength(1);
+    expect(result.slots[0].startAt).toEqual(new Date("2026-07-15T08:00:00")); // only Wednesday re-placed
+  });
+
   it("prefers the Time-of-Day Preference sub-window when it has room", () => {
     const input = baseInput({
       routines: [

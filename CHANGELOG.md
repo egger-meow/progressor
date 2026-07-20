@@ -135,10 +135,35 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   and drag-and-drop `priority` reordering on `/items` that instantly
   regenerates the current week's Schedule. Activated in `ROADMAP.md` and
   decomposed into `PRIORITIES.md`.
+- Warm design-token system (`src/app/globals.css`) and `Noto Sans TC`
+  typography applied across all four pages (`src/app/page.module.css`),
+  generated with the ui-ux-pro-max design skill per the project owner's
+  "warm motivated high interactive vibe" direction.
+- All UI-authored copy (labels, buttons, headings, nav, hints,
+  error-fallback strings) translated to Traditional Chinese.
+- `/items`' add/edit forms no longer take a manual `priority` field —
+  `createTrackableItem` now defaults an omitted priority to "last place"
+  (`src/server/trackable-items.ts`'s `nextPriority`).
+- Drag-and-drop `priority` reordering on `/items`
+  (`src/app/items/priority-list.tsx`, `reorderTrackableItems`,
+  `reorderItemsAction`): persists the new order and instantly
+  regenerates the current week's Schedule on drop.
+- Phase 5 closed: completion audit at
+  `docs/audits/ui-ux-overhaul-and-live-priority-reordering-audit.md`;
+  removed from `ROADMAP.md`. No phase is currently authorized.
 
 ### Changed
 
 ### Fixed
+
+- `placeFixedCommitments`/`placeRoutines`/`placeFlexibleTrackableItems`
+  (`src/scheduler/`) re-placed a duplicate `Time Slot` for an
+  already-scheduled `Fixed Commitment`/`Routine` occurrence or
+  `Trackable Item` session on every re-run of schedule generation for
+  the same week — now idempotent (`hasExistingOccurrence`, per-item
+  "already scheduled this week" checks), a prerequisite for drag-and-drop
+  priority reordering to safely trigger an instant regenerate on every
+  drop.
 
 - Vitest test files raced on the shared SQLite test database when run in
   parallel, corrupting other files' in-progress assertions; disabled

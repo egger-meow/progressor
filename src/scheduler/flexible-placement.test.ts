@@ -63,6 +63,26 @@ describe("placeFlexibleTrackableItems", () => {
     ]);
   });
 
+  it("does not place a second session for an item that already has one this week (re-run idempotency)", () => {
+    const input = baseInput({
+      trackableItems: [trackableItem({ status: "in-progress" })],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+      existingSlots: [
+        {
+          id: "ts-1",
+          startAt: new Date("2026-07-14T08:00:00"),
+          endAt: new Date("2026-07-14T10:00:00"),
+          occupantType: "trackable-item",
+          occupantId: "ti-1",
+        },
+      ],
+    });
+
+    const result = placeFlexibleTrackableItems(input, []);
+
+    expect(result.slots).toEqual([]);
+  });
+
   it("promotes only the highest-priority not-started item up to the WIP Limit", () => {
     const input = baseInput({
       trackableItems: [
