@@ -16,9 +16,14 @@ discrete units over multiple sittings. Concrete kinds: `Book`, `Course`.
 Fields: `id`, `title`, `type` (`book` | `course`), `priority` (使用者指定的
 整數優先度，數字越小越優先), `status` (`not-started` | `in-progress` |
 `paused` | `done`), `unitCount`（總單元數）, `unitsCompleted`（已完成單元數）,
-`estimatedDays`（使用者輸入的預估完成天數）, `tags`（見下方 Tag）. A
-Trackable Item may have many `Time Slot` occurrences assigned to it across
-many weeks, but at most one `status` at a time.
+`estimatedDays`（完成剩餘進度所需天數，不是整個項目的總天數 — 2026-07-21
+澄清）, `targetDate`（可選，明確指定的目標完成日期，與 `estimatedDays`
+互相獨立，不會自動互相推算——尚未開始的項目通常沒有「今天」可以當基準，
+2026-07-21 新增）, `unitWeightMultiplier`（單一倍率，預設 1.0，代表「平均
+每單元比正常長 N 倍」；目前僅供顯示參考，尚未接入排程邏輯，2026-07-21
+新增）, `tags`（見下方 Tag）. A Trackable Item may have many `Time Slot`
+occurrences assigned to it across many weeks, but at most one `status` at
+a time.
 
 ### Tag（標籤）
 
@@ -67,6 +72,23 @@ or a concrete anchor time (field `preferredStartTime`, `"HH:mm"` — Phase 7,
 scheduler (from Phase 2 on) tries `preferredStartTime` first when set, then
 `timeOfDayPreference`'s bucket window, then the full daily window; Phase 1
 showed it as metadata only, since Phase 1 has no scheduler.
+
+### Category Item Schedule（分類固定排程）
+
+Added 2026-07-22: an opt-in recurring reservation for one `Trackable Item`
+`type` (`book` or `course`) — one row per type, configured on `/items`'
+"固定排程" section. Reuses `Routine`'s `cadence`/`anchor`/
+`timeOfDayPreference`/`preferredStartTime`/`durationMinutes` vocabulary
+exactly (same shape, shared validation in `src/server/cadence.ts`), but
+unlike a `Routine` occurrence — which belongs to one occupant — an
+occurrence here is shared by **every currently `in-progress` (or
+WIP-Limit-promotable) item of that type at once**: "all books in progress
+I will finish the parts at that period" (project owner, 2026-07-22), not
+one book picked per occurrence. A `type` with no configured schedule keeps
+the original priority-ordered flexible placement (one session per eligible
+item, found independently within the week's `Slack` budget) unchanged —
+this is additive, never a breaking replacement. See `Schedule / Weekly
+View` below for how multiple items sharing one occurrence are displayed.
 
 ### Semester（學期）
 
@@ -135,7 +157,11 @@ editable per the charter's Guardrails. A "顯示：" selector above the grid
 (added 2026-07-21) toggles which fields each `Time Slot`'s card shows —
 time／`Tag`／occupant kind — a per-browser display preference, not part of
 the `Schedule` data itself. A day with a `Deadline Task` due on it shows a
-red banner above that day's column.
+red banner above that day's column. Multiple `Time Slot`s that share the
+exact same `[startAt, endAt)` window and occupant kind — e.g. every
+`in-progress` `Book` sharing one `Category Item Schedule` occurrence —
+render as one merged block instead of stacked duplicate cards; per-item
+title/progress only shows once expanded (added 2026-07-22).
 
 ### Scheduler（自動排程引擎）
 

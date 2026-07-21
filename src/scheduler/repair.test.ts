@@ -49,6 +49,7 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
     routines: [],
     fixedCommitments: [],
     deadlineTasks: [],
+    categoryItemSchedules: [],
     adHocEvents: [],
     // Spare book capacity (2 slots, 1 used) is what makes Book B a live
     // backfill candidate once Book A's session is freed up; course is at

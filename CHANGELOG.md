@@ -197,6 +197,50 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   `src/app/page.tsx`) — project owner, 2026-07-21: "If a day have a
   deadline event, the event would show above the day...to highlight that
   day is a deadline, maybe with red."
+- `TrackableItem.targetDate` (optional `DateTime?`) — an explicit target
+  completion date, independent of `estimatedDays` (never auto-derived from
+  it): most useful set directly on a not-yet-started item, where "today +
+  N days" doesn't mean anything yet. A "設定目標完成日期" checkbox +
+  `DatePicker` on `/items`' create/edit forms — project owner, 2026-07-21,
+  clarifying that the day-count/deadline equivalence "only for those we
+  are active reading...most book we not started reading hard to estimate
+  deadline."
+- `TrackableItem.unitWeightMultiplier` (`Float`, default `1.0`) — "chapters
+  average Nx longer than normal," a single per-item multiplier (the
+  project owner's own choice over a per-chapter list). Display-only for
+  now ("平均每單元倍率" on `/items`) — deliberately not wired into any
+  scheduling/pacing logic yet, flagged in a schema comment so it doesn't
+  become the next silent dead field.
+- `CategoryItemSchedule` (new model, one row per `TrackableItemType` —
+  `src/server/category-item-schedules.ts`): an opt-in recurring
+  reservation for Book/Course scheduling, reusing `Routine`'s
+  cadence/anchor/timeOfDayPreference/preferredStartTime vocabulary
+  (extracted into shared `src/server/cadence.ts`/`src/scheduler/
+  occurrence-timing.ts`, reused by both `Routine` and this — a pure
+  refactor, `routines.test.ts`/`routine-placement.test.ts` pass
+  unmodified). `placeCategoryItemSchedules` (`src/scheduler/
+  category-placement.ts`) places one Time Slot per currently-eligible item
+  of that type, all sharing the exact same window per occurrence — not
+  one book picked per occurrence — per the project owner's explicit
+  correction, 2026-07-21: "all books in progress I will finish the parts
+  at that period...never watch specific book(s) only." A type with no
+  configured schedule is untouched and keeps today's per-item flexible
+  placement (`placeFlexibleTrackableItems`) — additive, not a breaking
+  replacement. Configured via a new "固定排程" section on `/items`
+  (`setCategoryItemScheduleAction`/`removeCategoryItemScheduleAction`),
+  deliberately shipped only after the Scheduler already consumed it —
+  see `docs/status.md`'s note on the `DeadlineTask.estimatedDays` dead-field
+  mistake this session found and fixed once already.
+- The Weekly View now merges same-window Time Slots of the same kind
+  (`groupKey`, `src/app/grouped-slot-block.tsx`) into one block instead of
+  stacked duplicate cards — the direct rendering counterpart to
+  `CategoryItemSchedule`'s shared-window placement. Only the shared kind
+  chip + time range are always visible; per-item title + progress
+  (`occupantProgress`, split out of `occupantLabel` in
+  `src/server/time-slots.ts`) appear on expand (`GroupedSlotDetailPanel`,
+  via the existing "?edit="-style query-param pattern, no new client JS)
+  — project owner, 2026-07-21: "all books together in a time zone...not
+  different books separated, only details looks what the books' progress."
 
 ### Changed
 

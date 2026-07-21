@@ -337,12 +337,33 @@ rather than packing it solid. Like a `Routine` occurrence, an item with no
 room anywhere this week simply gets no session; no `SchedulerConflict` is
 raised for it.
 
+Added 2026-07-22: `src/scheduler/category-placement.ts`'s
+`placeCategoryItemSchedules` runs *before* `placeFlexibleTrackableItems`
+and, for each `Trackable Item` `type` with a configured `Category Item
+Schedule`, takes over its placement entirely — reusing
+`selectEligibleItems` (unmodified) to find that type's eligible items, then
+for each cadence/anchor occurrence (day+window selection shared with
+`Routine` via `src/scheduler/occurrence-timing.ts`'s
+`occurrenceDayOffsets`/`findOccurrenceWindow`), placing one Time Slot per
+eligible item, all sharing the identical window — not one item per
+occurrence like a `Routine`. `computeSchedule` (`src/scheduler/index.ts`)
+filters that type's items out of `placeFlexibleTrackableItems`'s input
+afterward, so a type with no configured schedule flows through unchanged
+(additive, not a breaking replacement) — this is what makes the two
+placement strategies mutually exclusive per type rather than
+double-booking. Re-run idempotency reuses `hard-constraints.ts`'s
+`hasExistingOccurrence` (now generic over every occupant kind, not just
+`"fixed-commitment"`/`"routine"`), checked per item per day, so a
+newly-WIP-promoted item is filled into an already-partially-covered day
+rather than skipped or duplicated.
+
 `src/scheduler/index.ts`'s `computeSchedule(input: SchedulerInput):
-SchedulerOutput` is the Scheduler's public entry point: it runs the three
+SchedulerOutput` is the Scheduler's public entry point: it runs the
 placement layers in order — hard constraints, then `Routine` occurrences,
-then flexible `Trackable Item` work — feeding each layer's placements
-forward as "busy" for the next, then merges everything into one
-`SchedulerOutput`. `src/scheduler/index.test.ts` is the fixture-based
+then `Category Item Schedule` occurrences, then flexible `Trackable Item`
+work for whatever's left — feeding each layer's placements forward as
+"busy" for the next, then merges everything into one `SchedulerOutput`.
+`src/scheduler/index.test.ts` is the fixture-based
 end-to-end suite: a realistic mixed week (an in-progress `Book` plus a
 second `Book` blocked by its type's `WIP Limit` already being at cap, a
 promotable `Course`, a `Fixed Commitment`, a `Deadline Task`, and a weekly
@@ -415,9 +436,13 @@ list + inline-edit-via-`?edit=`-query-param + Server Action pattern
 
 - `/items` (`src/app/items/`) — create, edit, and delete `Book` and
   `Course` records: title, type, priority, `unitCount`,
-  `unitsCompleted`, `estimatedDays`, `status`. `type` is immutable once
-  created (not part of the edit form, matching `updateTrackableItem`'s
-  input shape).
+  `unitsCompleted`, `estimatedDays`, `targetDate`, `unitWeightMultiplier`,
+  `status`. `type` is immutable once created (not part of the edit form,
+  matching `updateTrackableItem`'s input shape). Also hosts (added
+  2026-07-22) a "同時進行上限" section (`WIP Limit` per type, previously
+  backend-only) and a "固定排程" section (`Category Item Schedule` per
+  type — cadence/anchor/time-of-day/preferredStartTime/durationMinutes,
+  same fields as `/routines`' form).
 - `/routines` (`src/app/routines/`) — create, edit, and delete `Routine`
   records. `anchor` is entered as a comma-separated list ("1,3,5")
   rather than a full weekday/day-of-month picker grid — an inferred
@@ -602,15 +627,21 @@ then hands the merged full order to the unchanged `reorderItemsAction` /
 `reorderTrackableItems`. No Scheduler change was needed.
 
 **Trackable Item Time Slot detail:** a Weekly View block occupied by a
-`Book`/`Course` session now shows which unit it's for, e.g. `書籍：Deep
-Work（第 1 章／共 12 章）` or `課程：Algorithms Course（第 1 支影片／共 30
-支影片）` — `Chapter` for `Book`, `Video` for `Course`, per
+`Book`/`Course` session shows which unit it's for, e.g. `Deep Work（第 1
+章／共 12 章）` — `Chapter` for `Book`, `Video` for `Course`, per
 `docs/domain-model.md`'s unit vocabulary, computed as `unitsCompleted + 1`
-capped at `unitCount` (`occupantLabel` in `src/server/time-slots.ts`).
-This also closed a leftover Phase 5 gap: `occupantLabel`'s output for
-every occupant kind (not just `Trackable Item`) was still in English —
-now Traditional Chinese throughout (e.g. `常規事件：`, `固定事務：`,
-`（已刪除）` placeholders).
+capped at `unitCount`. This also closed a leftover Phase 5 gap:
+`occupantLabel`'s output for every occupant kind (not just `Trackable
+Item`) was still in English — now Traditional Chinese throughout (e.g.
+`常規事件：`, `固定事務：`, `（已刪除）` placeholders). Updated 2026-07-22:
+`occupantInfo` (`src/server/time-slots.ts`) splits this into two fields —
+`occupantLabel` is now just the title, and the unit string moved to a new
+`occupantProgress` (`TimeSlotWithLabel`, `undefined` for every non-
+`Trackable Item` occupant) — so a Weekly View block shared by multiple
+items (a `Category Item Schedule` occurrence) can list each item's own
+title + progress separately once expanded, instead of one baked-together
+string. A single-item block still joins them back into one line for
+display, so the single-book-per-day look is unchanged.
 
 Manually verified against the running dev server: added a `Book` (0/12
 units) and a `Course` (0/30 units), confirmed each landed in its own

@@ -149,6 +149,57 @@ describe("tags", () => {
   });
 });
 
+describe("targetDate / unitWeightMultiplier", () => {
+  it("defaults targetDate to null and unitWeightMultiplier to 1.0 when omitted", async () => {
+    const book = await createTrackableItem(bookInput());
+    expect(book.targetDate).toBeNull();
+    expect(book.unitWeightMultiplier).toBe(1.0);
+  });
+
+  it("persists an explicit targetDate independently of estimatedDays", async () => {
+    const targetDate = new Date("2026-09-01T00:00:00Z");
+    const book = await createTrackableItem(bookInput({ targetDate, estimatedDays: 20 }));
+    expect(book.targetDate?.getTime()).toBe(targetDate.getTime());
+    expect(book.estimatedDays).toBe(20);
+  });
+
+  it("rejects an invalid targetDate", async () => {
+    await expect(
+      createTrackableItem(bookInput({ targetDate: new Date("not-a-date") })),
+    ).rejects.toThrow(/targetDate must be a valid Date or null/);
+  });
+
+  it("rejects unitWeightMultiplier <= 0", async () => {
+    await expect(
+      createTrackableItem(bookInput({ unitWeightMultiplier: 0 })),
+    ).rejects.toThrow(/unitWeightMultiplier must be > 0/);
+  });
+
+  it("updateTrackableItem sets/clears targetDate independently of estimatedDays, leaves it untouched when omitted", async () => {
+    const book = await createTrackableItem(bookInput({ estimatedDays: 20 }));
+    const targetDate = new Date("2026-10-01T00:00:00Z");
+
+    const withTarget = await updateTrackableItem(book.id, { targetDate });
+    expect(withTarget.targetDate?.getTime()).toBe(targetDate.getTime());
+    expect(withTarget.estimatedDays).toBe(20);
+
+    const untouched = await updateTrackableItem(book.id, { title: "Renamed" });
+    expect(untouched.targetDate?.getTime()).toBe(targetDate.getTime());
+
+    const cleared = await updateTrackableItem(book.id, { targetDate: null });
+    expect(cleared.targetDate).toBeNull();
+  });
+
+  it("updateTrackableItem replaces unitWeightMultiplier when provided, leaves it untouched otherwise", async () => {
+    const book = await createTrackableItem(bookInput({ unitWeightMultiplier: 1.5 }));
+    const untouched = await updateTrackableItem(book.id, { title: "Renamed" });
+    expect(untouched.unitWeightMultiplier).toBe(1.5);
+
+    const updated = await updateTrackableItem(book.id, { unitWeightMultiplier: 2 });
+    expect(updated.unitWeightMultiplier).toBe(2);
+  });
+});
+
 describe("WIP limit enforcement", () => {
   it("defaults to DEFAULT_WIP_LIMIT when nothing is configured", async () => {
     expect(await getWipLimit("book")).toBe(DEFAULT_WIP_LIMIT);

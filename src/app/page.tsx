@@ -11,6 +11,7 @@ import { DatePicker } from "./date-picker";
 import { OccupantPicker, type OccupantOption } from "./occupant-picker";
 import { HourCellOverlay } from "./hour-cell-overlay";
 import { DisplayOptionsControl, WEEKLY_VIEW_ID } from "./display-options";
+import { GroupedSlotBlock, GroupedSlotDetailPanel, groupKey, type SlotGroup } from "./grouped-slot-block";
 import {
   createTimeSlotAction,
   updateTimeSlotAction,
@@ -179,7 +180,10 @@ function SlotCard({ slot, weekParam }: { slot: TimeSlotWithLabel; weekParam: str
         <span className={styles.slotTime}>
           {formatTimeLabel(new Date(slot.startAt))}–{formatTimeLabel(new Date(slot.endAt))}
         </span>
-        <span className={styles.slotOccupant}>{slot.occupantLabel}</span>
+        <span className={styles.slotOccupant}>
+          {slot.occupantLabel}
+          {slot.occupantProgress ? `（${slot.occupantProgress}）` : ""}
+        </span>
         {slot.occupantTags.length > 0 ? (
           <span className={styles.slotTags}>
             {slot.occupantTags.map((tag) => (
@@ -313,6 +317,7 @@ export default async function WeeklyView({
     week?: string;
     edit?: string;
     add?: string;
+    expand?: string;
     quickEvent?: string;
     error?: string;
   }>;
@@ -441,9 +446,34 @@ export default async function WeeklyView({
             return [{ slot, startRowIndex, span: endRowIndex - startRowIndex + 1 }];
           });
 
-          const continuationRows = new Set<number>();
+          // Merge same-window Time Slots (groupKey) into one group — a
+          // CategoryItemSchedule occurrence places one Time Slot per
+          // eligible item, all sharing the identical window, and this is
+          // what renders them as one block instead of stacked duplicate
+          // cards (see grouped-slot-block.tsx). Every other occupant kind
+          // never merges, so its rendering is unaffected.
+          const groupsByKey = new Map<
+            string,
+            { slots: TimeSlotWithLabel[]; startRowIndex: number; span: number }
+          >();
           for (const placement of placements) {
-            for (let j = placement.startRowIndex + 1; j < placement.startRowIndex + placement.span; j++) {
+            const key = groupKey(placement.slot);
+            const existing = groupsByKey.get(key);
+            if (existing) {
+              existing.slots.push(placement.slot);
+            } else {
+              groupsByKey.set(key, {
+                slots: [placement.slot],
+                startRowIndex: placement.startRowIndex,
+                span: placement.span,
+              });
+            }
+          }
+          const groups = Array.from(groupsByKey.values());
+
+          const continuationRows = new Set<number>();
+          for (const group of groups) {
+            for (let j = group.startRowIndex + 1; j < group.startRowIndex + group.span; j++) {
               continuationRows.add(j);
             }
           }
@@ -472,7 +502,7 @@ export default async function WeeklyView({
               </h2>
               <div className={styles.hourGrid}>
                 {hourRows.map((row, rowIndex) => {
-                  const placementsHere = placements.filter((p) => p.startRowIndex === rowIndex);
+                  const groupsHere = groups.filter((g) => g.startRowIndex === rowIndex);
                   const isContinuation = continuationRows.has(rowIndex);
                   const addParam = cellAddParam(day, row.hour);
                   const isAddingHere = params.add === addParam;
@@ -488,15 +518,27 @@ export default async function WeeklyView({
                         (slot) => new Date(slot.startAt).getTime() === row.rowEnd.getTime(),
                       );
 
-                  const editingSlotHere = placementsHere.find(
-                    (p) => editingSlot && p.slot.id === editingSlot.id,
-                  )?.slot;
+                  const editingSlotHere = groupsHere
+                    .flatMap((g) => g.slots)
+                    .find((slot) => editingSlot && slot.id === editingSlot.id);
+
+                  const expandingGroupHere: SlotGroup | undefined = groupsHere.find((g) =>
+                    g.slots.some((slot) => slot.id === params.expand),
+                  );
 
                   const compactContent =
-                    placementsHere.length > 0 ? (
-                      placementsHere.map((p) => (
-                        <SlotCard key={p.slot.id} slot={p.slot} weekParam={weekParam} />
-                      ))
+                    groupsHere.length > 0 ? (
+                      groupsHere.map((g) =>
+                        g.slots.length > 1 ? (
+                          <GroupedSlotBlock
+                            key={groupKey(g.slots[0])}
+                            group={g}
+                            expandHref={`/?week=${weekParam}&expand=${g.slots[0].id}`}
+                          />
+                        ) : (
+                          <SlotCard key={g.slots[0].id} slot={g.slots[0]} weekParam={weekParam} />
+                        ),
+                      )
                     ) : (
                       <div className={styles.hourEmptyActions}>
                         <a
@@ -540,9 +582,11 @@ export default async function WeeklyView({
                       weekParam={weekParam}
                       occupantOptions={occupantOptions}
                     />
+                  ) : expandingGroupHere ? (
+                    <GroupedSlotDetailPanel group={expandingGroupHere} weekParam={weekParam} />
                   ) : undefined;
 
-                  const span = placementsHere[0]?.span ?? 1;
+                  const span = groupsHere[0]?.span ?? 1;
 
                   return (
                     <Fragment key={row.hour}>

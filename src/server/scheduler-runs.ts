@@ -15,6 +15,7 @@
 import { listTrackableItems, getWipLimit } from "./trackable-items";
 import { listRoutines } from "./routines";
 import { listFixedCommitments, listDeadlineTasks } from "./semester-commitments";
+import { listCategoryItemSchedules } from "./category-item-schedules";
 import { listAdHocEvents } from "./ad-hoc-events";
 import { getSemester } from "./semester";
 import { listTimeSlots, createTimeSlot, type OccupantType } from "./time-slots";
@@ -41,6 +42,7 @@ export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promi
     routines,
     fixedCommitments,
     deadlineTasks,
+    categoryItemSchedules,
     adHocEvents,
     existingSlots,
     bookLimit,
@@ -51,6 +53,7 @@ export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promi
     listRoutines(),
     listFixedCommitments(),
     listDeadlineTasks(),
+    listCategoryItemSchedules(),
     listAdHocEvents(),
     listTimeSlots({ from: weekStart, to: weekEnd }),
     getWipLimit("book"),
@@ -87,6 +90,14 @@ export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promi
     })),
     fixedCommitments,
     deadlineTasks,
+    categoryItemSchedules: categoryItemSchedules.map((schedule) => ({
+      type: schedule.type as TrackableItemType,
+      cadence: schedule.cadence as RoutineCadence,
+      anchor: schedule.anchor,
+      timeOfDayPreference: schedule.timeOfDayPreference as TimeOfDayPreference | null,
+      preferredStartTime: schedule.preferredStartTime,
+      durationMinutes: schedule.durationMinutes,
+    })),
     adHocEvents,
     wipLimits: [
       { type: "book", maxInProgress: bookLimit },

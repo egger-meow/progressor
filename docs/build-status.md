@@ -658,3 +658,77 @@ new entry correcting it and say so explicitly.
   intermittently unresponsive (a repeated form-submit click required a
   JS-driven `button.click()` before it registered) — same known
   environment issue as the previous entry, not an app defect.
+- 2026-07-22: project owner reacted to a screenshot of `/items` (書籍與
+  課程) with six points, several of which — per-chapter weighting, Weekly
+  View grouping, and generalizing Book/Course scheduling into a
+  `Routine`-like recurring reservation — the owner asked (via
+  `AskUserQuestion`) to design as one connected phase before coding, since
+  a shared window/grouping-render decision affects all three. Entered
+  plan mode (`EnterPlanMode`), spawned two `Explore` agents (`Routine`
+  model/placement; Weekly View slot rendering) plus one `Plan` agent to
+  draft slices, then two more rounds of `AskUserQuestion` to pin down the
+  one behavioral fork that mattered: whether a `Category Item Schedule`
+  occurrence rotates through eligible items one-per-occurrence (like a
+  Routine) or is shared by every eligible item at once. Owner's answer —
+  "all books in progress I will finish the parts at that period...never
+  watch specific book(s) only" — meant every eligible item gets its own
+  Time Slot at the identical shared window, which is *why* the Weekly
+  View grouping/merge work turned out to be required companion work, not
+  an optional nice-to-have (multiple same-window Time Slots need to
+  render as one block, not stacked duplicates). Plan approved and
+  implemented in the confirmed slice order:
+  (1) `TrackableItem.targetDate` (optional, independent of
+  `estimatedDays`, per the owner's follow-up clarification that the
+  day-count/deadline equivalence only loosely applies while actively
+  reading) and `unitWeightMultiplier` (`Float`, default 1.0, display-only,
+  owner's own choice of "one multiplier per item" over a per-chapter
+  list) — both on `/items`' forms.
+  (2) `CategoryItemSchedule` model (one row per `TrackableItemType`,
+  `src/server/category-item-schedules.ts`) + extracted shared
+  `src/server/cadence.ts` (cadence/anchor/time-of-day validation, pulled
+  out of `routines.ts` — pure refactor, `routines.test.ts` passes
+  unmodified) — no UI yet.
+  (3) `src/scheduler/category-placement.ts`'s `placeCategoryItemSchedules`
+  + extracted shared `src/scheduler/occurrence-timing.ts`
+  (`occurrenceDayOffsets`/`findOccurrenceWindow`, pulled out of
+  `routine-placement.ts` — pure refactor, `routine-placement.test.ts`
+  passes unmodified) + widened `hard-constraints.ts`'s
+  `hasExistingOccurrence` to every occupant kind (was hardcoded to
+  `"fixed-commitment"`/`"routine"` only) + wired into `computeSchedule`
+  (`src/scheduler/index.ts`) as an additive layer that filters a
+  configured type's items out of `placeFlexibleTrackableItems`'s input.
+  (4) Weekly View grouping (`src/app/grouped-slot-block.tsx`'s
+  `groupKey`/`GroupedSlotBlock`/`GroupedSlotDetailPanel`) merging same-
+  exact-window same-kind Time Slots into one block, expandable via the
+  existing `?edit=`-style query-param pattern (no new client JS); split
+  `occupantInfo`'s (`src/server/time-slots.ts`) combined
+  title+progress string into separate `occupantLabel`/`occupantProgress`
+  fields so an expanded multi-item block can list each item's own
+  progress.
+  (5) `CategoryItemSchedule` UI on `/items` (`CategoryScheduleForm`,
+  fields adapted directly from `/routines`' form since they share
+  `cadence.ts`'s validation) — deliberately shipped last, after the
+  Scheduler already consumed the concept, per the same lesson this
+  session already learned once from `DeadlineTask.estimatedDays` sitting
+  unused for months.
+  `npm run verify` passes throughout — 223 tests (38 new: 12
+  `category-placement.test.ts`, 17 `category-item-schedules.test.ts`, 1
+  extended `index.test.ts` fixture, plus `trackable-items.test.ts`/
+  `time-slots.test.ts` additions for the new fields), lint/typecheck/build
+  clean at every slice. Manually verified against the running dev server
+  end-to-end: configured a daily `book` schedule via a direct Prisma
+  script (UI didn't exist yet at that point in the sequence) with the
+  project owner's own two real in-progress books, clicked "產生課表," and
+  confirmed a merged "2 項進行中" block on every day of the week, each
+  expanding to show both books' own title + progress + tags + per-item
+  跳過／標記完成／移除 actions; then, once the `/items` UI (slice 5)
+  shipped, configured a weekly `[1,3,5]` schedule through the real form,
+  regenerated, and confirmed sessions landed only on Mon/Wed/Fri; then
+  removed the schedule through the UI and confirmed "產生課表" reverted
+  to the original one-session-per-item flexible placement (fallback
+  verified, not just assumed). All test-created `Time Slot`s and the
+  test `CategoryItemSchedule` row were removed afterward via direct
+  Prisma scripts scoped to exactly the records created during
+  verification (deletion counts cross-checked against creation counts
+  each time), leaving the project owner's real `Book`/`Course` records
+  and their status/progress completely untouched throughout.

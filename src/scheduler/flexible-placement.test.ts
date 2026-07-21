@@ -13,6 +13,7 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
     routines: [],
     fixedCommitments: [],
     deadlineTasks: [],
+    categoryItemSchedules: [],
     adHocEvents: [],
     wipLimits: [],
     existingSlots: [],

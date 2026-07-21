@@ -49,6 +49,20 @@ export interface SchedulerRoutine {
   durationMinutes: number;
 }
 
+// Mirrors SchedulerRoutine's cadence/anchor/timeOfDayPreference/
+// preferredStartTime vocabulary (same shape, see occurrence-timing.ts) —
+// an opt-in recurring reservation for one TrackableItemType, shared by
+// every currently-eligible item of that type (see category-placement.ts),
+// not one occupant per occurrence like a Routine.
+export interface SchedulerCategoryItemSchedule {
+  type: TrackableItemType;
+  cadence: RoutineCadence;
+  anchor: number[] | null;
+  timeOfDayPreference: TimeOfDayPreference | null;
+  preferredStartTime: string | null;
+  durationMinutes: number;
+}
+
 export interface SchedulerFixedCommitment {
   id: string;
   title: string;
@@ -125,6 +139,7 @@ export interface SchedulerInput {
   routines: SchedulerRoutine[];
   fixedCommitments: SchedulerFixedCommitment[];
   deadlineTasks: SchedulerDeadlineTask[];
+  categoryItemSchedules: SchedulerCategoryItemSchedule[];
   adHocEvents: SchedulerAdHocEvent[];
   wipLimits: SchedulerWipLimit[];
   existingSlots: SchedulerExistingTimeSlot[];

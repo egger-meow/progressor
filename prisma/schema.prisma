@@ -24,6 +24,15 @@ model TrackableItem {
   unitCount      Int
   unitsCompleted Int      @default(0)
   estimatedDays  Int
+  // Optional explicit target completion date — deliberately separate from
+  // estimatedDays (never auto-derived from it, never auto-frozen): most
+  // useful set directly on a not-yet-started item where "today + N days"
+  // doesn't mean anything yet. Not consumed by the Scheduler yet.
+  targetDate     DateTime?
+  // "Chapters average Nx longer than normal" — a single per-item multiplier,
+  // not per-chapter. Display-only for now (nothing computes "how many units
+  // fit a session" yet); not consumed by the Scheduler.
+  unitWeightMultiplier Float @default(1.0)
   // JSON-encoded string array (same convention as Routine.anchor below) —
   // free-text labels the user assigns, e.g. a course tagged "學校課" or a
   // book tagged "trader". Parsed/validated in src/server/tags.ts.
@@ -39,6 +48,27 @@ model TrackableItem {
 model WipLimit {
   type          String @id
   maxInProgress Int
+}
+
+// One row per TrackableItemType ("book"/"course", same one-row-per-type
+// shape as WipLimit above) — an opt-in recurring reservation for that
+// category, mirroring Routine's cadence/anchor/timeOfDayPreference/
+// preferredStartTime/durationMinutes vocabulary (validated via the shared
+// src/server/cadence.ts, since this is the same shape/algorithm as Routine,
+// unlike FixedCommitment/DeadlineTask which are deliberately kept separate).
+// A type with no row here falls back to today's priority-ordered flexible
+// placement (src/scheduler/flexible-placement.ts) unchanged — this is
+// additive, never a breaking replacement. Placement:
+// src/scheduler/category-placement.ts.
+model CategoryItemSchedule {
+  type                String   @id
+  cadence             String
+  anchor              String?
+  timeOfDayPreference String?
+  preferredStartTime  String?
+  durationMinutes     Int      @default(120)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 // Routine implements docs/domain-model.md's "Routine". `cadence` and

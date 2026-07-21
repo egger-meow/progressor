@@ -7,6 +7,7 @@ import {
   SchedulerInput,
   ScheduledTimeSlot,
   SchedulerConflict,
+  SchedulerOccupantType,
 } from "./types";
 import {
   addDays,
@@ -42,13 +43,16 @@ export interface HardConstraintResult {
 // unexplained overlap (charter guardrail: never silently drop or hide a
 // fixed-deadline affair).
 // A re-run of the Scheduler for the same week must be idempotent: if this
-// exact Fixed Commitment/Routine already has an occurrence Time Slot on
-// this calendar day (from a prior run, per the re-run policy in
-// scheduler-runs.ts), placing another one would create a visible
-// duplicate rather than recognizing it's already scheduled.
+// exact Fixed Commitment/Routine/Trackable Item already has an occurrence
+// Time Slot on this calendar day (from a prior run, per the re-run policy
+// in scheduler-runs.ts), placing another one would create a visible
+// duplicate rather than recognizing it's already scheduled. Generic over
+// every occupant kind (not just "fixed-commitment"/"routine") since
+// category-placement.ts's per-item idempotency check needs
+// "trackable-item" too — the comparison itself is agnostic to which kind.
 export function hasExistingOccurrence(
   existingSlots: SchedulerInput["existingSlots"],
-  occupantType: "fixed-commitment" | "routine",
+  occupantType: SchedulerOccupantType,
   occupantId: string,
   day: Date,
 ): boolean {

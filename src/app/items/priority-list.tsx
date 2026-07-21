@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteTrackableItemAction, reorderItemsAction } from "./actions";
 import { reorderWithinType } from "./priority-order";
+import { formatDateParam } from "../week";
 import styles from "../page.module.css";
 
 export interface PriorityListItem {
@@ -14,6 +15,8 @@ export interface PriorityListItem {
   unitsCompleted: number;
   unitCount: number;
   estimatedDays: number;
+  unitWeightMultiplier: number;
+  targetDate: Date | null;
   tags: string[];
 }
 
@@ -142,8 +145,10 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
               <span className={styles.recordMain}>
                 <span className={styles.recordTitle}>{item.title}</span>
                 <span className={styles.recordMeta}>
-                  {STATUS_LABELS[item.status] ?? item.status} · {item.unitsCompleted}/
-                  {item.unitCount} 單元 · 預估 {item.estimatedDays} 天
+                  {STATUS_LABELS[item.status] ?? item.status} · 已完成 {item.unitsCompleted}/
+                  {item.unitCount} 單元 · 剩餘進度預估 {item.estimatedDays} 天
+                  {item.unitWeightMultiplier !== 1 ? ` · 平均每單元 ${item.unitWeightMultiplier}x` : ""}
+                  {item.targetDate ? ` · 目標 ${formatDateParam(new Date(item.targetDate))}` : ""}
                 </span>
                 {item.tags.length > 0 ? (
                   <span className={styles.tagList}>

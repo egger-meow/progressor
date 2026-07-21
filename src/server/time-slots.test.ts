@@ -253,6 +253,43 @@ describe("listTimeSlotsWithLabels — occupantTags", () => {
   });
 });
 
+describe("listTimeSlotsWithLabels — occupantProgress", () => {
+  it("splits a trackable-item's title (occupantLabel) from its progress (occupantProgress)", async () => {
+    const book = await createTrackableItem({
+      title: "Reminiscences of a Stock Operator",
+      type: "book",
+      priority: 1,
+      unitCount: 24,
+      unitsCompleted: 11,
+      estimatedDays: 5,
+    });
+    const slot = await createTimeSlot({
+      ...hourSlot(9),
+      occupantType: "trackable-item",
+      occupantId: book.id,
+    });
+
+    const labeled = await listTimeSlotsWithLabels();
+    const found = labeled.find((s) => s.id === slot.id);
+    expect(found?.occupantLabel).toBe("Reminiscences of a Stock Operator");
+    expect(found?.occupantProgress).toBe("第 12 章／共 24 章");
+  });
+
+  it("leaves occupantProgress undefined for every other occupant kind, including slack", async () => {
+    const routine = await createRoutine({ title: "Gym", category: "gym", cadence: "daily" });
+    const routineSlot = await createTimeSlot({
+      ...hourSlot(7),
+      occupantType: "routine",
+      occupantId: routine.id,
+    });
+    const slackSlot = await createTimeSlot({ ...hourSlot(8), occupantType: "slack" });
+
+    const labeled = await listTimeSlotsWithLabels();
+    expect(labeled.find((s) => s.id === routineSlot.id)?.occupantProgress).toBeUndefined();
+    expect(labeled.find((s) => s.id === slackSlot.id)?.occupantProgress).toBeUndefined();
+  });
+});
+
 describe("listTimeSlotsWithLabels — occupant deleted out from under a Time Slot", () => {
   it("degrades to a placeholder label instead of throwing (Core Entity Creation UI's delete guarantee)", async () => {
     const item = await createTrackableItem({

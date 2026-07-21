@@ -75,6 +75,7 @@ function buildFixture(): SchedulerInput {
         estimatedHours: 2,
       },
     ],
+    categoryItemSchedules: [],
     adHocEvents: [],
     wipLimits: [
       { type: "book", maxInProgress: 1 }, // already at cap via book-a
@@ -189,5 +190,53 @@ describe("computeSchedule (end-to-end fixture)", () => {
       occupantId: "dt-impossible",
       message: expect.stringContaining("Impossible Essay"),
     });
+  });
+
+  it("a configured CategoryItemSchedule takes over that type's placement entirely, sharing one window across every eligible item", () => {
+    const fixture = buildFixture();
+    // book-a (in-progress) and book-b would otherwise be blocked by the WIP
+    // Limit already at cap via book-a — raise it so both are eligible, to
+    // prove they land in the SAME window together, not two separate slots.
+    fixture.wipLimits = [
+      { type: "book", maxInProgress: 2 },
+      { type: "course", maxInProgress: 1 },
+    ];
+    fixture.trackableItems = fixture.trackableItems.map((item) =>
+      item.id === "book-b" ? { ...item, status: "in-progress" as const } : item,
+    );
+    fixture.categoryItemSchedules = [
+      {
+        type: "book",
+        cadence: "weekly",
+        anchor: [2], // Tuesday — clear of the Monday Fixed Commitment/Routine
+        timeOfDayPreference: null,
+        preferredStartTime: null,
+        durationMinutes: 120,
+      },
+    ];
+
+    const output = computeSchedule(fixture);
+
+    const bookSlots = output.slots.filter(
+      (s) => s.occupantType === "trackable-item" && (s.occupantId === "book-a" || s.occupantId === "book-b"),
+    );
+    expect(bookSlots).toHaveLength(2);
+    expect(bookSlots[0].startAt).toEqual(bookSlots[1].startAt);
+    expect(bookSlots[0].endAt).toEqual(bookSlots[1].endAt);
+    expect(bookSlots[0].startAt).toEqual(new Date("2026-07-14T08:00:00")); // Tuesday
+
+    // placeFlexibleTrackableItems must not have independently placed a
+    // second book session anywhere else this week.
+    const allBookSlots = output.slots.filter(
+      (s) => s.occupantType === "trackable-item" && (s.occupantId === "book-a" || s.occupantId === "book-b"),
+    );
+    expect(allBookSlots).toHaveLength(2);
+
+    // course-a (no CategoryItemSchedule configured) still goes through the
+    // old flexible per-item placement unchanged.
+    const courseSlots = output.slots.filter(
+      (s) => s.occupantType === "trackable-item" && s.occupantId === "course-a",
+    );
+    expect(courseSlots).toHaveLength(1);
   });
 });

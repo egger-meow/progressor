@@ -190,7 +190,7 @@ export function listTimeSlots(range?: ListTimeSlotsRange) {
 async function occupantInfo(
   occupantType: OccupantType,
   occupantId: string | null,
-): Promise<{ kind: string; label: string; tags: string[] }> {
+): Promise<{ kind: string; label: string; progress?: string; tags: string[] }> {
   if (occupantType === "slack" || !occupantId) {
     return { kind: "", label: "留白", tags: [] };
   }
@@ -221,15 +221,19 @@ async function occupantInfo(
         return { kind: "書籍／課程", label: "（書籍／課程已刪除）", tags: [] };
       }
       // Domain-model.md: Book's unit is Chapter, Course's unit is Video —
-      // surfaced here (not just the title) so a Weekly View block tells you
-      // which chapter/video this session is actually for, per INBOX.md's
-      // 2026-07-20 request.
+      // kept as its own `progress` field (not baked into `label`) so
+      // multiple items of the same kind sharing one Weekly View block
+      // (grouped-slot-block.tsx, one CategoryItemSchedule occurrence) can
+      // each show their own title + progress line, per INBOX.md's
+      // 2026-07-20 request that a block tell you which chapter/video a
+      // session is for.
       const kind = item.type === "book" ? "書籍" : "課程";
       const unitLabel = item.type === "book" ? "章" : "支影片";
       const currentUnit = Math.min(item.unitsCompleted + 1, item.unitCount);
       return {
         kind,
-        label: `${item.title}（第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}）`,
+        label: item.title,
+        progress: `第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}`,
         tags: parseTags(item.tags),
       };
     }
@@ -250,6 +254,7 @@ export interface TimeSlotWithLabel {
   occupantId: string | null;
   occupantKind: string;
   occupantLabel: string;
+  occupantProgress?: string;
   occupantTags: string[];
 }
 
@@ -268,6 +273,7 @@ export async function listTimeSlotsWithLabels(
         occupantId: slot.occupantId,
         occupantKind: info.kind,
         occupantLabel: info.label,
+        occupantProgress: info.progress,
         occupantTags: info.tags,
       };
     }),

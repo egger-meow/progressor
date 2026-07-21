@@ -8,7 +8,7 @@ export type TrackableItemStatus =
   | "paused"
   | "done";
 
-const VALID_TYPES: TrackableItemType[] = ["book", "course"];
+export const VALID_TYPES: TrackableItemType[] = ["book", "course"];
 const VALID_STATUSES: TrackableItemStatus[] = [
   "not-started",
   "in-progress",
@@ -38,6 +38,12 @@ export interface CreateTrackableItemInput {
   estimatedDays: number;
   status?: TrackableItemStatus;
   unitsCompleted?: number;
+  // Explicit target completion date — independent of estimatedDays, see
+  // prisma/schema.prisma's comment. null/undefined means "no target set."
+  targetDate?: Date | null;
+  // "Chapters average Nx longer than normal" — defaults to 1.0. Display-only
+  // for now, see prisma/schema.prisma's comment.
+  unitWeightMultiplier?: number;
   tags?: string[];
 }
 
@@ -48,6 +54,8 @@ export interface UpdateTrackableItemInput {
   unitCount?: number;
   unitsCompleted?: number;
   estimatedDays?: number;
+  targetDate?: Date | null;
+  unitWeightMultiplier?: number;
   tags?: string[];
 }
 
@@ -71,6 +79,22 @@ function assertValidUnits(unitCount: number, unitsCompleted: number): void {
   }
   if (unitsCompleted < 0 || unitsCompleted > unitCount) {
     throw new Error("unitsCompleted must be between 0 and unitCount");
+  }
+}
+
+function assertValidTargetDate(targetDate: Date | null | undefined): void {
+  if (
+    targetDate !== null &&
+    targetDate !== undefined &&
+    (!(targetDate instanceof Date) || Number.isNaN(targetDate.getTime()))
+  ) {
+    throw new Error("targetDate must be a valid Date or null");
+  }
+}
+
+function assertValidUnitWeightMultiplier(unitWeightMultiplier: number): void {
+  if (!Number.isFinite(unitWeightMultiplier) || unitWeightMultiplier <= 0) {
+    throw new Error("unitWeightMultiplier must be > 0");
   }
 }
 
@@ -138,6 +162,9 @@ export async function createTrackableItem(input: CreateTrackableItemInput) {
   if (input.estimatedDays <= 0) {
     throw new Error("estimatedDays must be > 0");
   }
+  assertValidTargetDate(input.targetDate);
+  const unitWeightMultiplier = input.unitWeightMultiplier ?? 1.0;
+  assertValidUnitWeightMultiplier(unitWeightMultiplier);
 
   if (status === "in-progress") {
     await assertWipLimitNotExceeded(input.type);
@@ -154,6 +181,8 @@ export async function createTrackableItem(input: CreateTrackableItemInput) {
       unitCount: input.unitCount,
       unitsCompleted,
       estimatedDays: input.estimatedDays,
+      targetDate: input.targetDate ?? null,
+      unitWeightMultiplier,
       tags: serializeTags(input.tags),
     },
   });
@@ -195,6 +224,12 @@ export async function updateTrackableItem(
   const nextUnitCount = input.unitCount ?? existing.unitCount;
   const nextUnitsCompleted = input.unitsCompleted ?? existing.unitsCompleted;
   assertValidUnits(nextUnitCount, nextUnitsCompleted);
+  if (input.targetDate !== undefined) {
+    assertValidTargetDate(input.targetDate);
+  }
+  if (input.unitWeightMultiplier !== undefined) {
+    assertValidUnitWeightMultiplier(input.unitWeightMultiplier);
+  }
 
   if (nextStatus === "in-progress" && existing.status !== "in-progress") {
     await assertWipLimitNotExceeded(existing.type);
@@ -209,6 +244,8 @@ export async function updateTrackableItem(
       unitCount: nextUnitCount,
       unitsCompleted: nextUnitsCompleted,
       estimatedDays: input.estimatedDays,
+      targetDate: input.targetDate === undefined ? undefined : input.targetDate,
+      unitWeightMultiplier: input.unitWeightMultiplier,
       tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });
