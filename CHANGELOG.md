@@ -235,6 +235,25 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   (`routine-placement.ts`) tries this exact time before
   `timeOfDayPreference`'s bucket window, falling back exactly as before
   when unset.
+- Weekly View day columns are now a real CSS Grid instead of a flex
+  column of independent hour rows, so a multi-hour `Time Slot` renders as
+  one card spanning `grid-row: "<start> / span <n>"` — one continuous
+  block crossing cell boundaries — instead of a start-hour card followed
+  by separately styled "continuation" strips underneath it (project
+  owner, 2026-07-21: "接續...the event should cross the blocks").
+- `SlotCard` (`src/app/page.tsx`) redesigned as a compact chip: only the
+  time range and occupant label are always visible; clicking the card
+  opens the existing floating edit panel, and 移除 is now a small icon
+  button (`.slotDeleteButton`) instead of a separate always-visible text
+  row — project owner, 2026-07-21: "固定事務：資料探勘 / 編輯 / 移除"
+  stacked as three lines was needless clutter.
+- The Weekly View's/`/commitments`' occupant `<select>` ("內容") replaced
+  with `OccupantPicker` (`src/app/occupant-picker.tsx`), a grouped
+  popover listing every Routine/Fixed Commitment/Deadline Task/Book or
+  Course/Ad-hoc Event by category — project owner, 2026-07-21, mistook a
+  cramped native dropdown (only "留白（不指定）" visibly highlighted) for
+  there being nothing else to pick, even though a second option existed
+  underneath it.
 
 ### Fixed
 

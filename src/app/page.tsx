@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { listTimeSlotsWithLabels, type TimeSlotWithLabel } from "@/server/time-slots";
 import { listRoutines } from "@/server/routines";
 import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commitments";
@@ -7,6 +8,7 @@ import { getSemester } from "@/server/semester";
 import { DAILY_WINDOW_START, DAILY_WINDOW_END } from "@/scheduler/constants";
 import { TimePicker } from "./time-picker";
 import { DatePicker } from "./date-picker";
+import { OccupantPicker, type OccupantOption } from "./occupant-picker";
 import { HourCellOverlay } from "./hour-cell-overlay";
 import {
   createTimeSlotAction,
@@ -32,11 +34,6 @@ import {
 } from "./week";
 import styles from "./page.module.css";
 
-interface OccupantOption {
-  value: string; // "type|id", or "slack|"
-  label: string;
-}
-
 const WINDOW_START_HOUR = parseHour(DAILY_WINDOW_START);
 const WINDOW_END_HOUR = parseHour(DAILY_WINDOW_END);
 
@@ -59,42 +56,50 @@ async function loadOccupantOptions(): Promise<OccupantOption[]> {
     ]);
 
   return [
-    { value: "slack|", label: "留白（不指定）" },
-    ...routines.map((r) => ({ value: `routine|${r.id}`, label: `常規事件：${r.title}` })),
+    { value: "slack|", group: "", title: "留白（不指定）" },
+    ...routines.map((r) => ({ value: `routine|${r.id}`, group: "常規事件", title: r.title })),
     ...fixedCommitments.map((c) => ({
       value: `fixed-commitment|${c.id}`,
-      label: `固定事務：${c.title}`,
+      group: "固定事務",
+      title: c.title,
     })),
     ...deadlineTasks.map((t) => ({
       value: `deadline-task|${t.id}`,
-      label: `截止任務：${t.title}`,
+      group: "截止任務",
+      title: t.title,
     })),
     ...trackableItems.map((i) => ({
       value: `trackable-item|${i.id}`,
-      label: `${i.type === "book" ? "書籍" : "課程"}：${i.title}`,
+      group: i.type === "book" ? "書籍" : "課程",
+      title: i.title,
     })),
     ...adHocEvents.map((e) => ({
       value: `ad-hoc-event|${e.id}`,
-      label: `臨時事件：${e.title}`,
+      group: "臨時事件",
+      title: e.title,
     })),
   ];
 }
 
-function OccupantSelect({
-  options,
-  selected,
-}: {
-  options: OccupantOption[];
-  selected?: string;
-}) {
+function TrashIcon() {
   return (
-    <select name="occupant" defaultValue={selected ?? "slack|"} required>
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
   );
 }
 
@@ -126,9 +131,10 @@ function SlotEditForm({
         </label>
         <label>
           內容
-          <OccupantSelect
+          <OccupantPicker
+            name="occupant"
             options={occupantOptions}
-            selected={`${slot.occupantType}|${slot.occupantId ?? ""}`}
+            defaultValue={`${slot.occupantType}|${slot.occupantId ?? ""}`}
           />
         </label>
         <div className={styles.slotFormActions}>
@@ -144,43 +150,53 @@ function SlotEditForm({
   );
 }
 
+// A single card that visually spans every hour it covers (see the
+// day-column render loop's `gridRow: span N`) — a real timetable block
+// instead of a stack of per-hour boxes. Kept deliberately compact: only
+// the time + what's in it are always visible; editing happens by clicking
+// the card itself (opens the same floating edit panel as before), and
+// 移除 is a small icon button instead of a full text row — project owner,
+// 2026-07-21: "固定事務：資料探勘 / 編輯 / 移除" stacked as three separate
+// lines was needless clutter for something that should read at a glance.
 function SlotCard({ slot, weekParam }: { slot: TimeSlotWithLabel; weekParam: string }) {
+  const isTrackable = slot.occupantType === "trackable-item" && slot.occupantId;
   return (
     <div className={styles.slotItem}>
-      <span className={styles.slotTime}>
-        {formatTimeLabel(new Date(slot.startAt))}–{formatTimeLabel(new Date(slot.endAt))}
-      </span>
-      <span className={styles.slotOccupant}>{slot.occupantLabel}</span>
-      <span className={styles.slotActions}>
-        <a href={`/?week=${weekParam}&edit=${slot.id}`} className={styles.linkAction}>
-          編輯
-        </a>
-        <form action={deleteTimeSlotAction} className={styles.inlineForm}>
-          <input type="hidden" name="id" value={slot.id} />
-          <input type="hidden" name="week" value={weekParam} />
-          <button type="submit" className={styles.buttonDanger}>
-            移除
-          </button>
-        </form>
-        {slot.occupantType === "trackable-item" && slot.occupantId ? (
-          <>
-            <form action={skipSessionAction} className={styles.inlineForm}>
-              <input type="hidden" name="slotId" value={slot.id} />
-              <input type="hidden" name="week" value={weekParam} />
-              <button type="submit" className={styles.buttonSecondary}>
-                跳過
-              </button>
-            </form>
-            <form action={completeItemAction} className={styles.inlineForm}>
-              <input type="hidden" name="itemId" value={slot.occupantId} />
-              <input type="hidden" name="week" value={weekParam} />
-              <button type="submit" className={styles.buttonAccent}>
-                標記完成
-              </button>
-            </form>
-          </>
-        ) : null}
-      </span>
+      <a
+        href={`/?week=${weekParam}&edit=${slot.id}`}
+        className={styles.slotItemMain}
+        aria-label={`編輯：${slot.occupantLabel}`}
+      >
+        <span className={styles.slotTime}>
+          {formatTimeLabel(new Date(slot.startAt))}–{formatTimeLabel(new Date(slot.endAt))}
+        </span>
+        <span className={styles.slotOccupant}>{slot.occupantLabel}</span>
+      </a>
+      <form action={deleteTimeSlotAction} className={styles.slotDeleteForm}>
+        <input type="hidden" name="id" value={slot.id} />
+        <input type="hidden" name="week" value={weekParam} />
+        <button type="submit" className={styles.slotDeleteButton} aria-label="移除" title="移除">
+          <TrashIcon />
+        </button>
+      </form>
+      {isTrackable && slot.occupantId ? (
+        <div className={styles.slotExtraActions}>
+          <form action={skipSessionAction} className={styles.inlineForm}>
+            <input type="hidden" name="slotId" value={slot.id} />
+            <input type="hidden" name="week" value={weekParam} />
+            <button type="submit" className={styles.slotChipButton}>
+              跳過
+            </button>
+          </form>
+          <form action={completeItemAction} className={styles.inlineForm}>
+            <input type="hidden" name="itemId" value={slot.occupantId} />
+            <input type="hidden" name="week" value={weekParam} />
+            <button type="submit" className={styles.slotChipButtonAccent}>
+              標記完成
+            </button>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -219,7 +235,7 @@ function InlineAddForm({
         </label>
         <label>
           內容
-          <OccupantSelect options={occupantOptions} />
+          <OccupantPicker name="occupant" options={occupantOptions} />
         </label>
         <div className={styles.slotFormActions}>
           <button type="submit" className={styles.button}>
@@ -359,24 +375,48 @@ export default async function WeeklyView({
           const extraHours = daySlots.map((slot) => new Date(slot.startAt).getHours());
           const hourRows = buildHourRows(day, WINDOW_START_HOUR, WINDOW_END_HOUR, extraHours);
 
+          // Where each Time Slot starts (as a row index into hourRows) and how
+          // many rows it spans — lets the card below render once with
+          // `gridRow: "<start> / span <n>"` so a multi-hour event is one
+          // continuous block crossing cell boundaries, the way a real 課表
+          // reads, instead of a start-hour card followed by separately
+          // colored "continuation" rows underneath it (project owner,
+          // 2026-07-21: "接續 layout look like this... the event should
+          // cross the blocks").
+          const placements = daySlots.flatMap((slot) => {
+            const start = new Date(slot.startAt);
+            const end = new Date(slot.endAt);
+            const startRowIndex = hourRows.findIndex((r) => start >= r.rowStart && start < r.rowEnd);
+            if (startRowIndex === -1) {
+              return [];
+            }
+            let endRowIndex = startRowIndex;
+            for (let j = startRowIndex; j < hourRows.length; j++) {
+              if (hourRows[j].rowStart < end) {
+                endRowIndex = j;
+              } else {
+                break;
+              }
+            }
+            return [{ slot, startRowIndex, span: endRowIndex - startRowIndex + 1 }];
+          });
+
+          const continuationRows = new Set<number>();
+          for (const placement of placements) {
+            for (let j = placement.startRowIndex + 1; j < placement.startRowIndex + placement.span; j++) {
+              continuationRows.add(j);
+            }
+          }
+
           return (
             <section key={index} className={styles.dayColumn}>
               <h2>
                 {DAY_LABELS[index]} <span className={styles.dayDate}>{formatDateLabel(day)}</span>
               </h2>
-              <ul className={styles.hourGrid}>
-                {hourRows.map((row) => {
-                  const startingSlots = daySlots.filter((slot) => {
-                    const start = new Date(slot.startAt);
-                    return start >= row.rowStart && start < row.rowEnd;
-                  });
-                  const isContinuation =
-                    startingSlots.length === 0 &&
-                    daySlots.some((slot) => {
-                      const start = new Date(slot.startAt);
-                      const end = new Date(slot.endAt);
-                      return start < row.rowStart && end > row.rowStart;
-                    });
+              <div className={styles.hourGrid}>
+                {hourRows.map((row, rowIndex) => {
+                  const placementsHere = placements.filter((p) => p.startRowIndex === rowIndex);
+                  const isContinuation = continuationRows.has(rowIndex);
                   const addParam = cellAddParam(day, row.hour);
                   const isAddingHere = params.add === addParam;
 
@@ -391,17 +431,15 @@ export default async function WeeklyView({
                         (slot) => new Date(slot.startAt).getTime() === row.rowEnd.getTime(),
                       );
 
-                  const editingSlotHere = startingSlots.find(
-                    (slot) => editingSlot && slot.id === editingSlot.id,
-                  );
+                  const editingSlotHere = placementsHere.find(
+                    (p) => editingSlot && p.slot.id === editingSlot.id,
+                  )?.slot;
 
                   const compactContent =
-                    startingSlots.length > 0 ? (
-                      startingSlots.map((slot) => (
-                        <SlotCard key={slot.id} slot={slot} weekParam={weekParam} />
+                    placementsHere.length > 0 ? (
+                      placementsHere.map((p) => (
+                        <SlotCard key={p.slot.id} slot={p.slot} weekParam={weekParam} />
                       ))
-                    ) : isContinuation ? (
-                      <span className={styles.hourContinuation} aria-hidden="true" />
                     ) : (
                       <div className={styles.hourEmptyActions}>
                         <a
@@ -447,16 +485,29 @@ export default async function WeeklyView({
                     />
                   ) : undefined;
 
+                  const span = placementsHere[0]?.span ?? 1;
+
                   return (
-                    <li key={row.hour} className={styles.hourRow}>
-                      <span className={styles.hourLabel}>{formatHourParam(row.hour)}</span>
-                      <HourCellOverlay overlay={overlayContent} className={styles.hourContent}>
-                        {compactContent}
-                      </HourCellOverlay>
-                    </li>
+                    <Fragment key={row.hour}>
+                      <span
+                        className={styles.hourLabel}
+                        style={{ gridRow: rowIndex + 1, borderTop: rowIndex === 0 ? "none" : undefined }}
+                      >
+                        {formatHourParam(row.hour)}
+                      </span>
+                      {isContinuation ? null : (
+                        <HourCellOverlay
+                          overlay={overlayContent}
+                          className={styles.hourContent}
+                          style={{ gridRow: `${rowIndex + 1} / span ${span}` }}
+                        >
+                          {compactContent}
+                        </HourCellOverlay>
+                      )}
+                    </Fragment>
                   );
                 })}
-              </ul>
+              </div>
             </section>
           );
         })}

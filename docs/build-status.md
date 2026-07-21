@@ -517,3 +517,32 @@ new entry correcting it and say so explicitly.
   from testing an arbitrary Semester date, one Routine occurrence, and
   the test `Routine`/`Semester` records themselves), leaving both of
   the project owner's own pre-existing records untouched.
+- 2026-07-21: Weekly View grid follow-up fix, from chat feedback against
+  the project owner's own real 17:00–20:00 `Time Slot` (screenshotted):
+  the previous "continuation bar" made a multi-hour slot look like
+  separate boxes with gaps, not one event; the compact `SlotCard` still
+  stacked title/編輯/移除 as three lines; the native occupant `<select>`
+  only visibly showed "留白（不指定）" when opened even though a second
+  option existed. Converted `.hourGrid` (`src/app/page.module.css`) from
+  a flex column to a real CSS Grid and had the day-column loop
+  (`src/app/page.tsx`) render each multi-hour `Time Slot`'s `SlotCard`
+  once with an inline `gridRow: "<start> / span <n>"` so it visually
+  spans its full duration as one card (deleted `.hourContinuation`
+  entirely); redesigned `SlotCard` as a compact chip (time + occupant
+  only always-visible, card itself links to the existing `?edit=` panel,
+  移除 now a small icon button); added `OccupantPicker`
+  (`src/app/occupant-picker.tsx`, new) replacing the native `<select
+  name="occupant">` with a grouped popover (same pattern as
+  `TimePicker`/`DatePicker`) listing every option under its category
+  header instead of a cramped native dropdown. `HourCellOverlay` gained
+  a `style` prop to carry the per-cell `gridRow` through. `npm run
+  verify` passes — still 161 tests (pure UI restructuring over the same
+  Server Action contracts, no service-layer change), lint/typecheck/
+  build all clean. Manually verified against the running dev server
+  using the project owner's own real data: their existing 17:00–20:00
+  slot rendered as one seamless card spanning three rows with
+  `接續前一個`/`接續後一個 ↓` still offered on the adjacent empty cells;
+  the occupant picker opened showing both "留白（不指定）" and a "固定事
+  務" group containing their real "資料探勘" commitment at once; a test
+  add-then-delete round-tripped cleanly (`TimeSlot` count unchanged
+  afterward).

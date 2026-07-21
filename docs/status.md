@@ -791,6 +791,60 @@ inline while the edit form floated beside it. `npm run verify` passes
 typecheck/build all clean. Test data cleared from `prisma/dev.db`
 afterward.
 
+**Spanning slot cards, compact SlotCard, grouped occupant picker
+(2026-07-21, same-day follow-up):** project owner feedback against a
+real multi-hour slot on their own week: the previous "continuation bar"
+approach (a 14%-tint strip in each covered hour) read as separate boxes
+with gaps between them, not one event ("接續...the event should cross
+the blocks"); the compact `SlotCard` still stacked "固定事務：X" /
+"編輯" / "移除" as three lines for something that should read at a
+glance; and the native `<select>` for "內容" only visibly showed "留白
+（不指定）" highlighted when opened, reading as if nothing else was
+selectable even when a second option existed underneath.
+
+- `.hourGrid` (`src/app/page.module.css`) is now a real CSS Grid
+  (`grid-template-columns: 40px 1fr`, `grid-auto-rows: 56px`) instead of
+  a flex column of independent `.hourRow`s. The day-column render loop
+  (`src/app/page.tsx`) precomputes each `Time Slot`'s start row index and
+  row span, and renders its `SlotCard` once with an inline `gridRow:
+  "<start> / span <n>"` — a multi-hour slot is one continuous card
+  crossing cell boundaries, with nothing rendered in the rows it covers
+  (no separate "continuation" element at all; `.hourContinuation` was
+  deleted). `HourCellOverlay` (`hour-cell-overlay.tsx`) gained a `style`
+  prop to carry this per-cell `gridRow` through to its anchor `<div>`.
+- `SlotCard` redesigned as a compact chip filling its full row-span
+  height: the time range + occupant label are the only always-visible
+  text, the whole card is a link to the existing `?edit=` floating panel
+  (same edit UI as before, just triggered by clicking the card instead
+  of a separate "編輯" line), and 移除 is a small icon button
+  (`.slotDeleteButton`, an inline SVG trash icon) pinned to the card's
+  corner instead of a fourth always-visible text row. 跳過/標記完成 (only
+  shown for a `Trackable Item` occupant) remain small pill buttons below.
+- `OccupantPicker` (`src/app/occupant-picker.tsx`, new) replaces the
+  native `<select name="occupant">` everywhere it appeared (Weekly
+  View's edit/add forms). Same popover pattern as `TimePicker`/
+  `DatePicker`: a button trigger showing the current selection, a panel
+  listing every option grouped under its category header (常規事件/固定
+  事務/截止任務/書籍/課程/臨時事件; 留白（不指定） stands alone with no
+  header). The hidden input still carries the exact `"type|id"` string
+  every Server Action already parses — no backend change.
+
+Manually verified against the running dev server, using the project
+owner's own real data: their existing 17:00–20:00 "留白" `Time Slot`
+(the exact one in their screenshot) rendered as one continuous card
+spanning three hour rows with no gap or color seam, `↑ 接續前一個`/`接續
+後一個 ↓` still offered correctly on the empty cells touching its
+boundaries; clicking 編輯 opened the floating panel positioned beside
+the spanning card without disturbing any other day's row alignment;
+opening the occupant picker showed both "留白（不指定）" and a "固定事
+務" group containing their real "資料探勘" commitment, clearly legible
+at once (not just one item visible); selecting it, submitting a test
+1-hour slot, and deleting it again round-tripped cleanly (`TimeSlot`
+count back to the same 2 real rows it started at). `npm run verify`
+passes — still 161 tests (pure UI restructuring over the same Server
+Action contracts; no service-layer behavior changed), lint/typecheck/
+build all clean.
+
 ### Semester Scoping for Fixed Commitments & Concrete Routine Times (Phase 7)
 
 `Semester` (`src/server/semester.ts`, new — a singleton row, fixed id

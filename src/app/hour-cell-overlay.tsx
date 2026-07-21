@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import styles from "./page.module.css";
 
@@ -16,10 +16,12 @@ export function HourCellOverlay({
   overlay,
   children,
   className,
+  style,
 }: {
   overlay?: ReactNode;
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
 }) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -52,7 +54,7 @@ export function HourCellOverlay({
   }, [overlay]);
 
   return (
-    <div ref={anchorRef} className={className}>
+    <div ref={anchorRef} className={className} style={style}>
       {children}
       {overlay && position
         ? createPortal(
