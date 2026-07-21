@@ -48,11 +48,23 @@ until the user edits or deletes the `Routine` itself — it is not a
 
 ### Time-of-Day Preference（時段偏好）
 
-A preference, attached to a `Routine`'s `category` or set globally by the
-user, expressed as `morning` | `afternoon` | `evening` | `night` (or an
-explicit hour range). The scheduler (from Phase 2 on) tries to honor this
-when placing flexible work; Phase 1 shows it as metadata only, since Phase 1
-has no scheduler.
+A preference, attached to a `Routine`, expressed either as a bucket
+(`morning` | `afternoon` | `evening` | `night`, field `timeOfDayPreference`)
+or a concrete anchor time (field `preferredStartTime`, `"HH:mm"` — Phase 7,
+"Semester Scoping for Fixed Commitments & Concrete Routine Times"). The
+scheduler (from Phase 2 on) tries `preferredStartTime` first when set, then
+`timeOfDayPreference`'s bucket window, then the full daily window; Phase 1
+showed it as metadata only, since Phase 1 has no scheduler.
+
+### Semester（學期）
+
+Added Phase 7 (2026-07-21), not part of the original bootstrap interview:
+a configurable `startDate` + `weekCount` (default 16) that bounds a `Fixed
+Commitment`'s occurrences to the weeks it covers. A `Fixed Commitment` may
+set `ignoreSemesterBounds` to opt out (e.g. a standing meeting with a
+professor that isn't tied to term dates). Singleton — one active `Semester`
+at a time, matching this app's single-user scope. Drives the Weekly View's
+"第 N 週" (week-of-semester) display.
 
 ### Semester Commitment（學期事務）
 
@@ -62,7 +74,11 @@ two mutually exclusive kinds:
 - **Fixed Commitment（固定事務）**：anchored to an exact recurring time slot
   that cannot move — weekly class, weekly meeting/report slot. Structurally
   like a `Routine` with `cadence = "weekly"`, but semantically distinct: it
-  is a hard constraint, never a schedulable-around preference.
+  is a hard constraint, never a schedulable-around preference. Bound to the
+  `Semester` window by default (`ignoreSemesterBounds = false`); a
+  commitment not actually tied to term dates (e.g. a standing meeting with
+  a professor) can set `ignoreSemesterBounds = true` to show every week
+  regardless — see `Semester` below.
 - **Deadline Task（期限任務）**：has a `dueAt` but flexible placement before
   that time — homework, quiz/exam prep, report writing. Structurally closer
   to a `Trackable Item` (has `estimatedDays`, gets units of work scheduled

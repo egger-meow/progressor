@@ -1,5 +1,6 @@
 import { listRoutines } from "@/server/routines";
 import { createRoutineAction, deleteRoutineAction, updateRoutineAction } from "./actions";
+import { TimePicker } from "../time-picker";
 import styles from "../page.module.css";
 
 const CADENCES = [
@@ -96,6 +97,21 @@ export default async function RoutinesPage({
                         ))}
                       </select>
                     </label>
+                    <label className={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        name="useExactTime"
+                        defaultChecked={routine.preferredStartTime !== null}
+                      />
+                      使用指定時間（優先於時段偏好）
+                    </label>
+                    <label>
+                      指定時間
+                      <TimePicker
+                        name="preferredStartTime"
+                        defaultValue={routine.preferredStartTime ?? "09:00"}
+                      />
+                    </label>
                     <div className={styles.slotFormActions}>
                       <button type="submit" className={styles.button}>
                         儲存
@@ -118,9 +134,11 @@ export default async function RoutinesPage({
                   <span className={styles.recordMeta}>
                     {CADENCE_LABELS[routine.cadence] ?? routine.cadence}
                     {routine.anchor ? `［${routine.anchor.join(",")}］` : ""}
-                    {routine.timeOfDayPreference
-                      ? ` · ${TIME_OF_DAY_LABELS[routine.timeOfDayPreference] ?? routine.timeOfDayPreference}`
-                      : ""}
+                    {routine.preferredStartTime
+                      ? ` · 指定 ${routine.preferredStartTime}`
+                      : routine.timeOfDayPreference
+                        ? ` · ${TIME_OF_DAY_LABELS[routine.timeOfDayPreference] ?? routine.timeOfDayPreference}`
+                        : ""}
                   </span>
                 </span>
                 <span className={styles.slotActions}>
@@ -174,6 +192,14 @@ export default async function RoutinesPage({
                 </option>
               ))}
             </select>
+          </label>
+          <label className={styles.checkboxLabel}>
+            <input type="checkbox" name="useExactTime" />
+            使用指定時間（優先於時段偏好）
+          </label>
+          <label>
+            指定時間
+            <TimePicker name="preferredStartTime" />
           </label>
           <button type="submit" className={styles.button}>
             新增

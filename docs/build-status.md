@@ -473,3 +473,47 @@ new entry correcting it and say so explicitly.
   day's alignment; submitted it, then opened 編輯 and confirmed the
   compact `SlotCard` stayed inline while the edit form floated beside
   it. Test data cleared from `prisma/dev.db` afterward.
+- 2026-07-21: `ROADMAP.md`'s "Semester Scoping for Fixed Commitments &
+  Concrete Routine Times" phase completed and closed, authorized in
+  chat: `Fixed Commitment`s showed every week forever with no way to
+  scope them to an actual semester, and a `Routine`'s `Time-of-Day
+  Preference` only offered four vague buckets. Migrated the schema
+  (`Semester` singleton, `FixedCommitment.ignoreSemesterBounds`,
+  `Routine.preferredStartTime`); added `src/server/semester.ts`
+  (get/set); extended `semester-commitments.ts`/`routines.ts` for the
+  two new fields with validation; extended `SchedulerInput`
+  (`semester`, plus the two new per-record fields) and added
+  `startOfWeek` to `src/scheduler/time.ts`; bounded
+  `placeFixedCommitments` to the Semester window via a new
+  `isWithinSemester` helper (`hard-constraints.ts`); made
+  `placeRoutines` try `preferredStartTime`'s exact window before the
+  `timeOfDayPreference` bucket (`routine-placement.ts`); threaded
+  `semester` through `buildSchedulerInput`
+  (`src/server/scheduler-runs.ts`, shared by both `runScheduler` and
+  the repair layer); built the `/commitments` "學期設定" section +
+  "忽略學期範圍" checkbox, the `/routines` concrete-time `TimePicker` +
+  "使用指定時間" checkbox, and the Weekly View's "第 N 週" badge. Added
+  24 new tests across `semester.test.ts` (new),
+  `semester-commitments.test.ts`, `routines.test.ts`,
+  `hard-constraints.test.ts`, `routine-placement.test.ts`, and
+  `week.test.ts` — 161 total, `npm run verify` clean (lint/typecheck/
+  build). Manually verified end-to-end against the running dev server
+  using the project owner's own real `Fixed Commitment` ("資料探勘")
+  rather than fabricating unrelated data: configured a `Semester`
+  starting 2026-08-01/16 weeks; confirmed "第 N 週" appeared/disappeared
+  correctly across the current week (before the semester), week 1, week
+  16 (last valid), and week 17 (first invalid); generated the schedule
+  for an in-range week and confirmed "資料探勘" was placed, then for the
+  current (out-of-range) week and confirmed nothing was placed for it;
+  created and tested a `Routine` with `preferredStartTime: "09:00"` and
+  confirmed it both displayed correctly and was placed exactly there by
+  the Scheduler. Discovered mid-verification that the project owner had
+  independently created "資料探勘" and a manual Slack `Time Slot` in
+  their own session while this work was in progress (timestamps
+  9 seconds after the commitment's own creation, well before this
+  phase's testing began) — cross-checked every `Time Slot`'s
+  `createdAt` before cleaning up, and removed only the ones this
+  session's own test actions produced (one `Fixed Commitment` occurrence
+  from testing an arbitrary Semester date, one Routine occurrence, and
+  the test `Routine`/`Semester` records themselves), leaving both of
+  the project owner's own pre-existing records untouched.

@@ -98,6 +98,36 @@ describe("createRoutine", () => {
       }),
     ).rejects.toThrow(/Invalid Time-of-Day Preference/);
   });
+
+  it("creates a routine with a concrete preferredStartTime", async () => {
+    const routine = await createRoutine({
+      title: "Gym",
+      category: "gym",
+      cadence: "daily",
+      preferredStartTime: "18:30",
+    });
+    expect(routine.preferredStartTime).toBe("18:30");
+  });
+
+  it("defaults preferredStartTime to null when omitted", async () => {
+    const routine = await createRoutine({
+      title: "Gym",
+      category: "gym",
+      cadence: "daily",
+    });
+    expect(routine.preferredStartTime).toBeNull();
+  });
+
+  it("rejects a malformed preferredStartTime", async () => {
+    await expect(
+      createRoutine({
+        title: "x",
+        category: "gym",
+        cadence: "daily",
+        preferredStartTime: "6:30pm",
+      }),
+    ).rejects.toThrow(/Invalid preferredStartTime/);
+  });
 });
 
 describe("updateRoutine", () => {
@@ -111,6 +141,20 @@ describe("updateRoutine", () => {
     const updated = await updateRoutine(routine.id, { title: "Gym: legs" });
     expect(updated.title).toBe("Gym: legs");
     expect(updated.anchor).toEqual([1, 2]);
+  });
+
+  it("sets and clears preferredStartTime", async () => {
+    const routine = await createRoutine({
+      title: "Gym",
+      category: "gym",
+      cadence: "daily",
+    });
+
+    const withTime = await updateRoutine(routine.id, { preferredStartTime: "07:00" });
+    expect(withTime.preferredStartTime).toBe("07:00");
+
+    const cleared = await updateRoutine(routine.id, { preferredStartTime: null });
+    expect(cleared.preferredStartTime).toBeNull();
   });
 
   it("clears the anchor when cadence changes to daily", async () => {

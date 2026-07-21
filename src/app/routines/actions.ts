@@ -32,6 +32,15 @@ function parseAnchor(raw: string): number[] | undefined {
     .filter((n) => Number.isInteger(n));
 }
 
+// The TimePicker (src/app/time-picker.tsx) always carries a real "HH:mm"
+// value — it has no "empty" state — so a separate checkbox is what says
+// whether that value should actually be used as preferredStartTime, or
+// ignored in favor of the timeOfDayPreference bucket below it.
+function readPreferredStartTime(formData: FormData): string | undefined {
+  const useExactTime = formData.get("useExactTime") === "on";
+  return useExactTime ? String(formData.get("preferredStartTime")) : undefined;
+}
+
 function readEditableFields(formData: FormData) {
   const timeOfDayRaw = String(formData.get("timeOfDayPreference") ?? "");
   return {
@@ -47,7 +56,10 @@ function readEditableFields(formData: FormData) {
 
 export async function createRoutineAction(formData: FormData): Promise<void> {
   try {
-    await createRoutine(readEditableFields(formData));
+    await createRoutine({
+      ...readEditableFields(formData),
+      preferredStartTime: readPreferredStartTime(formData),
+    });
   } catch (error) {
     redirectToRoutines(error instanceof Error ? error.message : "新增常規事件失敗");
   }
@@ -64,6 +76,7 @@ export async function updateRoutineAction(formData: FormData): Promise<void> {
       cadence: String(formData.get("cadence")) as RoutineCadence,
       anchor: parseAnchor(String(formData.get("anchor") ?? "")),
       timeOfDayPreference: timeOfDayRaw ? (timeOfDayRaw as TimeOfDayPreference) : null,
+      preferredStartTime: readPreferredStartTime(formData) ?? null,
     });
   } catch (error) {
     redirectToRoutines(error instanceof Error ? error.message : "更新常規事件失敗");

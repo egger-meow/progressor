@@ -41,6 +41,9 @@ export interface SchedulerRoutine {
   // JSON-encoded storage form.
   anchor: number[] | null;
   timeOfDayPreference: TimeOfDayPreference | null;
+  // "HH:mm", 24h, or null. Tried before timeOfDayPreference's bucket
+  // window — see routine-placement.ts.
+  preferredStartTime: string | null;
 }
 
 export interface SchedulerFixedCommitment {
@@ -49,6 +52,20 @@ export interface SchedulerFixedCommitment {
   dayOfWeek: number; // 0 (Sunday) - 6 (Saturday)
   startTime: string; // "HH:mm", 24h
   endTime: string;
+  // When true, this commitment is placed every week regardless of
+  // `SchedulerInput.semester` — see hard-constraints.ts's
+  // placeFixedCommitments.
+  ignoreSemesterBounds: boolean;
+}
+
+// A configured Semester (src/server/semester.ts) — a start date + week
+// count that bounds a non-opted-out FixedCommitment's occurrences. null
+// means no Semester has been configured, which must never make an
+// existing commitment silently disappear (hard-constraints.ts treats
+// null as "unbounded," not "outside every week").
+export interface SchedulerSemester {
+  startDate: Date;
+  weekCount: number;
 }
 
 export interface SchedulerDeadlineTask {
@@ -105,6 +122,7 @@ export interface SchedulerInput {
   adHocEvents: SchedulerAdHocEvent[];
   wipLimits: SchedulerWipLimit[];
   existingSlots: SchedulerExistingTimeSlot[];
+  semester: SchedulerSemester | null;
 }
 
 // A slot the Scheduler is proposing. occupantId is null only when

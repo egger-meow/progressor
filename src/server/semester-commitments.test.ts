@@ -33,6 +33,27 @@ describe("createFixedCommitment", () => {
     expect(commitment.dayOfWeek).toBe(2);
   });
 
+  it("defaults ignoreSemesterBounds to false when omitted", async () => {
+    const commitment = await createFixedCommitment({
+      title: "CS101 Lecture",
+      dayOfWeek: 2,
+      startTime: "10:00",
+      endTime: "11:30",
+    });
+    expect(commitment.ignoreSemesterBounds).toBe(false);
+  });
+
+  it("persists ignoreSemesterBounds: true when explicitly set", async () => {
+    const commitment = await createFixedCommitment({
+      title: "Meeting with Professor",
+      dayOfWeek: 3,
+      startTime: "15:00",
+      endTime: "15:30",
+      ignoreSemesterBounds: true,
+    });
+    expect(commitment.ignoreSemesterBounds).toBe(true);
+  });
+
   it("rejects an out-of-range dayOfWeek", async () => {
     await expect(
       createFixedCommitment({
@@ -132,6 +153,21 @@ describe("updateFixedCommitment / updateDeadlineTask", () => {
     await expect(
       updateFixedCommitment(commitment.id, { startTime: "11:00" }),
     ).rejects.toThrow(/must be before endTime/);
+  });
+
+  it("updates ignoreSemesterBounds", async () => {
+    const commitment = await createFixedCommitment({
+      title: "Meeting",
+      dayOfWeek: 3,
+      startTime: "09:00",
+      endTime: "10:00",
+    });
+    expect(commitment.ignoreSemesterBounds).toBe(false);
+
+    const updated = await updateFixedCommitment(commitment.id, {
+      ignoreSemesterBounds: true,
+    });
+    expect(updated.ignoreSemesterBounds).toBe(true);
   });
 
   it("updates a DeadlineTask's dueAt", async () => {

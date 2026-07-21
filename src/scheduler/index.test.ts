@@ -53,6 +53,7 @@ function buildFixture(): SchedulerInput {
         cadence: "weekly",
         anchor: [1, 4], // Monday, Thursday
         timeOfDayPreference: null,
+        preferredStartTime: null,
       },
     ],
     fixedCommitments: [
@@ -62,6 +63,7 @@ function buildFixture(): SchedulerInput {
         dayOfWeek: 1, // Monday
         startTime: "09:00",
         endTime: "10:00",
+        ignoreSemesterBounds: false,
       },
     ],
     deadlineTasks: [
@@ -78,6 +80,7 @@ function buildFixture(): SchedulerInput {
       { type: "course", maxInProgress: 1 },
     ],
     existingSlots: [],
+    semester: null,
   };
 }
 

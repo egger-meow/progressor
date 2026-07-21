@@ -11,6 +11,11 @@ export interface CreateFixedCommitmentInput {
   dayOfWeek: number; // 0 (Sunday) - 6 (Saturday)
   startTime: string; // "HH:mm", 24h
   endTime: string; // "HH:mm", 24h
+  // Default false: when a Semester is configured (src/server/semester.ts),
+  // the Scheduler only places this commitment's occurrence for weeks
+  // inside the semester's range unless this is true — see
+  // src/scheduler/hard-constraints.ts.
+  ignoreSemesterBounds?: boolean;
 }
 
 export interface UpdateFixedCommitmentInput {
@@ -18,6 +23,7 @@ export interface UpdateFixedCommitmentInput {
   dayOfWeek?: number;
   startTime?: string;
   endTime?: string;
+  ignoreSemesterBounds?: boolean;
 }
 
 export interface CreateDeadlineTaskInput {
@@ -66,6 +72,7 @@ export async function createFixedCommitment(input: CreateFixedCommitmentInput) {
       dayOfWeek: input.dayOfWeek,
       startTime: input.startTime,
       endTime: input.endTime,
+      ignoreSemesterBounds: input.ignoreSemesterBounds ?? false,
     },
   });
 }
@@ -89,7 +96,13 @@ export async function updateFixedCommitment(
 
   return prisma.fixedCommitment.update({
     where: { id },
-    data: { title: input.title, dayOfWeek, startTime, endTime },
+    data: {
+      title: input.title,
+      dayOfWeek,
+      startTime,
+      endTime,
+      ignoreSemesterBounds: input.ignoreSemesterBounds,
+    },
   });
 }
 

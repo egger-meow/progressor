@@ -58,6 +58,7 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
       { type: "course", maxInProgress: 1 },
     ],
     existingSlots: [],
+    semester: null,
     ...overrides,
   };
 }
@@ -170,7 +171,16 @@ describe("repairSchedule: insert-ad-hoc-event", () => {
 
   it("flags, but does not evict, an overlap with a Fixed Commitment", () => {
     const input = baseInput({
-      fixedCommitments: [{ id: "fc-1", title: "Lecture", dayOfWeek: 1, startTime: "09:00", endTime: "10:30" }],
+      fixedCommitments: [
+        {
+          id: "fc-1",
+          title: "Lecture",
+          dayOfWeek: 1,
+          startTime: "09:00",
+          endTime: "10:30",
+          ignoreSemesterBounds: false,
+        },
+      ],
       existingSlots: [slot("slot-fc", "2026-07-13T09:00:00", "2026-07-13T10:30:00", "fixed-commitment", "fc-1")],
     });
 
@@ -217,7 +227,17 @@ describe("repairSchedule: insert-ad-hoc-event", () => {
 
   it("leaves a Routine occurrence overlap alone — no eviction, no conflict", () => {
     const input = baseInput({
-      routines: [{ id: "routine-gym", title: "Gym", category: "gym", cadence: "weekly", anchor: [1], timeOfDayPreference: null }],
+      routines: [
+        {
+          id: "routine-gym",
+          title: "Gym",
+          category: "gym",
+          cadence: "weekly",
+          anchor: [1],
+          timeOfDayPreference: null,
+          preferredStartTime: null,
+        },
+      ],
       existingSlots: [slot("slot-routine", "2026-07-13T09:00:00", "2026-07-13T11:00:00", "routine", "routine-gym")],
     });
 

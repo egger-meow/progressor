@@ -15,6 +15,7 @@ import {
   overlaps,
   findFreeInterval,
   sameCalendarDay,
+  startOfWeek,
   type Interval,
 } from "./time";
 import {
@@ -56,15 +57,39 @@ export function hasExistingOccurrence(
   );
 }
 
+// Whether `date`'s calendar week falls inside `semester`'s
+// [start week, start week + weekCount) range. `semester === null` (no
+// Semester configured) always returns true — configuring a Semester
+// must never make an existing FixedCommitment silently disappear from a
+// week it would have shown in before (ROADMAP.md's exit condition).
+export function isWithinSemester(
+  date: Date,
+  semester: SchedulerInput["semester"],
+): boolean {
+  if (!semester) {
+    return true;
+  }
+  const firstWeekStart = startOfWeek(semester.startDate);
+  const lastWeekStartExclusive = addDays(firstWeekStart, semester.weekCount * 7);
+  const dateWeekStart = startOfWeek(date);
+  return dateWeekStart >= firstWeekStart && dateWeekStart < lastWeekStartExclusive;
+}
+
 export function placeFixedCommitments(input: SchedulerInput): HardConstraintResult {
-  const occurrences = input.fixedCommitments.map((commitment) => {
-    const day = addDays(input.weekStart, offsetFromMonday(commitment.dayOfWeek));
-    return {
-      commitment,
-      startAt: combineDateAndTime(day, commitment.startTime),
-      endAt: combineDateAndTime(day, commitment.endTime),
-    };
-  });
+  const occurrences = input.fixedCommitments
+    .map((commitment) => {
+      const day = addDays(input.weekStart, offsetFromMonday(commitment.dayOfWeek));
+      return {
+        commitment,
+        startAt: combineDateAndTime(day, commitment.startTime),
+        endAt: combineDateAndTime(day, commitment.endTime),
+      };
+    })
+    .filter(
+      (occurrence) =>
+        occurrence.commitment.ignoreSemesterBounds ||
+        isWithinSemester(occurrence.startAt, input.semester),
+    );
 
   const slots: ScheduledTimeSlot[] = occurrences
     .filter(

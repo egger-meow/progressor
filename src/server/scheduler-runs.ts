@@ -16,6 +16,7 @@ import { listTrackableItems, getWipLimit } from "./trackable-items";
 import { listRoutines } from "./routines";
 import { listFixedCommitments, listDeadlineTasks } from "./semester-commitments";
 import { listAdHocEvents } from "./ad-hoc-events";
+import { getSemester } from "./semester";
 import { listTimeSlots, createTimeSlot, type OccupantType } from "./time-slots";
 import {
   computeSchedule,
@@ -35,17 +36,27 @@ export interface RunSchedulerResult {
 // Exported so src/server/scheduler-repair.ts (Phase 3) can snapshot the
 // same shape without duplicating this mapping.
 export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promise<SchedulerInput> {
-  const [trackableItems, routines, fixedCommitments, deadlineTasks, adHocEvents, existingSlots, bookLimit, courseLimit] =
-    await Promise.all([
-      listTrackableItems(),
-      listRoutines(),
-      listFixedCommitments(),
-      listDeadlineTasks(),
-      listAdHocEvents(),
-      listTimeSlots({ from: weekStart, to: weekEnd }),
-      getWipLimit("book"),
-      getWipLimit("course"),
-    ]);
+  const [
+    trackableItems,
+    routines,
+    fixedCommitments,
+    deadlineTasks,
+    adHocEvents,
+    existingSlots,
+    bookLimit,
+    courseLimit,
+    semester,
+  ] = await Promise.all([
+    listTrackableItems(),
+    listRoutines(),
+    listFixedCommitments(),
+    listDeadlineTasks(),
+    listAdHocEvents(),
+    listTimeSlots({ from: weekStart, to: weekEnd }),
+    getWipLimit("book"),
+    getWipLimit("course"),
+    getSemester(),
+  ]);
 
   return {
     weekStart,
@@ -71,6 +82,7 @@ export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promi
       cadence: routine.cadence as RoutineCadence,
       anchor: routine.anchor,
       timeOfDayPreference: routine.timeOfDayPreference as TimeOfDayPreference | null,
+      preferredStartTime: routine.preferredStartTime,
     })),
     fixedCommitments,
     deadlineTasks,
@@ -86,6 +98,7 @@ export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promi
       occupantType: slot.occupantType as OccupantType,
       occupantId: slot.occupantId,
     })),
+    semester,
   };
 }
 

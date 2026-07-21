@@ -214,6 +214,27 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   inline — `HourCellOverlay` (`src/app/hour-cell-overlay.tsx`, new)
   floats them as a panel next to the cell instead, so editing one day's
   slot no longer misaligns that day's rows against the rest of the week.
+- Phase 7 ("Semester Scoping for Fixed Commitments & Concrete Routine
+  Times") authorized, activated, and closed: completion audit at
+  `docs/audits/semester-scoping-and-concrete-routine-times-audit.md`;
+  removed from `ROADMAP.md`.
+- New `Semester` concept (`src/server/semester.ts`, singleton — start
+  date + week count, default 16), configurable from a "學期設定" section
+  on `/commitments`.
+- `FixedCommitment.ignoreSemesterBounds` (new column, default `false`,
+  a checkbox on its create/edit forms): when a `Semester` is configured,
+  a non-opted-out commitment's occurrence is only placed by the
+  Scheduler for weeks inside the Semester's range (`isWithinSemester`,
+  `src/scheduler/hard-constraints.ts`) — unaffected when opted out or
+  when no Semester is configured.
+- The Weekly View shows "第 N 週" next to the week label whenever the
+  displayed week falls inside the configured Semester's range
+  (`semesterWeekIndex`, `src/app/week.ts`).
+- `Routine.preferredStartTime` (new column, nullable `"HH:mm"`, set via
+  a `TimePicker` + checkbox on `/routines`): the Scheduler
+  (`routine-placement.ts`) tries this exact time before
+  `timeOfDayPreference`'s bucket window, falling back exactly as before
+  when unset.
 
 ### Fixed
 

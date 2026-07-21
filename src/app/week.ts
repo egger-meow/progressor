@@ -67,6 +67,29 @@ export function formatHourParam(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+// Which week of a Semester (src/server/semester.ts) `weekStart` falls in
+// (1-indexed), or null if no Semester is configured or `weekStart` falls
+// outside its [start week, start week + weekCount) range (before it
+// starts, or after it ends — 寒暑假). Week 1 is the calendar week
+// containing the Semester's startDate, even if that date isn't itself a
+// Monday.
+export function semesterWeekIndex(
+  weekStart: Date,
+  semester: { startDate: Date; weekCount: number } | null,
+): number | null {
+  if (!semester) {
+    return null;
+  }
+  const firstWeekStart = startOfWeek(semester.startDate);
+  const diffMs = weekStart.getTime() - firstWeekStart.getTime();
+  const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+  const index = diffWeeks + 1;
+  if (index < 1 || index > semester.weekCount) {
+    return null;
+  }
+  return index;
+}
+
 export interface HourRow {
   hour: number;
   rowStart: Date;

@@ -9,6 +9,7 @@ import {
   updateDeadlineTask,
   updateFixedCommitment,
 } from "@/server/semester-commitments";
+import { setSemester } from "@/server/semester";
 
 function redirectToCommitments(error?: string): never {
   const params = new URLSearchParams();
@@ -26,6 +27,7 @@ export async function createFixedCommitmentAction(formData: FormData): Promise<v
       dayOfWeek: Number(formData.get("dayOfWeek")),
       startTime: String(formData.get("startTime")),
       endTime: String(formData.get("endTime")),
+      ignoreSemesterBounds: formData.get("ignoreSemesterBounds") === "on",
     });
   } catch (error) {
     redirectToCommitments(error instanceof Error ? error.message : "新增固定事務失敗");
@@ -41,9 +43,22 @@ export async function updateFixedCommitmentAction(formData: FormData): Promise<v
       dayOfWeek: Number(formData.get("dayOfWeek")),
       startTime: String(formData.get("startTime")),
       endTime: String(formData.get("endTime")),
+      ignoreSemesterBounds: formData.get("ignoreSemesterBounds") === "on",
     });
   } catch (error) {
     redirectToCommitments(error instanceof Error ? error.message : "更新固定事務失敗");
+  }
+  redirectToCommitments();
+}
+
+export async function setSemesterAction(formData: FormData): Promise<void> {
+  try {
+    await setSemester({
+      startDate: new Date(String(formData.get("startDate"))),
+      weekCount: Number(formData.get("weekCount")),
+    });
+  } catch (error) {
+    redirectToCommitments(error instanceof Error ? error.message : "設定學期失敗");
   }
   redirectToCommitments();
 }

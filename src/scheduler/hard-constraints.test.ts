@@ -20,6 +20,7 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
     adHocEvents: [],
     wipLimits: [],
     existingSlots: [],
+    semester: null,
     ...overrides,
   };
 }
@@ -28,7 +29,7 @@ describe("placeFixedCommitments", () => {
   it("places a single commitment at its anchored day/time with no conflicts", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "Algorithms Lecture", dayOfWeek: 1, startTime: "10:00", endTime: "11:00" },
+        { id: "fc-1", title: "Algorithms Lecture", dayOfWeek: 1, startTime: "10:00", endTime: "11:00", ignoreSemesterBounds: false },
       ],
     });
 
@@ -48,8 +49,8 @@ describe("placeFixedCommitments", () => {
   it("places both commitments and reports a conflict when two overlap", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "Lecture A", dayOfWeek: 2, startTime: "09:00", endTime: "10:00" },
-        { id: "fc-2", title: "Lecture B", dayOfWeek: 2, startTime: "09:30", endTime: "10:30" },
+        { id: "fc-1", title: "Lecture A", dayOfWeek: 2, startTime: "09:00", endTime: "10:00", ignoreSemesterBounds: false },
+        { id: "fc-2", title: "Lecture B", dayOfWeek: 2, startTime: "09:30", endTime: "10:30", ignoreSemesterBounds: false },
       ],
     });
 
@@ -64,7 +65,7 @@ describe("placeFixedCommitments", () => {
   it("still places a commitment that overlaps an existing Ad-hoc Event, but flags it", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "Study Group", dayOfWeek: 3, startTime: "14:00", endTime: "15:00" },
+        { id: "fc-1", title: "Study Group", dayOfWeek: 3, startTime: "14:00", endTime: "15:00", ignoreSemesterBounds: false },
       ],
       existingSlots: [
         {
@@ -93,7 +94,7 @@ describe("placeFixedCommitments", () => {
   it("does not re-place a commitment that already has an occurrence Time Slot on that day (re-run idempotency)", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "Algorithms Lecture", dayOfWeek: 1, startTime: "10:00", endTime: "11:00" },
+        { id: "fc-1", title: "Algorithms Lecture", dayOfWeek: 1, startTime: "10:00", endTime: "11:00", ignoreSemesterBounds: false },
       ],
       existingSlots: [
         {
@@ -114,8 +115,8 @@ describe("placeFixedCommitments", () => {
   it("does not flag a conflict for non-overlapping commitments", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "Lecture A", dayOfWeek: 1, startTime: "09:00", endTime: "10:00" },
-        { id: "fc-2", title: "Lecture B", dayOfWeek: 1, startTime: "10:00", endTime: "11:00" },
+        { id: "fc-1", title: "Lecture A", dayOfWeek: 1, startTime: "09:00", endTime: "10:00", ignoreSemesterBounds: false },
+        { id: "fc-2", title: "Lecture B", dayOfWeek: 1, startTime: "10:00", endTime: "11:00", ignoreSemesterBounds: false },
       ],
     });
 
@@ -123,6 +124,63 @@ describe("placeFixedCommitments", () => {
 
     expect(result.slots).toHaveLength(2);
     expect(result.conflicts).toEqual([]);
+  });
+});
+
+describe("placeFixedCommitments — Semester bounding", () => {
+  const fc = (overrides: Partial<SchedulerInput["fixedCommitments"][number]> = {}) => ({
+    id: "fc-1",
+    title: "Algorithms Lecture",
+    dayOfWeek: 1, // Monday — weekStart itself
+    startTime: "10:00",
+    endTime: "11:00",
+    ignoreSemesterBounds: false,
+    ...overrides,
+  });
+
+  it("places the occurrence when the target week is inside the Semester's range", () => {
+    const input = baseInput({
+      fixedCommitments: [fc()],
+      semester: { startDate: weekStart, weekCount: 2 },
+    });
+
+    expect(placeFixedCommitments(input).slots).toHaveLength(1);
+  });
+
+  it("does not place the occurrence for a week before the Semester starts", () => {
+    const input = baseInput({
+      fixedCommitments: [fc()],
+      semester: { startDate: new Date("2026-07-20T00:00:00"), weekCount: 16 },
+    });
+
+    expect(placeFixedCommitments(input).slots).toEqual([]);
+  });
+
+  it("does not place the occurrence for a week after the Semester's weekCount ends (寒暑假)", () => {
+    const input = baseInput({
+      fixedCommitments: [fc()],
+      semester: { startDate: new Date("2026-01-05T00:00:00"), weekCount: 4 },
+    });
+
+    expect(placeFixedCommitments(input).slots).toEqual([]);
+  });
+
+  it("still places the occurrence when ignoreSemesterBounds is true, even outside the range", () => {
+    const input = baseInput({
+      fixedCommitments: [fc({ ignoreSemesterBounds: true })],
+      semester: { startDate: new Date("2026-01-05T00:00:00"), weekCount: 4 },
+    });
+
+    expect(placeFixedCommitments(input).slots).toHaveLength(1);
+  });
+
+  it("places the occurrence unconditionally when no Semester is configured (backward compatible)", () => {
+    const input = baseInput({
+      fixedCommitments: [fc()],
+      semester: null,
+    });
+
+    expect(placeFixedCommitments(input).slots).toHaveLength(1);
   });
 });
 
@@ -212,7 +270,7 @@ describe("placeHardConstraints", () => {
   it("reports a genuine capacity conflict when a Fixed Commitment fills the only eligible day", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "All-day Retreat", dayOfWeek: 1, startTime: "08:00", endTime: "23:00" },
+        { id: "fc-1", title: "All-day Retreat", dayOfWeek: 1, startTime: "08:00", endTime: "23:00", ignoreSemesterBounds: false },
       ],
       deadlineTasks: [
         { id: "dt-1", title: "Quiz Prep", dueAt: new Date("2026-07-13T10:01:00"), estimatedDays: 1 },
@@ -235,7 +293,7 @@ describe("placeHardConstraints", () => {
   it("combines Fixed Commitment and Deadline Task placement with no overlap", () => {
     const input = baseInput({
       fixedCommitments: [
-        { id: "fc-1", title: "Morning Class", dayOfWeek: 1, startTime: "08:00", endTime: "09:00" },
+        { id: "fc-1", title: "Morning Class", dayOfWeek: 1, startTime: "08:00", endTime: "09:00", ignoreSemesterBounds: false },
       ],
       deadlineTasks: [
         { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedDays: 1 },

@@ -3,6 +3,7 @@ import { listRoutines } from "@/server/routines";
 import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commitments";
 import { listTrackableItems } from "@/server/trackable-items";
 import { listAdHocEvents } from "@/server/ad-hoc-events";
+import { getSemester } from "@/server/semester";
 import { DAILY_WINDOW_START, DAILY_WINDOW_END } from "@/scheduler/constants";
 import { TimePicker } from "./time-picker";
 import { DatePicker } from "./date-picker";
@@ -26,6 +27,7 @@ import {
   formatTimeLabel,
   parseDateParam,
   parseHour,
+  semesterWeekIndex,
   startOfWeek,
 } from "./week";
 import styles from "./page.module.css";
@@ -290,10 +292,12 @@ export default async function WeeklyView({
   const prevWeekParam = formatDateParam(addDays(weekStart, -7));
   const nextWeekParam = formatDateParam(addDays(weekStart, 7));
 
-  const [slots, occupantOptions] = await Promise.all([
+  const [slots, occupantOptions, semester] = await Promise.all([
     listTimeSlotsWithLabels({ from: weekStart, to: weekEnd }),
     loadOccupantOptions(),
+    getSemester(),
   ]);
+  const weekIndex = semesterWeekIndex(weekStart, semester);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const editingSlot = params.edit ? slots.find((s) => s.id === params.edit) : undefined;
@@ -318,6 +322,9 @@ export default async function WeeklyView({
         <span className={styles.weekLabel}>
           {formatDateLabel(weekStart)} – {formatDateLabel(addDays(weekStart, 6))}
         </span>
+        {weekIndex !== null ? (
+          <span className={styles.badgeAccent}>第 {weekIndex} 週</span>
+        ) : null}
         <form action={generateScheduleAction} className={styles.inlineForm}>
           <input type="hidden" name="week" value={weekParam} />
           <button type="submit" className={styles.button}>

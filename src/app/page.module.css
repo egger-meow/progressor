@@ -436,6 +436,20 @@
   color: var(--color-muted-foreground);
 }
 
+.slotForm .checkboxLabel {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
 .slotForm input,
 .slotForm select {
   font-family: inherit;

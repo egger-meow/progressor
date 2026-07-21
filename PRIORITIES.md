@@ -66,8 +66,6 @@ Everything else that's real work but doesn't meet this bar belongs under
    and `docs/audits/`. This file is not a changelog and is not a status
    report — see `docs/status.md` and `docs/build-status.md` for that.
 
-## Current Priorities
-
 Empty. `ROADMAP.md` has no Active Phase and no further Authorized Phases
 — every proposal left under "Proposed — Not Yet Authorized" (calendar
 export/sync, notifications/reminders, a mobile companion view) needs a

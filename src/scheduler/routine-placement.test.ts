@@ -16,6 +16,7 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
     adHocEvents: [],
     wipLimits: [],
     existingSlots: [],
+    semester: null,
     ...overrides,
   };
 }
@@ -28,6 +29,7 @@ function routine(overrides: Partial<SchedulerRoutine> = {}): SchedulerRoutine {
     cadence: "daily",
     anchor: null,
     timeOfDayPreference: null,
+    preferredStartTime: null,
     ...overrides,
   };
 }
@@ -134,6 +136,57 @@ describe("placeRoutines", () => {
       {
         startAt: new Date("2026-07-13T20:00:00"),
         endAt: new Date("2026-07-13T22:00:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("places exactly at preferredStartTime when that slot is free", () => {
+    const input = baseInput({
+      routines: [
+        routine({
+          cadence: "weekly",
+          anchor: [1],
+          timeOfDayPreference: "evening", // would otherwise land at 17:00
+          preferredStartTime: "14:30",
+        }),
+      ],
+    });
+
+    const result = placeRoutines(input, []);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T14:30:00"),
+        endAt: new Date("2026-07-13T16:30:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("falls back to the Time-of-Day Preference bucket when preferredStartTime's exact slot is busy", () => {
+    const input = baseInput({
+      routines: [
+        routine({
+          cadence: "weekly",
+          anchor: [1],
+          timeOfDayPreference: "evening",
+          preferredStartTime: "14:30",
+        }),
+      ],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T14:00:00"), end: new Date("2026-07-13T15:00:00") },
+    ];
+
+    const result = placeRoutines(input, busy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T17:00:00"),
+        endAt: new Date("2026-07-13T19:00:00"),
         occupantType: "routine",
         occupantId: "r-1",
       },

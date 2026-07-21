@@ -19,6 +19,10 @@ export interface CreateRoutineInput {
   // Ignored (must be omitted) for "daily".
   anchor?: number[];
   timeOfDayPreference?: TimeOfDayPreference;
+  // "HH:mm", 24h — domain-model.md's Time-of-Day Preference "(or an
+  // explicit hour range)" case. When set, the Scheduler tries this exact
+  // time before timeOfDayPreference's bucket window (routine-placement.ts).
+  preferredStartTime?: string;
 }
 
 export interface UpdateRoutineInput {
@@ -28,6 +32,7 @@ export interface UpdateRoutineInput {
   anchor?: number[];
   // Explicit null clears the preference; omitted leaves it unchanged.
   timeOfDayPreference?: TimeOfDayPreference | null;
+  preferredStartTime?: string | null;
 }
 
 function assertValidCadence(cadence: string): asserts cadence is RoutineCadence {
@@ -41,6 +46,14 @@ function assertValidTimeOfDay(
 ): asserts value is TimeOfDayPreference {
   if (!VALID_TIME_OF_DAY.includes(value as TimeOfDayPreference)) {
     throw new Error(`Invalid Time-of-Day Preference: ${value}`);
+  }
+}
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+function assertValidPreferredStartTime(value: string): void {
+  if (!TIME_PATTERN.test(value)) {
+    throw new Error(`Invalid preferredStartTime: ${value} (expected "HH:mm")`);
   }
 }
 
@@ -80,6 +93,9 @@ export async function createRoutine(input: CreateRoutineInput) {
   if (input.timeOfDayPreference) {
     assertValidTimeOfDay(input.timeOfDayPreference);
   }
+  if (input.preferredStartTime) {
+    assertValidPreferredStartTime(input.preferredStartTime);
+  }
   const anchor = normalizeAnchor(input.cadence, input.anchor);
 
   const routine = await prisma.routine.create({
@@ -89,6 +105,7 @@ export async function createRoutine(input: CreateRoutineInput) {
       cadence: input.cadence,
       anchor,
       timeOfDayPreference: input.timeOfDayPreference ?? null,
+      preferredStartTime: input.preferredStartTime ?? null,
     },
   });
   return withParsedAnchor(routine);
@@ -113,6 +130,9 @@ export async function updateRoutine(id: string, input: UpdateRoutineInput) {
   if (input.timeOfDayPreference) {
     assertValidTimeOfDay(input.timeOfDayPreference);
   }
+  if (input.preferredStartTime) {
+    assertValidPreferredStartTime(input.preferredStartTime);
+  }
 
   const cadenceChanged =
     input.cadence !== undefined && input.cadence !== existing.cadence;
@@ -135,6 +155,8 @@ export async function updateRoutine(id: string, input: UpdateRoutineInput) {
         input.timeOfDayPreference === undefined
           ? undefined
           : input.timeOfDayPreference,
+      preferredStartTime:
+        input.preferredStartTime === undefined ? undefined : input.preferredStartTime,
     },
   });
   return withParsedAnchor(routine);

@@ -7,6 +7,20 @@ export function addDays(date: Date, days: number): Date {
   return result;
 }
 
+// Monday 00:00 of the calendar week containing `date` — mirrors
+// src/app/week.ts's startOfWeek (same Monday-first convention as
+// SchedulerInput.weekStart); duplicated rather than imported because
+// src/scheduler/ never depends on the UI layer (types.ts's header
+// comment).
+export function startOfWeek(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  const day = result.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  result.setDate(result.getDate() + diffToMonday);
+  return result;
+}
+
 // FixedCommitment.dayOfWeek is 0 (Sunday) - 6 (Saturday); SchedulerInput's
 // weekStart is always a Monday. Returns the day offset from weekStart to
 // that weekday within the same week.

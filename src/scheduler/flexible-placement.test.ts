@@ -16,6 +16,7 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
     adHocEvents: [],
     wipLimits: [],
     existingSlots: [],
+    semester: null,
     ...overrides,
   };
 }

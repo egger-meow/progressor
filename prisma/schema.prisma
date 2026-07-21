@@ -43,6 +43,10 @@ model WipLimit {
 // shape depends on `cadence` (weekday(s) for weekly, day(s)-of-month for
 // monthly, unused for daily), so it's stored as a JSON-encoded array of
 // integers and validated in src/server/routines.ts rather than as columns.
+// `preferredStartTime` ("HH:mm", 24h) is the domain-model doc's
+// Time-of-Day Preference "(or an explicit hour range)" case: an optional
+// concrete anchor the Scheduler tries before `timeOfDayPreference`'s
+// four-bucket window.
 model Routine {
   id                  String   @id @default(cuid())
   title               String
@@ -50,6 +54,7 @@ model Routine {
   cadence             String
   anchor              String?
   timeOfDayPreference String?
+  preferredStartTime  String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
@@ -60,14 +65,20 @@ model Routine {
 // incompatible (hard constraint vs. flexible-before-a-deadline) and must
 // stay non-interchangeable in code, per that doc's Naming Conventions
 // section (the same rule that keeps Routine and Fixed Commitment apart).
+// `ignoreSemesterBounds` (default false): when a `Semester` is
+// configured, a Fixed Commitment is only placed for weeks inside its
+// [start week, start week + weekCount) range unless this is true (e.g.
+// a standing meeting with a professor that isn't semester-bound). See
+// `Semester` below and src/scheduler/hard-constraints.ts.
 model FixedCommitment {
-  id        String   @id @default(cuid())
-  title     String
-  dayOfWeek Int
-  startTime String
-  endTime   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  title                String
+  dayOfWeek            Int
+  startTime            String
+  endTime              String
+  ignoreSemesterBounds Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model DeadlineTask {
@@ -77,6 +88,20 @@ model DeadlineTask {
   estimatedDays Int
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// Singleton (fixed id — this is a single-user app, one active semester
+// at a time): a configurable start date + week count (default 16) that
+// bounds a non-opted-out FixedCommitment's occurrences, and drives the
+// Weekly View's "第 N 週" display. Not part of docs/domain-model.md's
+// original concept list — added 2026-07-21 for `Semester`-scoped Fixed
+// Commitments; see that doc's "Semester Commitment" section for the
+// terminology this extends.
+model Semester {
+  id        String   @id @default("singleton")
+  startDate DateTime
+  weekCount Int      @default(16)
+  updatedAt DateTime @updatedAt
 }
 
 // AdHocEvent implements docs/domain-model.md's "Ad-hoc Event". It has no

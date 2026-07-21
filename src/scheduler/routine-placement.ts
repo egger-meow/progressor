@@ -62,11 +62,18 @@ export function placeRoutines(input: SchedulerInput, busy: Interval[]): RoutineP
         continue;
       }
 
-      // Try the Time-of-Day Preference's narrower window first ("leans
-      // toward" it); fall back to the full daily window rather than
-      // giving up the whole day if just that sub-window is busy.
+      // Try a concrete preferredStartTime first (the exact window it
+      // names — findFreeInterval only succeeds there if that precise
+      // slot is free); then the Time-of-Day Preference's narrower bucket
+      // window; then fall back to the full daily window rather than
+      // giving up the whole day if the narrower windows are busy.
       let found: Interval | null = null;
-      if (routine.timeOfDayPreference) {
+      if (routine.preferredStartTime) {
+        const preferredStart = combineDateAndTime(day, routine.preferredStartTime);
+        const preferredEnd = new Date(preferredStart.getTime() + SESSION_DURATION_MS);
+        found = findFreeInterval(preferredStart, preferredEnd, SESSION_DURATION_MS, allBusy);
+      }
+      if (!found && routine.timeOfDayPreference) {
         const preferred = TIME_OF_DAY_WINDOWS[routine.timeOfDayPreference];
         found = findFreeInterval(
           combineDateAndTime(day, preferred.start),

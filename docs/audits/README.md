@@ -67,3 +67,9 @@ once fixed, either a new audit or a correction note added to
   noted exceptions (hourly-only click-to-create granularity;
   `computer` click simulation timed out again this session, worked
   around with `javascript_tool`'s `requestSubmit()`).
+- [`semester-scoping-and-concrete-routine-times-audit.md`](semester-scoping-and-concrete-routine-times-audit.md)
+  — Phase 7, "Semester Scoping for Fixed Commitments & Concrete Routine
+  Times." Complete, no exceptions from the exit condition's wording;
+  verification used the project owner's own real `Fixed Commitment`
+  rather than fabricated data, cross-checking `Time Slot` timestamps
+  before cleanup since the owner was using the app concurrently.

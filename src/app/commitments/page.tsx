@@ -1,9 +1,11 @@
 import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commitments";
+import { getSemester } from "@/server/semester";
 import {
   createDeadlineTaskAction,
   createFixedCommitmentAction,
   deleteDeadlineTaskAction,
   deleteFixedCommitmentAction,
+  setSemesterAction,
   updateDeadlineTaskAction,
   updateFixedCommitmentAction,
 } from "./actions";
@@ -28,9 +30,10 @@ export default async function CommitmentsPage({
   searchParams: Promise<{ editFC?: string; editDT?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const [fixedCommitments, deadlineTasks] = await Promise.all([
+  const [fixedCommitments, deadlineTasks, semester] = await Promise.all([
     listFixedCommitments(),
     listDeadlineTasks(),
+    getSemester(),
   ]);
   const editingFC = params.editFC
     ? fixedCommitments.find((c) => c.id === params.editFC)
@@ -47,6 +50,43 @@ export default async function CommitmentsPage({
       </div>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
+
+      <section className={styles.addForm}>
+        <h3>學期設定</h3>
+        {semester ? (
+          <p className={styles.hint}>
+            目前學期：{formatDateParam(semester.startDate)} 起，共 {semester.weekCount} 週
+            （到 {formatDateParam(new Date(semester.startDate.getTime() + semester.weekCount * 7 * 86400000))} 前）。
+            未勾選「忽略學期範圍」的固定事務只會在此範圍內的週次顯示。
+          </p>
+        ) : (
+          <p className={styles.hint}>
+            尚未設定學期——所有固定事務目前每週都會顯示，不受學期範圍限制。
+          </p>
+        )}
+        <form action={setSemesterAction} className={styles.slotForm}>
+          <label>
+            開學日
+            <DatePicker
+              name="startDate"
+              defaultValue={semester ? formatDateParam(semester.startDate) : undefined}
+            />
+          </label>
+          <label>
+            週數
+            <input
+              type="number"
+              name="weekCount"
+              defaultValue={semester?.weekCount ?? 16}
+              min={1}
+              required
+            />
+          </label>
+          <button type="submit" className={styles.button}>
+            儲存學期設定
+          </button>
+        </form>
+      </section>
 
       <h2>固定事務</h2>
       {fixedCommitments.length === 0 ? (
@@ -80,6 +120,14 @@ export default async function CommitmentsPage({
                     <label>
                       結束
                       <TimePicker name="endTime" defaultValue={c.endTime} />
+                    </label>
+                    <label className={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        name="ignoreSemesterBounds"
+                        defaultChecked={c.ignoreSemesterBounds}
+                      />
+                      忽略學期範圍（不限 16 週，每週都顯示）
                     </label>
                     <div className={styles.slotFormActions}>
                       <button type="submit" className={styles.button}>
@@ -142,6 +190,10 @@ export default async function CommitmentsPage({
           <label>
             結束
             <TimePicker name="endTime" defaultValue="10:00" />
+          </label>
+          <label className={styles.checkboxLabel}>
+            <input type="checkbox" name="ignoreSemesterBounds" />
+            忽略學期範圍（不限 16 週，每週都顯示）
           </label>
           <button type="submit" className={styles.button}>
             新增

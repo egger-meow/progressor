@@ -23,8 +23,13 @@ grid per day, whether or not it has any `Time Slot`s, with click-to-
 create directly on an empty hour cell (Phase 6 — see "Interactive
 Weekly Grid & Click-to-Create" below). All four pages share one
 persistent top nav bar (`src/app/nav-bar.tsx`) instead of each
-repeating its own plain-text section links. Phases 1-6 are closed; see
-`docs/audits/` for their completion evidence.
+repeating its own plain-text section links. A `Fixed Commitment` can be
+bound to a configurable `Semester` window (default 16 weeks), the
+Weekly View shows which week of the semester is displayed, and a
+`Routine` can pin a concrete preferred start time instead of only a
+time-of-day bucket (Phase 7 — see "Semester Scoping for Fixed
+Commitments & Concrete Routine Times" below). Phases 1-7 are closed;
+see `docs/audits/` for their completion evidence.
 
 ## Verification Gates
 
@@ -154,6 +159,32 @@ adding a slot required a separate bottom form.
 
 Passed; see
 [`docs/audits/interactive-weekly-grid-and-click-to-create-audit.md`](audits/interactive-weekly-grid-and-click-to-create-audit.md).
+
+#### Phase 7 — Semester Scoping for Fixed Commitments & Concrete Routine Times (closed)
+
+Authorized by the project owner in chat (2026-07-21): `Fixed Commitment`
+occurrences showed every week forever with no way to say "only while
+the semester is running" (寒暑假 should show none), and a `Routine`'s
+`Time-of-Day Preference` only offered four vague buckets with no way to
+pin an exact time.
+
+1. A `Semester` (start date + week count, default 16) is configurable
+   from `/commitments`, persists, and is shown there once set.
+2. A `Fixed Commitment` has a "忽略學期範圍" option, defaulting to off.
+   When a `Semester` is configured and a commitment does not ignore it,
+   the Scheduler places its occurrence only for weeks inside the
+   Semester's range. A commitment with the opt-out on, or when no
+   `Semester` is configured, is unaffected.
+3. The Weekly View shows "第 N 週" next to the week label whenever the
+   displayed week falls inside the configured `Semester`'s range.
+4. A `Routine` can be given a concrete preferred start time; when set,
+   the Scheduler tries that exact time first, falling back to the
+   bucket window and then the full daily window.
+5. `npm run verify` passes, with new test coverage.
+6. A written manual walkthrough, recorded in `docs/audits/`.
+
+Passed; see
+[`docs/audits/semester-scoping-and-concrete-routine-times-audit.md`](audits/semester-scoping-and-concrete-routine-times-audit.md).
 
 No phase is currently active — see `../ROADMAP.md`'s "Proposed — Not Yet
 Authorized" section for what's left to authorize.
@@ -760,10 +791,83 @@ inline while the edit form floated beside it. `npm run verify` passes
 typecheck/build all clean. Test data cleared from `prisma/dev.db`
 afterward.
 
+### Semester Scoping for Fixed Commitments & Concrete Routine Times (Phase 7)
+
+`Semester` (`src/server/semester.ts`, new — a singleton row, fixed id
+`"singleton"`) holds a `startDate` and `weekCount` (default 16),
+configurable from a new "學期設定" section at the top of `/commitments`
+(a `DatePicker` + number input, `setSemesterAction`). `getSemester()`
+returning `null` (not yet configured) is a first-class state, not an
+error — every consumer treats it as "unbounded," matching the exit
+condition's guardrail that configuring a `Semester` must never make an
+existing `Fixed Commitment` silently disappear from a week it showed in
+before.
+
+**Fixed Commitment bounding:** `FixedCommitment.ignoreSemesterBounds`
+(new column, default `false`) is a checkbox on both the create and edit
+forms ("忽略學期範圍（不限 16 週，每週都顯示）"). `SchedulerInput` gained
+a `semester: { startDate, weekCount } | null` field
+(`src/server/scheduler-runs.ts`'s `buildSchedulerInput`, threaded to
+both `runScheduler` and the repair layer since they share that
+builder). `placeFixedCommitments`'s new `isWithinSemester` helper
+(`src/scheduler/hard-constraints.ts`) computes the target occurrence's
+calendar week against `[startOfWeek(semester.startDate), + weekCount
+weeks)` (a new `startOfWeek` added to `src/scheduler/time.ts`, mirroring
+`src/app/week.ts`'s own copy — the Scheduler never imports the UI
+layer) — week 1 is the calendar week containing `startDate`, even if
+that date isn't itself a Monday. A commitment with
+`ignoreSemesterBounds: true`, or `semester: null`, is filtered in
+(unaffected), matching pre-Phase-7 behavior exactly.
+
+**"第 N 週" header:** `semesterWeekIndex` (`src/app/week.ts`) returns
+the 1-indexed week number, or `null` outside the `Semester`'s range or
+when unconfigured; the Weekly View shows it as a badge next to the
+week-range label only when non-null.
+
+**Concrete Routine time:** `Routine.preferredStartTime` (new column,
+nullable `"HH:mm"`) is set via a `TimePicker` plus a "使用指定時間（優先
+於時段偏好）" checkbox on `/routines`' create/edit forms — the checkbox
+exists because `TimePicker` always carries a real value (no "empty"
+state), so it alone can't distinguish "I want 09:00" from "I didn't set
+anything." `placeRoutines` (`src/scheduler/routine-placement.ts`) tries
+the exact `[preferredStartTime, preferredStartTime + session duration)`
+window first (only succeeds if that precise slot is free), then falls
+back to `timeOfDayPreference`'s bucket window, then the full daily
+window — unchanged behavior when `preferredStartTime` is unset.
+
+Manually verified against the running dev server, using the project
+owner's own real `Fixed Commitment` ("資料探勘", Tuesday
+13:30–15:20, pre-existing) so as not to fabricate unrelated data:
+configured a `Semester` starting 2026-08-01 (16 weeks); confirmed the
+Weekly View showed no "第 N 週" badge for the current week (before the
+semester) but "第 1 週"/"第 16 週" for the first/last weeks in range and
+no badge again the week after; clicked "產生課表" for a week inside the
+range and confirmed "資料探勘" was placed, then for a week before the
+range and confirmed nothing was placed for it. Created a test `Routine`
+with a concrete `preferredStartTime` of 09:00 and confirmed it recorded
+correctly ("指定 09:00" in its list entry) and that generating the
+schedule placed it exactly there. `npm run verify` passes — 161 tests
+(24 new: `semester.test.ts`, plus new coverage in
+`semester-commitments.test.ts`, `routines.test.ts`,
+`hard-constraints.test.ts`, `routine-placement.test.ts`, `week.test.ts`),
+lint/typecheck/build all clean. All test artifacts (a temporary
+`Routine`, a `Time Slot` this session generated, and the test
+`Semester` configuration) were cleaned up afterward — the project
+owner's own pre-existing `Fixed Commitment` and its earlier
+independently-created `Time Slot`s were left untouched throughout.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
   intentionally out of scope; see `../ROADMAP.md`'s Proposed section.
+- No UI to unset a configured `Semester` — "學期設定" only overwrites
+  the current one with a new start date/week count. Only one `Semester`
+  exists at a time (the singleton row), so there's no history of past
+  semesters either.
+- A `Routine`'s `preferredStartTime` is a single anchor for the whole
+  Routine — there's no way to give it a different concrete time per
+  weekday (a `weekly` Routine with a multi-day anchor tries the same
+  preferred time on every one of its occurrence days).
 - Single-user only; no auth, no multi-device sync beyond the local SQLite
   file.
 - No UI yet to configure a `WIP Limit` (`setWipLimit`) — it defaults to
