@@ -6,6 +6,7 @@ import { listAdHocEvents } from "@/server/ad-hoc-events";
 import { DAILY_WINDOW_START, DAILY_WINDOW_END } from "@/scheduler/constants";
 import { TimePicker } from "./time-picker";
 import { DatePicker } from "./date-picker";
+import { HourCellOverlay } from "./hour-cell-overlay";
 import {
   createTimeSlotAction,
   updateTimeSlotAction,
@@ -383,64 +384,68 @@ export default async function WeeklyView({
                         (slot) => new Date(slot.startAt).getTime() === row.rowEnd.getTime(),
                       );
 
+                  const editingSlotHere = startingSlots.find(
+                    (slot) => editingSlot && slot.id === editingSlot.id,
+                  );
+
+                  const compactContent =
+                    startingSlots.length > 0 ? (
+                      startingSlots.map((slot) => (
+                        <SlotCard key={slot.id} slot={slot} weekParam={weekParam} />
+                      ))
+                    ) : isContinuation ? (
+                      <span className={styles.hourContinuation} aria-hidden="true" />
+                    ) : (
+                      <div className={styles.hourEmptyActions}>
+                        <a
+                          href={`/?week=${weekParam}&add=${addParam}`}
+                          className={styles.hourAddButton}
+                          aria-label={`在 ${formatHourParam(row.hour)} 新增時段`}
+                        >
+                          ＋
+                        </a>
+                        {prevAdjacentSlot ? (
+                          <ExtendSlotButton
+                            slot={prevAdjacentSlot}
+                            weekParam={weekParam}
+                            startTime={formatTimeLabel(new Date(prevAdjacentSlot.startAt))}
+                            endTime={formatTimeLabel(row.rowEnd)}
+                            label="↑ 接續前一個"
+                          />
+                        ) : null}
+                        {nextAdjacentSlot ? (
+                          <ExtendSlotButton
+                            slot={nextAdjacentSlot}
+                            weekParam={weekParam}
+                            startTime={formatTimeLabel(row.rowStart)}
+                            endTime={formatTimeLabel(new Date(nextAdjacentSlot.endAt))}
+                            label="接續後一個 ↓"
+                          />
+                        ) : null}
+                      </div>
+                    );
+
+                  const overlayContent = editingSlotHere ? (
+                    <SlotEditForm
+                      slot={editingSlotHere}
+                      weekParam={weekParam}
+                      occupantOptions={occupantOptions}
+                    />
+                  ) : isAddingHere ? (
+                    <InlineAddForm
+                      day={day}
+                      hour={row.hour}
+                      weekParam={weekParam}
+                      occupantOptions={occupantOptions}
+                    />
+                  ) : undefined;
+
                   return (
                     <li key={row.hour} className={styles.hourRow}>
                       <span className={styles.hourLabel}>{formatHourParam(row.hour)}</span>
-                      <div className={styles.hourContent}>
-                        {startingSlots.length > 0
-                          ? startingSlots.map((slot) =>
-                              editingSlot && editingSlot.id === slot.id ? (
-                                <SlotEditForm
-                                  key={slot.id}
-                                  slot={slot}
-                                  weekParam={weekParam}
-                                  occupantOptions={occupantOptions}
-                                />
-                              ) : (
-                                <SlotCard key={slot.id} slot={slot} weekParam={weekParam} />
-                              ),
-                            )
-                          : isContinuation
-                            ? <span className={styles.hourContinuation} aria-hidden="true" />
-                            : isAddingHere
-                              ? (
-                                  <InlineAddForm
-                                    day={day}
-                                    hour={row.hour}
-                                    weekParam={weekParam}
-                                    occupantOptions={occupantOptions}
-                                  />
-                                )
-                              : (
-                                  <div className={styles.hourEmptyActions}>
-                                    <a
-                                      href={`/?week=${weekParam}&add=${addParam}`}
-                                      className={styles.hourAddButton}
-                                      aria-label={`在 ${formatHourParam(row.hour)} 新增時段`}
-                                    >
-                                      ＋
-                                    </a>
-                                    {prevAdjacentSlot ? (
-                                      <ExtendSlotButton
-                                        slot={prevAdjacentSlot}
-                                        weekParam={weekParam}
-                                        startTime={formatTimeLabel(new Date(prevAdjacentSlot.startAt))}
-                                        endTime={formatTimeLabel(row.rowEnd)}
-                                        label="↑ 接續前一個"
-                                      />
-                                    ) : null}
-                                    {nextAdjacentSlot ? (
-                                      <ExtendSlotButton
-                                        slot={nextAdjacentSlot}
-                                        weekParam={weekParam}
-                                        startTime={formatTimeLabel(row.rowStart)}
-                                        endTime={formatTimeLabel(new Date(nextAdjacentSlot.endAt))}
-                                        label="接續後一個 ↓"
-                                      />
-                                    ) : null}
-                                  </div>
-                                )}
-                      </div>
+                      <HourCellOverlay overlay={overlayContent} className={styles.hourContent}>
+                        {compactContent}
+                      </HourCellOverlay>
                     </li>
                   );
                 })}

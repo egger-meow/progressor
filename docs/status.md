@@ -719,6 +719,47 @@ Server Action contracts; no service-layer behavior changed), lint/
 typecheck/build all clean. Test data cleared from `prisma/dev.db`
 afterward.
 
+**Uniform hourly-grid row height + floating edit/add panel
+(2026-07-21):** project owner feedback — empty hour rows were only as
+tall as their "+" (~24px), so a cell with a slot, or worse, an open
+edit/add form (5+ fields), suddenly inflated just that one row, making
+the day column look jagged/misaligned ("参差不齊") next to every other
+day at the same hour.
+
+- `.hourRow` now has a `min-height: 56px` (`src/app/page.module.css`)
+  instead of hugging its content — every row starts the same size, like
+  a real timetable, whether or not anything is scheduled there. `.hourRow`
+  switched from `align-items: center` to `stretch` so `.hourContent`
+  fills that height; a lone "+" centers itself vertically and
+  horizontally within it via `justify-content`/`.hourEmptyActions`
+  instead of sitting flush at the top-left.
+- `.hourContinuation` (the bar marking an hour a multi-hour slot already
+  covers) now fills the row's full height with a tinted color block
+  instead of a thin 6px line — a multi-hour event reads as one
+  continuous colored block spanning its rows, closer to a real calendar.
+- `SlotEditForm` and `InlineAddForm` no longer render inline in the row
+  at all. `HourCellOverlay` (`src/app/hour-cell-overlay.tsx`, new) wraps
+  every cell's compact content (the "+"/slot card/continuation bar,
+  which always stays inline and keeps the row's height stable) and,
+  when the SSR-decided `?edit=`/`?add=` form is present for that cell,
+  portals it to `document.body` as a floating panel positioned next to
+  the cell instead — the row that's being edited never grows, so it
+  can't throw off alignment with the other six days. Reuses the
+  existing `.addForm` card styling internally (just repositioned via a
+  thin wrapper, `.hourOverlayPanel`), elevated to `--shadow-lg` since it
+  now floats disconnected from the page's normal flow.
+
+Manually verified against the running dev server: an empty week showed
+every row at the same height across all seven days; opened the
+click-to-create form on a Wednesday 11:00 cell and confirmed it floated
+as a card next to the grid without changing that row's height or
+disturbing Thursday/Friday's alignment; submitted it, then opened
+編輯 on the resulting slot and confirmed the compact `SlotCard` stayed
+inline while the edit form floated beside it. `npm run verify` passes
+— still 137 tests (pure layout/structure change, no new logic), lint/
+typecheck/build all clean. Test data cleared from `prisma/dev.db`
+afterward.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
@@ -745,6 +786,15 @@ afterward.
   support arrow-key navigation between cells (Tab still moves focus
   between individual buttons, and Escape/outside-click still close the
   popover, but there's no roving-tabindex grid navigation).
+- `HourCellOverlay`'s floating edit/add panel (`src/app/hour-cell-overlay.tsx`)
+  positions itself once, when it opens — unlike `TimePicker`/`DatePicker`'s
+  popover, it doesn't reposition or close on scroll/resize while open, so
+  scrolling the page with an edit form open can leave the panel visually
+  detached from its row until the next navigation (取消/儲存/新增 all
+  navigate and fix this). Not wired through `use-popover.ts` because this
+  panel's open/close state is server-decided (`?edit=`/`?add=`), not
+  client-toggled, so there's no local "close" action to call from a
+  scroll listener the way the pickers have.
 
 ## Configuration / Environment Notes
 

@@ -445,3 +445,31 @@ new entry correcting it and say so explicitly.
   and the panel auto-closed; created a `Fixed Commitment` via the new
   pickers on `/commitments` and confirmed `09:00–10:00` persisted
   exactly. Test data cleared from `prisma/dev.db` afterward.
+- 2026-07-21: chat feedback on the layout itself — empty hour rows were
+  only as tall as their "+" (~24px), so an added slot, and especially
+  an opened edit/add form (5+ fields), inflated just that one row,
+  making the day column look jagged/misaligned next to every other day
+  at the same hour ("参差不齊"). Gave `.hourRow` a uniform `min-height`
+  and switched it to `align-items: stretch` so `.hourContent` fills
+  that height, centering a lone "+" both axes instead of top-left;
+  `.hourContinuation` now fills the row as a solid tinted block instead
+  of a 6px line. More substantially, added `HourCellOverlay`
+  (`src/app/hour-cell-overlay.tsx`): every cell's compact content (the
+  "+", the `SlotCard`, or the continuation bar) always stays inline and
+  keeps the row's height fixed; when the SSR-decided `?edit=`/`?add=`
+  form is present for that cell, it's portaled to `document.body` as a
+  floating panel next to the cell instead of growing inline — reuses
+  the `.addForm` card look, wrapped in a thin positioning class
+  (`.hourOverlayPanel`) with `--shadow-lg` since it's now visually
+  disconnected from the page flow. Measuring the anchor's position had
+  to move into a `requestAnimationFrame` callback inside the effect
+  (not called directly in the effect body) to satisfy
+  `react-hooks/set-state-in-effect`. `npm run verify` passes — still
+  137 tests (pure layout/structure, no new logic), lint/typecheck/build
+  all clean. Manually verified against the running dev server: an
+  empty week showed uniform row heights across all seven days; opened
+  the click-to-create form on a Wednesday 11:00 cell and confirmed it
+  floated as a card without changing that row's height or any other
+  day's alignment; submitted it, then opened 編輯 and confirmed the
+  compact `SlotCard` stayed inline while the edit form floated beside
+  it. Test data cleared from `prisma/dev.db` afterward.

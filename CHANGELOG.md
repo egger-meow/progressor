@@ -206,6 +206,14 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   month calendar, all mouse-driven, submitting the same `"HH:MM"`/
   `"YYYY-MM-DD"` strings the existing Server Actions already expected
   (no action or service-layer changes).
+- Weekly View hour rows now have a uniform `min-height` (real timetable
+  blocks from the start, not just tall enough for "+") and the "+" is
+  centered both axes; a multi-hour slot's continuation indicator now
+  fills the row instead of a thin line.
+- The Weekly View's edit/add-slot forms no longer expand their own row
+  inline — `HourCellOverlay` (`src/app/hour-cell-overlay.tsx`, new)
+  floats them as a panel next to the cell instead, so editing one day's
+  slot no longer misaligns that day's rows against the rest of the week.
 
 ### Fixed
 
