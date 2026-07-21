@@ -58,3 +58,43 @@ export function combineDateAndTime(dateParam: string, timeParam: string): Date {
   }
   return combined;
 }
+
+export function parseHour(timeParam: string): number {
+  return Number(timeParam.slice(0, 2));
+}
+
+export function formatHourParam(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+export interface HourRow {
+  hour: number;
+  rowStart: Date;
+  rowEnd: Date;
+}
+
+// One row per hour of `day`, spanning at least [windowStartHour,
+// windowEndHour) (the Scheduler's daily window — see
+// src/scheduler/constants.ts) but widened to include every hour in
+// `extraHours` (a manually-created Time Slot isn't restricted to that
+// window, and a Time Slot must never become invisible on the Weekly
+// View's grid — ROADMAP.md's "Interactive Weekly Grid" exit condition).
+export function buildHourRows(
+  day: Date,
+  windowStartHour: number,
+  windowEndHour: number,
+  extraHours: number[] = [],
+): HourRow[] {
+  const minHour = Math.min(windowStartHour, ...extraHours);
+  const maxHourExclusive = Math.max(windowEndHour, ...extraHours.map((h) => h + 1));
+
+  const rows: HourRow[] = [];
+  for (let hour = minHour; hour < maxHourExclusive; hour++) {
+    const rowStart = new Date(day);
+    rowStart.setHours(hour, 0, 0, 0);
+    const rowEnd = new Date(day);
+    rowEnd.setHours(hour + 1, 0, 0, 0);
+    rows.push({ hour, rowStart, rowEnd });
+  }
+  return rows;
+}

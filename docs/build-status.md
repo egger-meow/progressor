@@ -313,3 +313,31 @@ new entry correcting it and say so explicitly.
   `書籍：Deep Work（第 1 章／共 12 章）` and `課程：Algorithms
   Course（第 1 支影片／共 30 支影片）`. Test/seed data cleared from
   `prisma/dev.db` afterward.
+- 2026-07-21: `ROADMAP.md`'s "Interactive Weekly Grid & Click-to-Create"
+  phase completed and closed, authorized in chat: the Weekly View's day
+  columns collapsed to "沒有時段" when empty and adding a slot required
+  scrolling to a separate form. Added `buildHourRows`/`parseHour`/
+  `formatHourParam` (`src/app/week.ts`, 6 new tests in `week.test.ts`)
+  and rebuilt `src/app/page.tsx`'s day-column rendering around them: each
+  day always shows one row per hour across the Scheduler's daily window
+  (08:00–23:00), widened per-day to include any `Time Slot` outside that
+  window; a row shows the slot(s) starting there, a non-interactive
+  continuation bar for hours a slot already covers, or a "＋ 新增" link
+  for a genuinely empty hour. Clicking that link navigates to
+  `/?week=...&add=<date>T<hour>` (mirroring the existing `?edit=`
+  pattern), revealing an inline form pre-filled with that hour that
+  posts straight to the existing `createTimeSlotAction` — no new Server
+  Action, no new client-side JavaScript. `npm run verify` passes — 137
+  tests (6 new), lint/typecheck/build all clean. Manually verified
+  against the running dev server (`javascript_tool`'s `requestSubmit()`
+  used in place of `computer` clicks, which timed out again this session
+  independent of the app — server logs and console stayed clean): an
+  empty week showed the full grid on every day, every cell clickable;
+  clicked an empty cell, changed the pre-filled end time to make a
+  2-hour slot, and confirmed it rendered a card in its starting hour and
+  a continuation bar (no add link) in the hour it also covered; edited
+  the slot down to 1 hour and confirmed the freed hour regained its own
+  "＋ 新增" link; removed it and confirmed the day returned to fully
+  empty; created a slot at 06:00 (outside the default window) and
+  confirmed only that day's grid widened down to 06:00, other days
+  unaffected. Test data cleared from `prisma/dev.db` afterward.

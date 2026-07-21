@@ -18,8 +18,11 @@ the gap that previously forced every phase's manual walkthrough to rely
 on a temporary, non-shipped seed route. The UI is now Traditional
 Chinese with a warm, interactive visual design and live drag-and-drop
 priority reordering (Phase 5 — see "UI/UX Overhaul & Live Priority
-Reordering" below). Phases 1-5 are closed; see `docs/audits/` for their
-completion evidence.
+Reordering" below). The Weekly View always renders a full hourly time
+grid per day, whether or not it has any `Time Slot`s, with click-to-
+create directly on an empty hour cell (Phase 6 — see "Interactive
+Weekly Grid & Click-to-Create" below). Phases 1-6 are closed; see
+`docs/audits/` for their completion evidence.
 
 ## Verification Gates
 
@@ -125,6 +128,30 @@ Phase 1's "correct, not pretty" styling deferral.
 
 Passed; see
 [`docs/audits/ui-ux-overhaul-and-live-priority-reordering-audit.md`](audits/ui-ux-overhaul-and-live-priority-reordering-audit.md).
+
+#### Phase 6 — Interactive Weekly Grid & Click-to-Create (closed)
+
+Authorized by the project owner in chat (2026-07-21): the Weekly View's
+per-day columns collapsed to a single "沒有時段" message when empty and
+adding a slot required a separate bottom form.
+
+1. Every day column renders one row per hour across the Scheduler's
+   daily window (08:00–23:00), always — extended per-day to include any
+   `Time Slot` outside that window.
+2. An existing `Time Slot` renders in its starting hour's row; the hours
+   it spans afterward render as a non-interactive continuation
+   indicator, not an empty/clickable row.
+3. Clicking an empty hour cell reveals an inline pre-filled add form
+   (reusing `createTimeSlotAction`); canceling collapses it back.
+4. The bottom "新增時段"/"快速新增臨時事件" forms remain available
+   unchanged.
+5. All existing per-slot actions (編輯/移除/跳過/標記完成) work
+   unchanged from within the grid.
+6. `npm run verify` passes.
+7. A written manual walkthrough, recorded in `docs/audits/`.
+
+Passed; see
+[`docs/audits/interactive-weekly-grid-and-click-to-create-audit.md`](audits/interactive-weekly-grid-and-click-to-create-audit.md).
 
 No phase is currently active — see `../ROADMAP.md`'s "Proposed — Not Yet
 Authorized" section for what's left to authorize.
@@ -545,6 +572,49 @@ read `書籍：Deep Work（第 1 章／共 12 章）` and `課程：Algorithms
 Course（第 1 支影片／共 30 支影片）`. `npm run verify` passes — 131 tests
 (2 new for `reorderWithinType`), lint/typecheck/build all clean.
 
+### Interactive Weekly Grid & Click-to-Create (Phase 6)
+
+The Weekly View's per-day columns (`src/app/page.tsx`) no longer
+collapse to a single "沒有時段" message when empty. Each day always
+renders one row per hour across the Scheduler's daily window
+(`DAILY_WINDOW_START`–`DAILY_WINDOW_END`, `src/scheduler/constants.ts`
+— 08:00–23:00), via a new pure helper, `buildHourRows`
+(`src/app/week.ts`, unit-tested in `week.test.ts`). A day whose
+`Time Slot`s fall outside that window (manual entry isn't restricted to
+it) has its grid widened to include them, per row — a `Time Slot` can
+never become invisible.
+
+Each hour row renders one of three things: (1) the `Time Slot`(s)
+starting in that hour, as the same card/edit-form used before (unchanged
+content and actions — 編輯/移除/跳過/標記完成); (2) a thin, non-
+interactive "continuation" bar, for an hour already covered by a slot
+that started earlier; or (3) a dashed "＋ 新增" link, for a genuinely
+empty hour.
+
+Clicking that link navigates to `/?week=...&add=<date>T<hour>` — the
+same URL-query-param pattern the existing `?edit=` inline-edit form
+already uses, so this needed no new client-side JavaScript. When `add`
+matches a cell, that cell renders an inline form pre-filled with the
+clicked day/hour as date/start (end defaults to start + 1 hour),
+submitting straight to the existing `createTimeSlotAction` — the same
+Server Action and fields the bottom "新增時段" form already uses.
+Canceling (or submitting) returns to the plain `/?week=...` URL. The
+bottom "新增時段" and "快速新增臨時事件" forms are unchanged, for slots
+that don't align to one clicked hour cell (e.g. a slot starting at a
+half hour, or a longer manual entry).
+
+Manually verified against the running dev server: an empty week showed
+the full 08:00–22:00 grid on every day with every cell clickable;
+clicking an empty cell and submitting created a 2-hour slot, which
+rendered a card in its starting hour and a continuation bar (no add
+link) in the hour it also covered; editing that slot down to 1 hour
+correctly gave the freed hour back its own "＋ 新增" link; removing it
+returned the day to fully empty; a slot created at 06:00 (outside the
+default window) correctly widened only that day's grid down to 06:00,
+leaving other days at 08:00. `npm run verify` passes — 137 tests (6 new
+for `buildHourRows`/`parseHour`/`formatHourParam`), lint/typecheck/build
+all clean. Test data cleared from `prisma/dev.db` afterward.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
@@ -562,6 +632,11 @@ Course（第 1 支影片／共 30 支影片）`. `npm run verify` passes — 131
   drag-and-drop with no touch/mobile fallback — a desktop-first
   interaction, consistent with the bootstrap platform decision (local web
   app first, see `../ROADMAP.md`'s Proposed section on a mobile view).
+- The Weekly View's click-to-create grid cells are hourly only — clicking
+  a cell pre-fills a whole-hour start/end, adjustable in the revealed
+  form before submitting. A slot starting on a half hour, or spanning
+  many hours, still needs the bottom "新增時段" form (or editing the
+  hour-aligned defaults after clicking).
 
 ## Configuration / Environment Notes
 

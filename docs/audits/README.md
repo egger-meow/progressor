@@ -62,3 +62,8 @@ once fixed, either a new audit or a correction note added to
   touch/mobile drag fallback; native drag gesture verified via a
   permanent integration test rather than a live pointer simulation, due
   to Browser-pane tooling timeouts that session).
+- [`interactive-weekly-grid-and-click-to-create-audit.md`](interactive-weekly-grid-and-click-to-create-audit.md)
+  — Phase 6, "Interactive Weekly Grid & Click-to-Create." Complete with
+  noted exceptions (hourly-only click-to-create granularity;
+  `computer` click simulation timed out again this session, worked
+  around with `javascript_tool`'s `requestSubmit()`).

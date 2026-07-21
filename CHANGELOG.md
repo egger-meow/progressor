@@ -161,6 +161,19 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   it's for — `Chapter` for `Book`, `Video` for `Course` — e.g. `書籍：Deep
   Work（第 1 章／共 12 章）` (`occupantLabel` in `src/server/time-slots.ts`),
   per the same `INBOX.md` request.
+- Phase 6 ("Interactive Weekly Grid & Click-to-Create") authorized by the
+  project owner in chat (2026-07-21), activated in `ROADMAP.md` and
+  decomposed into `PRIORITIES.md`, then closed: completion audit at
+  `docs/audits/interactive-weekly-grid-and-click-to-create-audit.md`;
+  removed from `ROADMAP.md`.
+- The Weekly View's day columns now always render a full hourly grid
+  across the Scheduler's daily window (`buildHourRows`, `src/app/week.ts`)
+  instead of collapsing to "沒有時段" when empty — widened per-day to
+  include any `Time Slot` outside that window so one is never hidden.
+- Clicking an empty hour cell in the Weekly View reveals an inline,
+  pre-filled "新增時段" form in place (same `createTimeSlotAction`, no new
+  Server Action), via the same URL-query-param pattern the existing
+  `?edit=` inline edit already used — no new client-side JavaScript.
 
 ### Changed
 
