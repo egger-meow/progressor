@@ -182,6 +182,10 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   project owner, 2026-07-21: "add function that we can add tags to items
   like 資料探勘would be 學校課 and books related to 交易 we can tag it
   trader."
+- Today's column in the Weekly View is now highlighted with a themed
+  border (`.dayColumnToday`, `src/app/page.tsx`/`page.module.css`) —
+  project owner, 2026-07-21: "today should [be] marked with border
+  line...just highlight it since its today."
 - A "顯示：" field selector above the Weekly View (`DisplayOptionsControl`,
   `src/app/display-options.tsx`) toggles which fields a `SlotCard` shows —
   時間／標籤／類別 — persisted per-browser in `localStorage` (not

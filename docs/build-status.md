@@ -608,3 +608,15 @@ new entry correcting it and say so explicitly.
   identical clicks); test artifacts were removed via a direct one-off
   Prisma script instead, leaving the project owner's own commitment (now
   carrying the tag) untouched.
+- 2026-07-21: same-day follow-up — "today should [be] marked with border
+  line...just highlight it since its today." Added `.dayColumnToday`
+  (2px themed border) via a per-day `isToday` check in `page.tsx`. While
+  wiring it up, found `.dayColumnDeadline`/`.dayColumnToday` had been
+  declared earlier in the stylesheet than `.dayColumn`'s own base rule
+  (from the earlier deadline-banner change), so `.dayColumn`'s `border:
+  1px solid var(--color-border)` shorthand was silently overriding both
+  — the red deadline border from the previous change had never actually
+  rendered either. Moved both rules after `.dayColumn`. `npm run verify`
+  passes — still 182 tests, lint/typecheck/build clean. Verified via
+  computed-style check: today's column now shows `border-color: rgb(249,
+  115, 22)` (primary), `border-width: 2px`.

@@ -1003,6 +1003,26 @@ mid-session — the project owner's own "資料探勘" `Fixed Commitment` (now
 carrying the "學校課" tag, matching their stated example) was left
 untouched.
 
+**Today highlight (2026-07-21, follow-up):** the Weekly View's day
+columns gave no visual cue for which one was today. `isToday` (computed
+per day in `src/app/page.tsx`'s render loop) adds a `.dayColumnToday`
+class giving that column a 2px themed (primary-color) border — project
+owner: "today should [be] marked with border line...just highlight it
+since its today." Along the way, fixed a real bug this same edit
+surfaced: `.dayColumnDeadline`/`.dayColumnToday` had been declared in
+`page.module.css` *before* `.dayColumn`'s own base rule (they were added
+in the "deadline banner" section, positioned right after `.weekGrid`,
+well above where `.dayColumn` is defined) — since both are single-class
+selectors of equal specificity, `.dayColumn`'s later `border: 1px solid
+var(--color-border)` shorthand was silently winning the cascade and the
+red deadline border never actually rendered either, despite the deadline
+banner itself working. Moved both rules to after `.dayColumn`'s
+definition; verified via computed-style checks that today's column now
+computes `border-color: rgb(249, 115, 22)` (the theme's primary orange),
+`border-width: 2px`. `npm run verify` passes — still 182 tests (pure CSS/
+render-loop change, no service-layer change), lint/typecheck/build all
+clean.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all

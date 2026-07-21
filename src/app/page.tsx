@@ -322,7 +322,8 @@ export default async function WeeklyView({
   const weekEnd = addDays(weekStart, 7);
   const weekParam = formatDateParam(weekStart);
 
-  const todayWeekParam = formatDateParam(startOfWeek(new Date()));
+  const today = new Date();
+  const todayWeekParam = formatDateParam(startOfWeek(today));
   const prevWeekParam = formatDateParam(addDays(weekStart, -7));
   const nextWeekParam = formatDateParam(addDays(weekStart, 7));
 
@@ -397,6 +398,11 @@ export default async function WeeklyView({
           // banner above the day header (project owner, 2026-07-21: "If a
           // day have a deadline event, the event would show above the
           // day...to highlight that day is a deadline, maybe with red").
+          const isToday =
+            day.getFullYear() === today.getFullYear() &&
+            day.getMonth() === today.getMonth() &&
+            day.getDate() === today.getDate();
+
           const dayDeadlines = deadlineTasks.filter((task) => {
             const due = new Date(task.dueAt);
             return (
@@ -442,15 +448,16 @@ export default async function WeeklyView({
             }
           }
 
+          const dayColumnClassName = [
+            styles.dayColumn,
+            dayDeadlines.length > 0 ? styles.dayColumnDeadline : null,
+            isToday ? styles.dayColumnToday : null,
+          ]
+            .filter(Boolean)
+            .join(" ");
+
           return (
-            <section
-              key={index}
-              className={
-                dayDeadlines.length > 0
-                  ? `${styles.dayColumn} ${styles.dayColumnDeadline}`
-                  : styles.dayColumn
-              }
-            >
+            <section key={index} className={dayColumnClassName}>
               {dayDeadlines.length > 0 ? (
                 <div className={styles.deadlineBanner}>
                   {dayDeadlines.map((task) => (

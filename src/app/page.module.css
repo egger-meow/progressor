@@ -319,10 +319,6 @@
    the (warm/neutral) palette, per project owner, 2026-07-21: "highlight
    that day is a deadline, maybe with red". --- */
 
-.dayColumnDeadline {
-  border-color: color-mix(in srgb, var(--color-destructive) 45%, var(--color-border));
-}
-
 .deadlineBanner {
   display: flex;
   flex-direction: column;
@@ -352,6 +348,20 @@
   gap: var(--space-3);
   min-width: 180px;
   box-shadow: var(--shadow-sm);
+}
+
+.dayColumnDeadline {
+  border-color: color-mix(in srgb, var(--color-destructive) 45%, var(--color-border));
+}
+
+/* Today's column — a themed border (not a banner/fill, which would
+   compete visually with the red deadline banner above) so today reads
+   at a glance in the 課表, per project owner, 2026-07-21: "today should
+   [be] marked with border line...just highlight it since its today". */
+.dayColumnToday {
+  border-color: var(--color-primary);
+  border-width: 2px;
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 .dayColumn h2 {
