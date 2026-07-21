@@ -114,6 +114,10 @@ export default async function ItemsPage({
             <input type="number" name="unitCount" required />
           </label>
           <label>
+            已完成單元（若已開始閱讀／上課，填入目前進度到第幾章／第幾支影片）
+            <input type="number" name="unitsCompleted" defaultValue={0} min={0} />
+          </label>
+          <label>
             預估天數
             <input type="number" name="estimatedDays" required />
           </label>
