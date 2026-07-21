@@ -13,7 +13,7 @@
 
 import { SchedulerInput, ScheduledTimeSlot, SchedulerRoutine, TimeOfDayPreference } from "./types";
 import { addDays, offsetFromMonday, combineDateAndTime, findFreeInterval, type Interval } from "./time";
-import { DAILY_WINDOW_START, DAILY_WINDOW_END, SESSION_DURATION_MS } from "./constants";
+import { DAILY_WINDOW_START, DAILY_WINDOW_END } from "./constants";
 import { hasExistingOccurrence } from "./hard-constraints";
 
 export interface RoutinePlacementResult {
@@ -67,18 +67,19 @@ export function placeRoutines(input: SchedulerInput, busy: Interval[]): RoutineP
       // slot is free); then the Time-of-Day Preference's narrower bucket
       // window; then fall back to the full daily window rather than
       // giving up the whole day if the narrower windows are busy.
+      const durationMs = routine.durationMinutes * 60 * 1000;
       let found: Interval | null = null;
       if (routine.preferredStartTime) {
         const preferredStart = combineDateAndTime(day, routine.preferredStartTime);
-        const preferredEnd = new Date(preferredStart.getTime() + SESSION_DURATION_MS);
-        found = findFreeInterval(preferredStart, preferredEnd, SESSION_DURATION_MS, allBusy);
+        const preferredEnd = new Date(preferredStart.getTime() + durationMs);
+        found = findFreeInterval(preferredStart, preferredEnd, durationMs, allBusy);
       }
       if (!found && routine.timeOfDayPreference) {
         const preferred = TIME_OF_DAY_WINDOWS[routine.timeOfDayPreference];
         found = findFreeInterval(
           combineDateAndTime(day, preferred.start),
           combineDateAndTime(day, preferred.end),
-          SESSION_DURATION_MS,
+          durationMs,
           allBusy,
         );
       }
@@ -86,7 +87,7 @@ export function placeRoutines(input: SchedulerInput, busy: Interval[]): RoutineP
         found = findFreeInterval(
           combineDateAndTime(day, DAILY_WINDOW_START),
           combineDateAndTime(day, DAILY_WINDOW_END),
-          SESSION_DURATION_MS,
+          durationMs,
           allBusy,
         );
       }

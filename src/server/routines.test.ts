@@ -128,6 +128,34 @@ describe("createRoutine", () => {
       }),
     ).rejects.toThrow(/Invalid preferredStartTime/);
   });
+
+  it("creates a routine with a custom durationMinutes", async () => {
+    const routine = await createRoutine({
+      title: "Stretch",
+      category: "gym",
+      cadence: "daily",
+      durationMinutes: 30,
+    });
+    expect(routine.durationMinutes).toBe(30);
+  });
+
+  it("defaults durationMinutes to 120 when omitted", async () => {
+    const routine = await createRoutine({
+      title: "Gym",
+      category: "gym",
+      cadence: "daily",
+    });
+    expect(routine.durationMinutes).toBe(120);
+  });
+
+  it("rejects a non-positive or absurdly large durationMinutes", async () => {
+    await expect(
+      createRoutine({ title: "x", category: "gym", cadence: "daily", durationMinutes: 0 }),
+    ).rejects.toThrow(/Invalid durationMinutes/);
+    await expect(
+      createRoutine({ title: "x", category: "gym", cadence: "daily", durationMinutes: 1000 }),
+    ).rejects.toThrow(/Invalid durationMinutes/);
+  });
 });
 
 describe("updateRoutine", () => {
@@ -155,6 +183,16 @@ describe("updateRoutine", () => {
 
     const cleared = await updateRoutine(routine.id, { preferredStartTime: null });
     expect(cleared.preferredStartTime).toBeNull();
+  });
+
+  it("updates durationMinutes", async () => {
+    const routine = await createRoutine({
+      title: "Gym",
+      category: "gym",
+      cadence: "daily",
+    });
+    const updated = await updateRoutine(routine.id, { durationMinutes: 45 });
+    expect(updated.durationMinutes).toBe(45);
   });
 
   it("clears the anchor when cadence changes to daily", async () => {

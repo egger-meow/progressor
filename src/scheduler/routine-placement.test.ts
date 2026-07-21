@@ -30,6 +30,7 @@ function routine(overrides: Partial<SchedulerRoutine> = {}): SchedulerRoutine {
     anchor: null,
     timeOfDayPreference: null,
     preferredStartTime: null,
+    durationMinutes: 120,
     ...overrides,
   };
 }
@@ -160,6 +161,30 @@ describe("placeRoutines", () => {
       {
         startAt: new Date("2026-07-13T14:30:00"),
         endAt: new Date("2026-07-13T16:30:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("places a session that's exactly durationMinutes long, not the old hardcoded 2 hours", () => {
+    const input = baseInput({
+      routines: [
+        routine({
+          cadence: "weekly",
+          anchor: [1],
+          preferredStartTime: "07:00",
+          durationMinutes: 30,
+        }),
+      ],
+    });
+
+    const result = placeRoutines(input, []);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T07:00:00"),
+        endAt: new Date("2026-07-13T07:30:00"),
         occupantType: "routine",
         occupantId: "r-1",
       },

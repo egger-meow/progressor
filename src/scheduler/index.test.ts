@@ -54,6 +54,7 @@ function buildFixture(): SchedulerInput {
         anchor: [1, 4], // Monday, Thursday
         timeOfDayPreference: null,
         preferredStartTime: null,
+        durationMinutes: 120,
       },
     ],
     fixedCommitments: [

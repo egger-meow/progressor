@@ -558,3 +558,21 @@ new entry correcting it and say so explicitly.
   project owner's own real "資料探勘" commitment (now at week 9/7 after
   their own concurrent edits) showed just "資料探勘" in the grid, with a
   "固定事務" badge appearing only once its edit panel was opened.
+- 2026-07-21: same-day follow-up — every `Routine` occurrence used one
+  hardcoded `SESSION_DURATION_MS` (2h) regardless of what it actually
+  was; project owner: "this should also edit duration 時間長度." Added
+  `Routine.durationMinutes` (new column, default 120, migration
+  `20260721092227_routine_duration_minutes`), a "時間長度（分鐘）"
+  number input on `/routines`, and threaded it through
+  `SchedulerRoutine`/`buildSchedulerInput`; `placeRoutines`
+  (`routine-placement.ts`) now computes `durationMs` per-Routine instead
+  of importing the constant. Also fixed `.checkboxLabel` (project owner:
+  "checkbox a bit 突兀 and location not horizontally aligned") — added
+  `align-self: center` so it stops sinking to the row's bottom edge, and
+  restyled the checkbox itself (`appearance: none` + themed border/fill/
+  checkmark) instead of the bare browser default. `npm run verify`
+  passes — 166 tests (5 new), lint/typecheck/build all clean. Manually
+  verified against the running dev server: a "Stretch" Routine with
+  `durationMinutes: 30` placed exactly a 30-minute block, not 2 hours;
+  the checkbox rows on `/commitments` and `/routines` now center with
+  their sibling fields and render as a themed checkmark square.

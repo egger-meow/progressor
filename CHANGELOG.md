@@ -261,6 +261,23 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   opened (a small badge above the fields) — project owner, 2026-07-21:
   "no need prefix, for anything in 課表. Just show what kind is it after
   click open details."
+- `Routine.durationMinutes` (new column, default 120): each Routine now
+  has its own session length instead of the Scheduler applying one
+  hardcoded `SESSION_DURATION_MS` (2 hours) to every Routine's
+  occurrence — set via a "時間長度（分鐘）" number input on `/routines`.
+  The default (120) matches the prior constant exactly, so an existing
+  Routine's placement is unaffected until its duration is edited.
+- `.checkboxLabel` (`src/app/page.module.css`, used by the Weekly View's
+  occupant-picker-adjacent checkboxes and `/commitments`'/`/routines`'
+  option checkboxes) — a lone checkbox+text row used to sink to the
+  bottom of its `.addForm .slotForm` row (shorter than sibling label+
+  input fields, so `align-items: flex-end` bottom-aligned it out of
+  step) and rendered as a bare, unstyled browser-default square;
+  `align-self: center` now centers it within the row, and the checkbox
+  itself is restyled (`appearance: none` + a themed border/fill/
+  checkmark) to match the rest of the app instead of standing out —
+  project owner, 2026-07-21: "checkbox a bit 突兀 and location not
+  horizontally aligned."
 
 ### Fixed
 

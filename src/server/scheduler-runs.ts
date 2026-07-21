@@ -83,6 +83,7 @@ export async function buildSchedulerInput(weekStart: Date, weekEnd: Date): Promi
       anchor: routine.anchor,
       timeOfDayPreference: routine.timeOfDayPreference as TimeOfDayPreference | null,
       preferredStartTime: routine.preferredStartTime,
+      durationMinutes: routine.durationMinutes,
     })),
     fixedCommitments,
     deadlineTasks,

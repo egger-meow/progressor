@@ -97,6 +97,18 @@ export default async function RoutinesPage({
                         ))}
                       </select>
                     </label>
+                    <label>
+                      時間長度（分鐘）
+                      <input
+                        type="number"
+                        name="durationMinutes"
+                        min={5}
+                        max={720}
+                        step={5}
+                        defaultValue={routine.durationMinutes}
+                        required
+                      />
+                    </label>
                     <label className={styles.checkboxLabel}>
                       <input
                         type="checkbox"
@@ -139,6 +151,7 @@ export default async function RoutinesPage({
                       : routine.timeOfDayPreference
                         ? ` · ${TIME_OF_DAY_LABELS[routine.timeOfDayPreference] ?? routine.timeOfDayPreference}`
                         : ""}
+                    {` · ${routine.durationMinutes} 分鐘`}
                   </span>
                 </span>
                 <span className={styles.slotActions}>
@@ -192,6 +205,18 @@ export default async function RoutinesPage({
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            時間長度（分鐘）
+            <input
+              type="number"
+              name="durationMinutes"
+              min={5}
+              max={720}
+              step={5}
+              defaultValue={120}
+              required
+            />
           </label>
           <label className={styles.checkboxLabel}>
             <input type="checkbox" name="useExactTime" />

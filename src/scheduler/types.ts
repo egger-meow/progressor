@@ -44,6 +44,9 @@ export interface SchedulerRoutine {
   // "HH:mm", 24h, or null. Tried before timeOfDayPreference's bucket
   // window — see routine-placement.ts.
   preferredStartTime: string | null;
+  // How long one occurrence runs, in minutes — replaces what used to be
+  // a single hardcoded SESSION_DURATION_MS applied to every Routine.
+  durationMinutes: number;
 }
 
 export interface SchedulerFixedCommitment {

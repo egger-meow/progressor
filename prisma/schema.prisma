@@ -46,7 +46,11 @@ model WipLimit {
 // `preferredStartTime` ("HH:mm", 24h) is the domain-model doc's
 // Time-of-Day Preference "(or an explicit hour range)" case: an optional
 // concrete anchor the Scheduler tries before `timeOfDayPreference`'s
-// four-bucket window.
+// four-bucket window. `durationMinutes` (default 120) replaces what used
+// to be a single hardcoded `SESSION_DURATION_MS` the Scheduler applied to
+// every Routine occurrence — the default matches that prior constant
+// exactly, so an existing Routine's placement is unaffected until its
+// duration is edited.
 model Routine {
   id                  String   @id @default(cuid())
   title               String
@@ -55,6 +59,7 @@ model Routine {
   anchor              String?
   timeOfDayPreference String?
   preferredStartTime  String?
+  durationMinutes     Int      @default(120)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

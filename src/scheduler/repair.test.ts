@@ -236,6 +236,7 @@ describe("repairSchedule: insert-ad-hoc-event", () => {
           anchor: [1],
           timeOfDayPreference: null,
           preferredStartTime: null,
+          durationMinutes: 120,
         },
       ],
       existingSlots: [slot("slot-routine", "2026-07-13T09:00:00", "2026-07-13T11:00:00", "routine", "routine-gym")],

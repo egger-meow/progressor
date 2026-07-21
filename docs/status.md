@@ -929,6 +929,36 @@ lint/typecheck/build all clean. All test artifacts (a temporary
 owner's own pre-existing `Fixed Commitment` and its earlier
 independently-created `Time Slot`s were left untouched throughout.
 
+**Per-Routine session duration + checkbox styling/alignment fix
+(2026-07-21, follow-up):** every `Routine` occurrence was placed for a
+single hardcoded `SESSION_DURATION_MS` (2 hours) regardless of what the
+Routine actually was — a 30-minute stretch and a 2-hour gym session both
+got the same block. `Routine.durationMinutes` (new column, default 120)
+is now set via a "時間長度（分鐘）" number input on `/routines`'
+create/edit forms; `placeRoutines` (`src/scheduler/routine-placement.ts`)
+computes `durationMs = routine.durationMinutes * 60 * 1000` and uses it
+everywhere `SESSION_DURATION_MS` used to be hardcoded (the constant
+itself is now unused there). The default (120) exactly matches the old
+constant, so an existing Routine's placement doesn't change until its
+duration is edited. Separately, `.checkboxLabel` (the "使用指定時間"/
+"忽略學期範圍" checkboxes) sank to the bottom of its row instead of
+lining up with the labeled fields beside it (a lone checkbox+text row is
+shorter than a label-text-plus-input stack, so `.addForm .slotForm`'s
+`align-items: flex-end` bottom-aligned it out of step) and rendered as a
+bare, unstyled browser-default square that stood out against the app's
+theme — `align-self: center` fixes the alignment, and the checkbox is
+now restyled (`appearance: none`, themed border/fill, a drawn checkmark)
+to match. Manually verified against the running dev server: created a
+"Stretch" `Routine` with `durationMinutes: 30`, `preferredStartTime:
+09:00`, generated the schedule, and confirmed it placed exactly
+09:00–09:30 (not the old 2-hour block); opened `/commitments`' and
+`/routines`' checkbox rows and confirmed the checkbox now centers
+vertically with its sibling fields and renders as a themed square with a
+checkmark when checked. `npm run verify` passes — 166 tests (5 new: 3 in
+`routines.test.ts` for `durationMinutes` validation/defaulting, 1 in
+`routine-placement.test.ts` confirming a custom duration is honored, 1
+update test), lint/typecheck/build all clean.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all

@@ -42,7 +42,9 @@ limit is rejected until an existing in-progress item is paused or finished.
 A recurring, non-deadline commitment. Fields: `id`, `title`, `category`
 （如 `gym`、`tutoring`／家教）, `cadence` (`daily` | `weekly` | `monthly`),
 `anchor`（依 cadence 決定：weekly 存星期幾，可多個；monthly 存日期）,
-`timeOfDayPreference`（見下）. A `Routine` occurrence recurs indefinitely
+`timeOfDayPreference`（見下）, `durationMinutes`（每次發生的時長，預設
+120 分鐘 — 取代了 Scheduler 過去對所有 Routine 一律套用的固定
+`SESSION_DURATION_MS`）. A `Routine` occurrence recurs indefinitely
 until the user edits or deletes the `Routine` itself — it is not a
 `Deadline Task` and never has a due date.
 

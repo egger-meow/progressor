@@ -41,6 +41,15 @@ function readPreferredStartTime(formData: FormData): string | undefined {
   return useExactTime ? String(formData.get("preferredStartTime")) : undefined;
 }
 
+function readDurationMinutes(formData: FormData): number | undefined {
+  const raw = formData.get("durationMinutes");
+  if (raw === null || raw === "") {
+    return undefined;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
 function readEditableFields(formData: FormData) {
   const timeOfDayRaw = String(formData.get("timeOfDayPreference") ?? "");
   return {
@@ -59,6 +68,7 @@ export async function createRoutineAction(formData: FormData): Promise<void> {
     await createRoutine({
       ...readEditableFields(formData),
       preferredStartTime: readPreferredStartTime(formData),
+      durationMinutes: readDurationMinutes(formData),
     });
   } catch (error) {
     redirectToRoutines(error instanceof Error ? error.message : "新增常規事件失敗");
@@ -77,6 +87,7 @@ export async function updateRoutineAction(formData: FormData): Promise<void> {
       anchor: parseAnchor(String(formData.get("anchor") ?? "")),
       timeOfDayPreference: timeOfDayRaw ? (timeOfDayRaw as TimeOfDayPreference) : null,
       preferredStartTime: readPreferredStartTime(formData) ?? null,
+      durationMinutes: readDurationMinutes(formData),
     });
   } catch (error) {
     redirectToRoutines(error instanceof Error ? error.message : "更新常規事件失敗");
