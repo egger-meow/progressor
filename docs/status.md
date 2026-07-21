@@ -845,6 +845,25 @@ passes — still 161 tests (pure UI restructuring over the same Server
 Action contracts; no service-layer behavior changed), lint/typecheck/
 build all clean.
 
+**No category prefix in the compact card (2026-07-21, same-day
+follow-up):** even after the redesign above, the compact `SlotCard`
+still read "固定事務：資料探勘" — project owner: "no need prefix, for
+anything in 課表. Just show what kind is it after click open details."
+`occupantLabel` (`src/server/time-slots.ts`) no longer prefixes the
+title with its category; `TimeSlotWithLabel` gained a separate
+`occupantKind` field ("常規事件"/"固定事務"/"截止任務"/"書籍"/"課程"/
+"臨時事件", or `""` for 留白). The Weekly View's compact `SlotCard`
+shows only the bare title; `SlotEditForm` shows `occupantKind` as a
+small badge above the date/time/內容 fields, so the category is visible
+once you open a slot's details, not before. Manually verified against
+the running dev server (the project owner's own real "資料探勘"
+commitment, now at week 9/7 after their own concurrent edits): the
+compact card read just "資料探勘"; opening its edit panel showed a
+"固定事務" badge above the fields. `npm run verify` passes — still 161
+tests (one field renamed/split, no new logic; the existing "deleted
+reference" fallback-message test still passes unchanged), lint/
+typecheck/build all clean.
+
 ### Semester Scoping for Fixed Commitments & Concrete Routine Times (Phase 7)
 
 `Semester` (`src/server/semester.ts`, new — a singleton row, fixed id

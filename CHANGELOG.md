@@ -254,6 +254,13 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   cramped native dropdown (only "留白（不指定）" visibly highlighted) for
   there being nothing else to pick, even though a second option existed
   underneath it.
+- `occupantLabel` (`src/server/time-slots.ts`) no longer prefixes a Time
+  Slot's title with its category (e.g. "固定事務：資料探勘") — the
+  compact `SlotCard` now shows just the title. The category moved to a
+  new `occupantKind` field, shown only once a slot's edit panel is
+  opened (a small badge above the fields) — project owner, 2026-07-21:
+  "no need prefix, for anything in 課表. Just show what kind is it after
+  click open details."
 
 ### Fixed
 

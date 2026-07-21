@@ -178,48 +178,64 @@ export function listTimeSlots(range?: ListTimeSlotsRange) {
   });
 }
 
-// Human-readable label for a Time Slot's occupant, for display in the
+// Occupant kind + human-readable label for a Time Slot, for display in the
 // Weekly View. Lives here (service layer) rather than in the UI so the UI
-// never has to know how each occupant kind is looked up.
-async function occupantLabel(
+// never has to know how each occupant kind is looked up. Kept as two
+// separate strings (not one prefixed label) so the Weekly View can show
+// just the title in the compact grid and the kind only once a slot is
+// opened for detail — project owner, 2026-07-21: a card packed with both
+// at once ("固定事務：資料探勘") was clutter for something that should
+// read at a glance from the grid.
+async function occupantInfo(
   occupantType: OccupantType,
   occupantId: string | null,
-): Promise<string> {
+): Promise<{ kind: string; label: string }> {
   if (occupantType === "slack" || !occupantId) {
-    return "留白";
+    return { kind: "", label: "留白" };
   }
   switch (occupantType) {
     case "routine": {
       const routine = await prisma.routine.findUnique({ where: { id: occupantId } });
-      return routine ? `常規事件：${routine.title}` : "（常規事件已刪除）";
+      return routine
+        ? { kind: "常規事件", label: routine.title }
+        : { kind: "常規事件", label: "（常規事件已刪除）" };
     }
     case "fixed-commitment": {
       const commitment = await prisma.fixedCommitment.findUnique({
         where: { id: occupantId },
       });
-      return commitment ? `固定事務：${commitment.title}` : "（固定事務已刪除）";
+      return commitment
+        ? { kind: "固定事務", label: commitment.title }
+        : { kind: "固定事務", label: "（固定事務已刪除）" };
     }
     case "deadline-task": {
       const task = await prisma.deadlineTask.findUnique({ where: { id: occupantId } });
-      return task ? `截止任務：${task.title}` : "（截止任務已刪除）";
+      return task
+        ? { kind: "截止任務", label: task.title }
+        : { kind: "截止任務", label: "（截止任務已刪除）" };
     }
     case "trackable-item": {
       const item = await prisma.trackableItem.findUnique({ where: { id: occupantId } });
       if (!item) {
-        return "（書籍／課程已刪除）";
+        return { kind: "書籍／課程", label: "（書籍／課程已刪除）" };
       }
       // Domain-model.md: Book's unit is Chapter, Course's unit is Video —
       // surfaced here (not just the title) so a Weekly View block tells you
       // which chapter/video this session is actually for, per INBOX.md's
       // 2026-07-20 request.
-      const typeLabel = item.type === "book" ? "書籍" : "課程";
+      const kind = item.type === "book" ? "書籍" : "課程";
       const unitLabel = item.type === "book" ? "章" : "支影片";
       const currentUnit = Math.min(item.unitsCompleted + 1, item.unitCount);
-      return `${typeLabel}：${item.title}（第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}）`;
+      return {
+        kind,
+        label: `${item.title}（第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}）`,
+      };
     }
     case "ad-hoc-event": {
       const event = await prisma.adHocEvent.findUnique({ where: { id: occupantId } });
-      return event ? `臨時事件：${event.title}` : "（臨時事件已刪除）";
+      return event
+        ? { kind: "臨時事件", label: event.title }
+        : { kind: "臨時事件", label: "（臨時事件已刪除）" };
     }
   }
 }
@@ -230,6 +246,7 @@ export interface TimeSlotWithLabel {
   endAt: Date;
   occupantType: OccupantType;
   occupantId: string | null;
+  occupantKind: string;
   occupantLabel: string;
 }
 
@@ -238,13 +255,17 @@ export async function listTimeSlotsWithLabels(
 ): Promise<TimeSlotWithLabel[]> {
   const slots = await listTimeSlots(range);
   return Promise.all(
-    slots.map(async (slot) => ({
-      id: slot.id,
-      startAt: slot.startAt,
-      endAt: slot.endAt,
-      occupantType: slot.occupantType as OccupantType,
-      occupantId: slot.occupantId,
-      occupantLabel: await occupantLabel(slot.occupantType as OccupantType, slot.occupantId),
-    })),
+    slots.map(async (slot) => {
+      const info = await occupantInfo(slot.occupantType as OccupantType, slot.occupantId);
+      return {
+        id: slot.id,
+        startAt: slot.startAt,
+        endAt: slot.endAt,
+        occupantType: slot.occupantType as OccupantType,
+        occupantId: slot.occupantId,
+        occupantKind: info.kind,
+        occupantLabel: info.label,
+      };
+    }),
   );
 }

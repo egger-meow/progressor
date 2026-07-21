@@ -117,6 +117,11 @@ function SlotEditForm({
       <form action={updateTimeSlotAction} className={styles.slotForm}>
         <input type="hidden" name="id" value={slot.id} />
         <input type="hidden" name="week" value={weekParam} />
+        {slot.occupantKind ? (
+          <span className={`${styles.badge} ${styles.slotFormKindBadge}`}>
+            {slot.occupantKind}
+          </span>
+        ) : null}
         <label>
           日期
           <DatePicker name="date" defaultValue={formatDateParam(new Date(slot.startAt))} />

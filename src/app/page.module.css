@@ -566,6 +566,15 @@
   gap: var(--space-4);
 }
 
+/* The kind badge (固定事務/常規事件/...) shown once a slot's edit panel
+   is open — see SlotEditForm, src/app/page.tsx. Forces it onto its own
+   line above the row of fields instead of squeezing in at their
+   flex-end baseline. */
+.slotFormKindBadge {
+  flex-basis: 100%;
+  width: fit-content;
+}
+
 .addForm label {
   display: flex;
   flex-direction: column;

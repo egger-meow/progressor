@@ -546,3 +546,15 @@ new entry correcting it and say so explicitly.
   務" group containing their real "資料探勘" commitment at once; a test
   add-then-delete round-tripped cleanly (`TimeSlot` count unchanged
   afterward).
+- 2026-07-21: same-day follow-up — the compact `SlotCard` still prefixed
+  the title with its category ("固定事務：資料探勘"); project owner:
+  "no need prefix, for anything in 課表. Just show what kind is it after
+  click open details." Split `occupantLabel` (`src/server/time-slots.ts`)
+  into a bare title plus a new `occupantKind` field on
+  `TimeSlotWithLabel`; the compact card now shows only the title,
+  `SlotEditForm` shows `occupantKind` as a small badge once the panel is
+  opened. `npm run verify` passes — still 161 tests, lint/typecheck/
+  build all clean. Manually verified against the running dev server: the
+  project owner's own real "資料探勘" commitment (now at week 9/7 after
+  their own concurrent edits) showed just "資料探勘" in the grid, with a
+  "固定事務" badge appearing only once its edit panel was opened.
