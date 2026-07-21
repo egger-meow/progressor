@@ -103,40 +103,54 @@ function SlotEditForm({
   occupantOptions: OccupantOption[];
 }) {
   return (
-    <form action={updateTimeSlotAction} className={styles.slotForm}>
-      <input type="hidden" name="id" value={slot.id} />
-      <input type="hidden" name="week" value={weekParam} />
-      <input
-        type="date"
-        name="date"
-        defaultValue={formatDateParam(new Date(slot.startAt))}
-        required
-      />
-      <input
-        type="time"
-        name="startTime"
-        defaultValue={formatTimeLabel(new Date(slot.startAt))}
-        required
-      />
-      <input
-        type="time"
-        name="endTime"
-        defaultValue={formatTimeLabel(new Date(slot.endAt))}
-        required
-      />
-      <OccupantSelect
-        options={occupantOptions}
-        selected={`${slot.occupantType}|${slot.occupantId ?? ""}`}
-      />
-      <div className={styles.slotFormActions}>
-        <button type="submit" className={styles.button}>
-          儲存
-        </button>
-        <a href={`/?week=${weekParam}`} className={styles.linkAction}>
-          取消
-        </a>
-      </div>
-    </form>
+    <div className={styles.addForm}>
+      <form action={updateTimeSlotAction} className={styles.slotForm}>
+        <input type="hidden" name="id" value={slot.id} />
+        <input type="hidden" name="week" value={weekParam} />
+        <label>
+          日期
+          <input
+            type="date"
+            name="date"
+            defaultValue={formatDateParam(new Date(slot.startAt))}
+            required
+          />
+        </label>
+        <label>
+          開始
+          <input
+            type="time"
+            name="startTime"
+            defaultValue={formatTimeLabel(new Date(slot.startAt))}
+            required
+          />
+        </label>
+        <label>
+          結束
+          <input
+            type="time"
+            name="endTime"
+            defaultValue={formatTimeLabel(new Date(slot.endAt))}
+            required
+          />
+        </label>
+        <label>
+          內容
+          <OccupantSelect
+            options={occupantOptions}
+            selected={`${slot.occupantType}|${slot.occupantId ?? ""}`}
+          />
+        </label>
+        <div className={styles.slotFormActions}>
+          <button type="submit" className={styles.button}>
+            儲存
+          </button>
+          <a href={`/?week=${weekParam}`} className={styles.linkAction}>
+            取消
+          </a>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -198,31 +212,37 @@ function InlineAddForm({
   const dateParam = formatDateParam(day);
   const endHour = Math.min(hour + 1, 24);
   return (
-    <form action={createTimeSlotAction} className={styles.slotForm}>
-      <input type="hidden" name="week" value={weekParam} />
-      <input type="hidden" name="date" value={dateParam} />
-      <input
-        type="time"
-        name="startTime"
-        defaultValue={formatHourParam(hour)}
-        required
-      />
-      <input
-        type="time"
-        name="endTime"
-        defaultValue={endHour === 24 ? "23:59" : formatHourParam(endHour)}
-        required
-      />
-      <OccupantSelect options={occupantOptions} />
-      <div className={styles.slotFormActions}>
-        <button type="submit" className={styles.button}>
-          新增
-        </button>
-        <a href={`/?week=${weekParam}`} className={styles.linkAction}>
-          取消
-        </a>
-      </div>
-    </form>
+    <div className={styles.addForm}>
+      <form action={createTimeSlotAction} className={styles.slotForm}>
+        <input type="hidden" name="week" value={weekParam} />
+        <input type="hidden" name="date" value={dateParam} />
+        <label>
+          開始
+          <input type="time" name="startTime" defaultValue={formatHourParam(hour)} required />
+        </label>
+        <label>
+          結束
+          <input
+            type="time"
+            name="endTime"
+            defaultValue={endHour === 24 ? "23:59" : formatHourParam(endHour)}
+            required
+          />
+        </label>
+        <label>
+          內容
+          <OccupantSelect options={occupantOptions} />
+        </label>
+        <div className={styles.slotFormActions}>
+          <button type="submit" className={styles.button}>
+            新增
+          </button>
+          <a href={`/?week=${weekParam}`} className={styles.linkAction}>
+            取消
+          </a>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -267,7 +287,13 @@ function ExtendSlotButton({
 export default async function WeeklyView({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; edit?: string; add?: string; error?: string }>;
+  searchParams: Promise<{
+    week?: string;
+    edit?: string;
+    add?: string;
+    quickEvent?: string;
+    error?: string;
+  }>;
 }) {
   const params = await searchParams;
   const weekStart = startOfWeek(parseDateParam(params.week));
@@ -312,17 +338,15 @@ export default async function WeeklyView({
             產生課表
           </button>
         </form>
-      </nav>
-
-      <nav className={styles.weekNav}>
-        <a href="/items" className={styles.navLink}>
-          書籍與課程
-        </a>
-        <a href="/routines" className={styles.navLink}>
-          常規事件
-        </a>
-        <a href="/commitments" className={styles.navLink}>
-          學期事務
+        <a
+          href={
+            params.quickEvent
+              ? `/?week=${weekParam}`
+              : `/?week=${weekParam}&quickEvent=1`
+          }
+          className={params.quickEvent ? styles.navLinkActive : styles.navLink}
+        >
+          {params.quickEvent ? "取消快速新增" : "快速新增臨時事件"}
         </a>
       </nav>
 
@@ -441,61 +465,42 @@ export default async function WeeklyView({
         })}
       </div>
 
-      <section className={styles.addForm}>
-        <h2>新增時段</h2>
-        <form action={createTimeSlotAction} className={styles.slotForm}>
-          <input type="hidden" name="week" value={weekParam} />
-          <label>
-            日期
-            <input type="date" name="date" defaultValue={weekParam} required />
-          </label>
-          <label>
-            開始
-            <input type="time" name="startTime" required />
-          </label>
-          <label>
-            結束
-            <input type="time" name="endTime" required />
-          </label>
-          <label>
-            內容
-            <OccupantSelect options={occupantOptions} />
-          </label>
-          <button type="submit" className={styles.button}>
-            新增
-          </button>
-        </form>
-      </section>
-
-      <section className={styles.addForm}>
-        <h2>快速新增臨時事件</h2>
-        <p className={styles.hint}>
-          立即建立一個臨時事件並直接排入課表——若與某本書/課程的彈性時段重疊，
-          該時段會被移到本週其他空檔，而不是被覆蓋（Phase 3 局部修正，不是整份重新產生）。
-        </p>
-        <form action={insertAdHocEventAction} className={styles.slotForm}>
-          <input type="hidden" name="week" value={weekParam} />
-          <label>
-            標題
-            <input type="text" name="title" required />
-          </label>
-          <label>
-            日期
-            <input type="date" name="date" defaultValue={weekParam} required />
-          </label>
-          <label>
-            開始
-            <input type="time" name="startTime" required />
-          </label>
-          <label>
-            結束
-            <input type="time" name="endTime" required />
-          </label>
-          <button type="submit" className={styles.button}>
-            加入
-          </button>
-        </form>
-      </section>
+      {params.quickEvent ? (
+        <section className={styles.addForm}>
+          <h2>快速新增臨時事件</h2>
+          <p className={styles.hint}>
+            立即建立一個臨時事件並直接排入課表——若與某本書/課程的彈性時段重疊，
+            該時段會被移到本週其他空檔，而不是被覆蓋（Phase 3 局部修正，不是整份重新產生）。
+          </p>
+          <form action={insertAdHocEventAction} className={styles.slotForm}>
+            <input type="hidden" name="week" value={weekParam} />
+            <label>
+              標題
+              <input type="text" name="title" required />
+            </label>
+            <label>
+              日期
+              <input type="date" name="date" defaultValue={weekParam} required />
+            </label>
+            <label>
+              開始
+              <input type="time" name="startTime" required />
+            </label>
+            <label>
+              結束
+              <input type="time" name="endTime" required />
+            </label>
+            <div className={styles.slotFormActions}>
+              <button type="submit" className={styles.button}>
+                加入
+              </button>
+              <a href={`/?week=${weekParam}`} className={styles.linkAction}>
+                取消
+              </a>
+            </div>
+          </form>
+        </section>
+      ) : null}
     </main>
   );
 }

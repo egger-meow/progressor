@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commitments";
 import {
   createDeadlineTaskAction,
@@ -44,18 +43,6 @@ export default async function CommitmentsPage({
         <h1>學期事務</h1>
         <p className={styles.pageSubtitle}>固定不可移動的課程／會議，以及有截止日但時段可彈性安排的作業／考試準備。</p>
       </div>
-
-      <nav className={styles.weekNav}>
-        <Link href="/" className={styles.navLink}>
-          &larr; 每週課表
-        </Link>
-        <a href="/items" className={styles.navLink}>
-          書籍與課程
-        </a>
-        <a href="/routines" className={styles.navLink}>
-          常規事件
-        </a>
-      </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 

@@ -2,6 +2,71 @@
    and /commitments (all four pages import this one module) — see
    globals.css for the underlying warm color/spacing/type tokens. */
 
+/* --- Persistent top nav bar (src/app/nav-bar.tsx, rendered once in
+   layout.tsx) — the four section links used to repeat, unstyled, inside
+   every page; project owner, 2026-07-21, wanted them consolidated and
+   "more highlighted." --- */
+
+.navBar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.navBarInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.navBrand {
+  font-weight: 900;
+  font-size: var(--text-lg);
+  color: var(--color-primary);
+  letter-spacing: 0.02em;
+}
+
+.navBarLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.navBarLink {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  color: var(--color-muted-foreground);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.navBarLink:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+}
+
+.navBarLinkActive {
+  composes: navBarLink;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.navBarLinkActive:hover {
+  background: var(--color-primary-hover);
+  color: var(--color-primary-foreground);
+}
+
 .page {
   display: flex;
   flex-direction: column;

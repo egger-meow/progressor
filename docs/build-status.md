@@ -382,3 +382,34 @@ new entry correcting it and say so explicitly.
   boundary; clicked "接續後一個 ↓" and confirmed the slot became
   08:00–11:00 with no leftover buttons on either side. Test data cleared
   from `prisma/dev.db` afterward.
+- 2026-07-21: third same-day follow-up, from a screenshot plus chat
+  feedback: the inline edit form's fields had no labels and no visual
+  separation from the grid row it appeared in (looked "squeezed"); the
+  four section links repeated, unstyled, in every page's own `<nav>`
+  instead of a real shared nav; and the Weekly View's two bottom forms
+  ("新增時段", "快速新增臨時事件") always took up scroll space redundant
+  with click-to-create. Added `src/app/nav-bar.tsx` (`"use client"` for
+  `usePathname()`-based active-link highlighting) rendered once in
+  `layout.tsx`, and removed the duplicated `<nav>` block from
+  `src/app/page.tsx`, `src/app/items/page.tsx`, `src/app/routines/
+  page.tsx`, `src/app/commitments/page.tsx`. Wrapped `SlotEditForm`/
+  `InlineAddForm` in the existing `.addForm` card class and added field
+  labels, matching every other page's inline edit form. Removed the
+  Weekly View's standalone "新增時段" section entirely; "快速新增臨時
+  事件" is now gated behind a `?quickEvent=1` toggle link next to "產生
+  課表" instead of always rendering. `npm run verify` passes — still 137
+  tests (styling/structure only), lint/typecheck/build all clean.
+  Manually verified against the running dev server via screenshots: nav
+  bar's active state correctly tracked the current route on all four
+  pages; the edit form rendered as a clear card with labels instead of
+  bare stacked inputs; the quick-event toggle correctly showed/hid the
+  ad-hoc form, with the page ending right after the grid by default.
+  Test data cleared from `prisma/dev.db` afterward. Separately flagged
+  to the project owner in chat rather than acted on: their screenshot of
+  `/commitments`' "新增截止任務" form suggested removing `estimatedDays`
+  as redundant with `dueAt`, but per `docs/domain-model.md` the two mean
+  different things for a `Deadline Task` (`dueAt` = when it's due,
+  `estimatedDays` = how many days of *work* the Scheduler should place
+  before then) — removing it would break `placeDeadlineTasks`
+  (`src/scheduler/hard-constraints.ts`), so this needs a decision from
+  the project owner, not a silent code change.

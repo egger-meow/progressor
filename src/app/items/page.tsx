@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { listTrackableItems } from "@/server/trackable-items";
 import { createTrackableItemAction, updateTrackableItemAction } from "./actions";
 import { PriorityList } from "./priority-list";
@@ -28,18 +27,6 @@ export default async function ItemsPage({
           新增後直接拖曳排序優先度 — 放開就會立即重新排程本週課表。
         </p>
       </div>
-
-      <nav className={styles.weekNav}>
-        <Link href="/" className={styles.navLink}>
-          &larr; 每週課表
-        </Link>
-        <a href="/routines" className={styles.navLink}>
-          常規事件
-        </a>
-        <a href="/commitments" className={styles.navLink}>
-          學期事務
-        </a>
-      </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 

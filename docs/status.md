@@ -21,7 +21,9 @@ priority reordering (Phase 5 — see "UI/UX Overhaul & Live Priority
 Reordering" below). The Weekly View always renders a full hourly time
 grid per day, whether or not it has any `Time Slot`s, with click-to-
 create directly on an empty hour cell (Phase 6 — see "Interactive
-Weekly Grid & Click-to-Create" below). Phases 1-6 are closed; see
+Weekly Grid & Click-to-Create" below). All four pages share one
+persistent top nav bar (`src/app/nav-bar.tsx`) instead of each
+repeating its own plain-text section links. Phases 1-6 are closed; see
 `docs/audits/` for their completion evidence.
 
 ## Verification Gates
@@ -639,6 +641,43 @@ slot became 09:00–11:00, the button correctly moved down to the new
 adjacent on either side anymore. `npm run verify` passes — still 137
 tests (composed from existing `updateTimeSlotAction`/`updateTimeSlot`,
 no new logic to test). Test data cleared from `prisma/dev.db` afterward.
+
+**Shared nav bar, decluttered Weekly View (2026-07-21):** from a
+screenshot and chat feedback — the inline edit form looked cramped with
+no field labels and no visual separation from the surrounding grid row
+("should be vertical spacer"); the four section links (每週課表/書籍與
+課程/常規事件/學期事務) repeated as plain unstyled text inside every
+page instead of a real nav; and the Weekly View's two bottom forms
+("新增時段" and "快速新增臨時事件") always took up scroll space even
+though click-to-create already covers the common case.
+
+- `src/app/nav-bar.tsx` (new, `"use client"` for `usePathname()`
+  active-link highlighting) renders once in `layout.tsx` as a sticky top
+  bar shared by all four pages, replacing each page's own duplicated
+  `<nav>` of plain links.
+- `SlotEditForm` and `InlineAddForm` (`src/app/page.tsx`) are now
+  wrapped in the same `.addForm` card styling every other page's inline
+  edit form already used (background, border, padding), with visible
+  field labels (日期/開始/結束/內容) instead of bare inputs — consistent
+  with the rest of the app rather than a special case.
+- The Weekly View's standalone "新增時段" section was removed entirely
+  — click-to-create on the grid (plus editing the pre-filled times in
+  that inline form) already covers what it did.
+- "快速新增臨時事件" is no longer always-visible below the grid; a
+  "快速新增臨時事件"/"取消快速新增" link next to "產生課表" toggles it
+  via a `?quickEvent=1` query param (the same pattern as `?edit=`/
+  `?add=` — no new client-side JavaScript). The page now ends right
+  after the grid by default.
+
+Manually verified against the running dev server: the nav bar's active
+link correctly followed the current page across all four routes;
+opening a slot's edit form showed it as a distinct card with labeled
+fields instead of bare stacked inputs; clicking "快速新增臨時事件"
+revealed the ad-hoc form and its own 取消 collapsed it back, with the
+Weekly View ending immediately after the grid when closed (the default).
+`npm run verify` passes — still 137 tests (styling/structure only, no
+new logic), lint/typecheck/build all clean. Test data cleared from
+`prisma/dev.db` afterward.
 
 ## Known Limits
 

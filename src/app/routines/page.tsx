@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { listRoutines } from "@/server/routines";
 import { createRoutineAction, deleteRoutineAction, updateRoutineAction } from "./actions";
 import styles from "../page.module.css";
@@ -40,18 +39,6 @@ export default async function RoutinesPage({
         <h1>常規事件</h1>
         <p className={styles.pageSubtitle}>健身、家教等每日／每週／每月重複的行程。</p>
       </div>
-
-      <nav className={styles.weekNav}>
-        <Link href="/" className={styles.navLink}>
-          &larr; 每週課表
-        </Link>
-        <a href="/items" className={styles.navLink}>
-          書籍與課程
-        </a>
-        <a href="/commitments" className={styles.navLink}>
-          學期事務
-        </a>
-      </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 

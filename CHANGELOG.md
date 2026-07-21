@@ -187,6 +187,17 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   `src/app/page.tsx`, reuses the existing `updateTimeSlotAction`) — for
   wanting a session longer than one hour without reopening the add form
   and retyping the end time.
+- All four pages now share one persistent, sticky top nav bar
+  (`src/app/nav-bar.tsx`, rendered in `layout.tsx`) with active-link
+  highlighting, replacing the plain-text section links each page used to
+  repeat on its own.
+- The Weekly View's inline edit/add forms (`SlotEditForm`,
+  `InlineAddForm`) now render as a labeled card, consistent with every
+  other page's inline edit form, instead of unlabeled bare inputs.
+- The Weekly View's standalone "新增時段" form was removed (click-to-
+  create on the grid covers it), and "快速新增臨時事件" is now a
+  `?quickEvent=1` toggle next to "產生課表" instead of an always-visible
+  section — the page ends right after the grid by default.
 
 ### Fixed
 
