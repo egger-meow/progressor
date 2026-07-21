@@ -620,6 +620,26 @@ leaving other days at 08:00. `npm run verify` passes — 137 tests (6 new
 for `buildHourRows`/`parseHour`/`formatHourParam`), lint/typecheck/build
 all clean. Test data cleared from `prisma/dev.db` afterward.
 
+**Adjacent-slot quick extend (same-day follow-up, 2026-07-21):** wanting
+a session longer than one hour used to mean opening the inline add form
+and retyping its end time. An empty hour cell whose start exactly
+matches an existing `Time Slot`'s end now also shows a small "↑ 接續
+前一個" button, and a cell whose end exactly matches a `Time Slot`'s
+start shows "接續後一個 ↓" — both one-click, submitting straight to the
+existing `updateTimeSlotAction` with that slot's own occupant unchanged
+and just one boundary moved to swallow the hour (`ExtendSlotButton`,
+`src/app/page.tsx`; no new Server Action). These buttons only render on
+the rare cell genuinely touching an existing slot's boundary, so they
+don't reintroduce the density the plain "＋" was just calmed down from.
+Manually verified: created a 09:00–10:00 slot, confirmed "↑ 接續前一個"
+appeared at 10:00 and "接續後一個 ↓" at 08:00; clicked "↑ 接續前一個" —
+slot became 09:00–11:00, the button correctly moved down to the new
+11:00 boundary; clicked "接續後一個 ↓" at 08:00 — slot became
+08:00–11:00, with no leftover buttons at either end since nothing is
+adjacent on either side anymore. `npm run verify` passes — still 137
+tests (composed from existing `updateTimeSlotAction`/`updateTimeSlot`,
+no new logic to test). Test data cleared from `prisma/dev.db` afterward.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all

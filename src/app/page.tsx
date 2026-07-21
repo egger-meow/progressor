@@ -226,6 +226,44 @@ function InlineAddForm({
   );
 }
 
+// One-click "merge this empty hour into an adjacent Time Slot" action —
+// same occupant, one boundary (start or end) moved to swallow the hour,
+// via the existing updateTimeSlotAction (no new Server Action). Offered
+// only on the rare cell that's genuinely adjacent to an existing slot's
+// exact boundary — project owner, 2026-07-21: "接續前一個/接續後一個" for
+// wanting a session longer than one hour without retyping its start time.
+function ExtendSlotButton({
+  slot,
+  weekParam,
+  startTime,
+  endTime,
+  label,
+}: {
+  slot: TimeSlotWithLabel;
+  weekParam: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+}) {
+  return (
+    <form action={updateTimeSlotAction} className={styles.inlineForm}>
+      <input type="hidden" name="id" value={slot.id} />
+      <input type="hidden" name="week" value={weekParam} />
+      <input type="hidden" name="date" value={formatDateParam(new Date(slot.startAt))} />
+      <input type="hidden" name="startTime" value={startTime} />
+      <input type="hidden" name="endTime" value={endTime} />
+      <input
+        type="hidden"
+        name="occupant"
+        value={`${slot.occupantType}|${slot.occupantId ?? ""}`}
+      />
+      <button type="submit" className={styles.hourExtendButton}>
+        {label}
+      </button>
+    </form>
+  );
+}
+
 export default async function WeeklyView({
   searchParams,
 }: {
@@ -325,6 +363,17 @@ export default async function WeeklyView({
                   const addParam = cellAddParam(day, row.hour);
                   const isAddingHere = params.add === addParam;
 
+                  const prevAdjacentSlot = isContinuation
+                    ? undefined
+                    : daySlots.find(
+                        (slot) => new Date(slot.endAt).getTime() === row.rowStart.getTime(),
+                      );
+                  const nextAdjacentSlot = isContinuation
+                    ? undefined
+                    : daySlots.find(
+                        (slot) => new Date(slot.startAt).getTime() === row.rowEnd.getTime(),
+                      );
+
                   return (
                     <li key={row.hour} className={styles.hourRow}>
                       <span className={styles.hourLabel}>{formatHourParam(row.hour)}</span>
@@ -354,13 +403,33 @@ export default async function WeeklyView({
                                   />
                                 )
                               : (
-                                  <a
-                                    href={`/?week=${weekParam}&add=${addParam}`}
-                                    className={styles.hourAddButton}
-                                    aria-label={`在 ${formatHourParam(row.hour)} 新增時段`}
-                                  >
-                                    ＋
-                                  </a>
+                                  <div className={styles.hourEmptyActions}>
+                                    <a
+                                      href={`/?week=${weekParam}&add=${addParam}`}
+                                      className={styles.hourAddButton}
+                                      aria-label={`在 ${formatHourParam(row.hour)} 新增時段`}
+                                    >
+                                      ＋
+                                    </a>
+                                    {prevAdjacentSlot ? (
+                                      <ExtendSlotButton
+                                        slot={prevAdjacentSlot}
+                                        weekParam={weekParam}
+                                        startTime={formatTimeLabel(new Date(prevAdjacentSlot.startAt))}
+                                        endTime={formatTimeLabel(row.rowEnd)}
+                                        label="↑ 接續前一個"
+                                      />
+                                    ) : null}
+                                    {nextAdjacentSlot ? (
+                                      <ExtendSlotButton
+                                        slot={nextAdjacentSlot}
+                                        weekParam={weekParam}
+                                        startTime={formatTimeLabel(row.rowStart)}
+                                        endTime={formatTimeLabel(new Date(nextAdjacentSlot.endAt))}
+                                        label="接續後一個 ↓"
+                                      />
+                                    ) : null}
+                                  </div>
                                 )}
                       </div>
                     </li>

@@ -359,3 +359,26 @@ new entry correcting it and say so explicitly.
   copy only, no logic change), lint/typecheck/build all clean. Manually
   verified via screenshot and hover simulation against the running dev
   server. Test data cleared from `prisma/dev.db` afterward.
+- 2026-07-21: second same-day follow-up, from a chat request: dragging
+  out a session longer than one hour meant opening the inline add form
+  and retyping the end time, with no shortcut for the common "just one
+  more hour" case. Added `ExtendSlotButton` (`src/app/page.tsx`): an
+  empty hour cell whose start exactly matches an existing `Time Slot`'s
+  end renders a one-click "↑ 接續前一個" button, and a cell whose end
+  exactly matches a `Time Slot`'s start renders "接續後一個 ↓" — both
+  submit straight to the existing `updateTimeSlotAction` with that
+  slot's own occupant unchanged and one boundary moved, so no new
+  Server Action or service-layer code was needed. Restricted to cells
+  genuinely adjacent to a boundary (computed per row from that day's
+  `Time Slot`s) so the buttons stay rare, not reintroducing the density
+  the previous session's fix had just removed. `npm run verify` passes
+  — still 137 tests (pure composition of existing, already-tested
+  primitives), lint/typecheck/build all clean. Manually verified against
+  the running dev server via `javascript_tool`'s `requestSubmit()`
+  (`computer` click simulation again unusable this session): created a
+  09:00–10:00 slot; confirmed both buttons appeared at exactly the
+  right neighboring cells; clicked "↑ 接續前一個" and confirmed the slot
+  became 09:00–11:00 with the button correctly relocating to the new
+  boundary; clicked "接續後一個 ↓" and confirmed the slot became
+  08:00–11:00 with no leftover buttons on either side. Test data cleared
+  from `prisma/dev.db` afterward.

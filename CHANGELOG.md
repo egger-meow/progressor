@@ -181,6 +181,12 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   dashed "＋ 新增" button to a quiet, low-opacity "＋" that only reaches
   full color on hover/focus — same-day project-owner feedback that ~105
   loud buttons per week read as visual clutter, not a calm timetable.
+- An empty hour cell exactly adjacent to an existing `Time Slot`'s
+  boundary now shows a one-click "接續前一個"/"接續後一個" button that
+  extends that slot to swallow the hour (`ExtendSlotButton`,
+  `src/app/page.tsx`, reuses the existing `updateTimeSlotAction`) — for
+  wanting a session longer than one hour without reopening the add form
+  and retyping the end time.
 
 ### Fixed
 
