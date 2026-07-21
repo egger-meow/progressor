@@ -177,6 +177,11 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 
 ### Changed
 
+- Weekly View empty-cell "＋" affordance restyled from a full-width
+  dashed "＋ 新增" button to a quiet, low-opacity "＋" that only reaches
+  full color on hover/focus — same-day project-owner feedback that ~105
+  loud buttons per week read as visual clutter, not a calm timetable.
+
 ### Fixed
 
 - `occupantLabel` (`src/server/time-slots.ts`) — the Weekly View's per-slot

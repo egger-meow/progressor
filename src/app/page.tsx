@@ -357,8 +357,9 @@ export default async function WeeklyView({
                                   <a
                                     href={`/?week=${weekParam}&add=${addParam}`}
                                     className={styles.hourAddButton}
+                                    aria-label={`在 ${formatHourParam(row.hour)} 新增時段`}
                                   >
-                                    ＋ 新增
+                                    ＋
                                   </a>
                                 )}
                       </div>

@@ -207,10 +207,10 @@
 
 .hourRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border);
+  padding: 3px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent);
 }
 
 .hourRow:first-child {
@@ -221,7 +221,6 @@
 .hourLabel {
   flex-shrink: 0;
   width: 40px;
-  padding-top: 4px;
   font-size: var(--text-xs);
   font-weight: 700;
   color: var(--color-muted-foreground);
@@ -238,32 +237,36 @@
 .hourContinuation {
   display: block;
   height: 6px;
-  margin-top: 4px;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
+/* Deliberately quiet by default (a slim, mostly-empty strip, not a
+   bordered button) — 15 rows x 7 days of a loud "+ 新增" box each read
+   as visual clutter (project owner feedback, 2026-07-21: "密集恐懼症").
+   Full color/opacity only appears on hover/focus, same as a real
+   calendar's empty-slot affordance. */
 .hourAddButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  height: 20px;
+  border-radius: var(--radius-sm);
   color: var(--color-muted-foreground);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  opacity: 0.3;
+  font-size: 13px;
+  line-height: 1;
   text-decoration: none;
-  transition: border-color var(--duration-fast) var(--ease-out),
+  transition: opacity var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
     background var(--duration-fast) var(--ease-out);
 }
 
-.hourAddButton:hover {
-  border-color: var(--color-primary);
+.hourAddButton:hover,
+.hourAddButton:focus-visible {
+  opacity: 1;
   color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
-  border-style: solid;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .slotItem {

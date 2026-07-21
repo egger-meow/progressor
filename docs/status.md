@@ -588,8 +588,13 @@ Each hour row renders one of three things: (1) the `Time Slot`(s)
 starting in that hour, as the same card/edit-form used before (unchanged
 content and actions — 編輯/移除/跳過/標記完成); (2) a thin, non-
 interactive "continuation" bar, for an hour already covered by a slot
-that started earlier; or (3) a dashed "＋ 新增" link, for a genuinely
-empty hour.
+that started earlier; or (3) a quiet "＋" link, for a genuinely empty
+hour — deliberately low-opacity by default (no border, no visible
+label text) and only reaching full color/opacity on hover/focus, per
+project-owner feedback the same day ("密集恐懼症"): the first version
+showed a full-width dashed "＋ 新增" button in every one of the ~105
+empty cells across a week, which read as visual clutter rather than a
+calm timetable.
 
 Clicking that link navigates to `/?week=...&add=<date>T<hour>` — the
 same URL-query-param pattern the existing `?edit=` inline-edit form

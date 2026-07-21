@@ -341,3 +341,21 @@ new entry correcting it and say so explicitly.
   empty; created a slot at 06:00 (outside the default window) and
   confirmed only that day's grid widened down to 06:00, other days
   unaffected. Test data cleared from `prisma/dev.db` afterward.
+- 2026-07-21: same-day follow-up to the grid above, from a screenshot the
+  project owner shared in chat: the empty-cell "＋ 新增" buttons (dashed
+  border, visible label, ~105 of them across a week) read as visual
+  clutter ("密集恐懼症"), and the occupant `<select>` in the inline
+  add form appeared to only offer "留白（不指定）". Restyled
+  `.hourAddButton` (`src/app/page.module.css`) to a quiet, low-opacity
+  "＋" (no border) that only reaches full color on hover/focus, and
+  shortened the link text from "＋ 新增" to "＋" with an
+  `aria-label="在 HH:00 新增時段"` added for accessibility. The dropdown
+  was not a bug: `prisma/dev.db` had zero `Trackable Item`/`Routine`/etc.
+  rows at the time of the screenshot (cleared during the previous
+  session), so `loadOccupantOptions` correctly had nothing else to list
+  — confirmed by creating a `Book` via `/items` and reloading the Weekly
+  View, which then showed `書籍：Deep Work` as a second option, then
+  removed the `Book`. `npm run verify` passes — still 137 tests (styling/
+  copy only, no logic change), lint/typecheck/build all clean. Manually
+  verified via screenshot and hover simulation against the running dev
+  server. Test data cleared from `prisma/dev.db` afterward.
