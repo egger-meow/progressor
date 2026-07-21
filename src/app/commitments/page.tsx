@@ -244,11 +244,13 @@ export default async function CommitmentsPage({
                       <DatePicker name="dueAt" defaultValue={formatDateParam(new Date(t.dueAt))} />
                     </label>
                     <label>
-                      預估天數
+                      預估工時（小時）
                       <input
                         type="number"
-                        name="estimatedDays"
-                        defaultValue={t.estimatedDays}
+                        name="estimatedHours"
+                        defaultValue={t.estimatedHours}
+                        min={0.5}
+                        step={0.5}
                         required
                       />
                     </label>
@@ -279,7 +281,7 @@ export default async function CommitmentsPage({
                 <span className={styles.recordMain}>
                   <span className={styles.recordTitle}>{t.title}</span>
                   <span className={styles.recordMeta}>
-                    截止 {formatDateParam(new Date(t.dueAt))} · 預估 {t.estimatedDays} 天
+                    截止 {formatDateParam(new Date(t.dueAt))} · 預估 {t.estimatedHours} 小時
                   </span>
                   {t.tags.length > 0 ? (
                     <span className={styles.tagList}>
@@ -319,8 +321,8 @@ export default async function CommitmentsPage({
             <DatePicker name="dueAt" />
           </label>
           <label>
-            預估天數
-            <input type="number" name="estimatedDays" required />
+            預估工時（小時）
+            <input type="number" name="estimatedHours" min={0.5} step={0.5} required />
           </label>
           <label>
             標籤（用逗號分隔）

@@ -72,7 +72,7 @@ function buildFixture(): SchedulerInput {
         id: "dt-essay",
         title: "Essay",
         dueAt: new Date("2026-07-16T23:00:00"), // Thursday evening
-        estimatedDays: 1,
+        estimatedHours: 2,
       },
     ],
     adHocEvents: [],
@@ -177,7 +177,7 @@ describe("computeSchedule (end-to-end fixture)", () => {
     const fixture = buildFixture();
     // Due almost immediately, before any session could realistically land.
     fixture.deadlineTasks = [
-      { id: "dt-impossible", title: "Impossible Essay", dueAt: new Date(weekStart), estimatedDays: 1 },
+      { id: "dt-impossible", title: "Impossible Essay", dueAt: new Date(weekStart), estimatedHours: 2 },
     ];
 
     const output = computeSchedule(fixture);

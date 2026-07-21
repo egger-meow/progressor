@@ -69,7 +69,7 @@ describe("createTimeSlot — occupant kinds", () => {
     const task = await createDeadlineTask({
       title: "Homework",
       dueAt: new Date("2026-08-01"),
-      estimatedDays: 2,
+      estimatedHours: 4,
     });
     const slot = await createTimeSlot({
       ...hourSlot(14),

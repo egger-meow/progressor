@@ -188,7 +188,7 @@ describe("placeDeadlineTasks", () => {
   it("places a session on the earliest free day before the deadline", () => {
     const input = baseInput({
       deadlineTasks: [
-        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedDays: 1 },
+        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedHours: 2 },
       ],
     });
 
@@ -208,7 +208,7 @@ describe("placeDeadlineTasks", () => {
   it("skips busy time and finds the next free window the same day", () => {
     const input = baseInput({
       deadlineTasks: [
-        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedDays: 1 },
+        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedHours: 2 },
       ],
     });
     const busy = [
@@ -231,7 +231,7 @@ describe("placeDeadlineTasks", () => {
   it("reports a conflict, and places nothing, when the deadline has already passed", () => {
     const input = baseInput({
       deadlineTasks: [
-        { id: "dt-1", title: "Overdue Essay", dueAt: new Date(weekStart), estimatedDays: 1 },
+        { id: "dt-1", title: "Overdue Essay", dueAt: new Date(weekStart), estimatedHours: 2 },
       ],
     });
 
@@ -251,8 +251,8 @@ describe("placeDeadlineTasks", () => {
   it("does not double-book two Deadline Tasks into the same window", () => {
     const input = baseInput({
       deadlineTasks: [
-        { id: "dt-1", title: "First", dueAt: new Date("2026-07-16T12:00:00"), estimatedDays: 1 },
-        { id: "dt-2", title: "Second", dueAt: new Date("2026-07-16T12:00:00"), estimatedDays: 1 },
+        { id: "dt-1", title: "First", dueAt: new Date("2026-07-16T12:00:00"), estimatedHours: 2 },
+        { id: "dt-2", title: "Second", dueAt: new Date("2026-07-16T12:00:00"), estimatedHours: 2 },
       ],
     });
 
@@ -264,6 +264,73 @@ describe("placeDeadlineTasks", () => {
     expect(first.startAt < second.startAt).toBe(true);
     expect(first.endAt <= second.startAt).toBe(true);
   });
+
+  it("splits a multi-hour task across several days, one capped session per day, instead of one long block", () => {
+    const input = baseInput({
+      deadlineTasks: [
+        { id: "dt-1", title: "Term Paper", dueAt: new Date("2026-07-16T23:00:00"), estimatedHours: 5 },
+      ],
+    });
+
+    const result = placeDeadlineTasks(input, []);
+
+    expect(result.conflicts).toEqual([]);
+    // 5h split into <=2h sessions: 2h + 2h + 1h across three separate days.
+    expect(result.slots).toHaveLength(3);
+    for (const slot of result.slots) {
+      expect(slot.occupantId).toBe("dt-1");
+      expect(slot.endAt.getTime() - slot.startAt.getTime()).toBeLessThanOrEqual(2 * 60 * 60 * 1000);
+    }
+    const days = new Set(result.slots.map((s) => s.startAt.toDateString()));
+    expect(days.size).toBe(3);
+    const totalMs = result.slots.reduce((sum, s) => sum + (s.endAt.getTime() - s.startAt.getTime()), 0);
+    expect(totalMs).toBe(5 * 60 * 60 * 1000);
+  });
+
+  it("surfaces a conflict for the remainder when a task's hours don't fully fit before its deadline, but keeps what did fit", () => {
+    const input = baseInput({
+      deadlineTasks: [
+        // Only one day (07-13) is available before the deadline, and the
+        // day's Slack-bounded budget (12h) is well short of 20h.
+        { id: "dt-1", title: "Huge Project", dueAt: new Date("2026-07-14T00:00:00"), estimatedHours: 20 },
+      ],
+    });
+
+    const result = placeDeadlineTasks(input, []);
+
+    expect(result.slots.length).toBeGreaterThan(0);
+    expect(result.slots.every((s) => s.occupantId === "dt-1")).toBe(true);
+    const placedMs = result.slots.reduce((sum, s) => sum + (s.endAt.getTime() - s.startAt.getTime()), 0);
+    expect(placedMs).toBeLessThan(20 * 60 * 60 * 1000);
+    expect(result.conflicts).toEqual([
+      {
+        reason: "deadline-task-unplaceable",
+        occupantType: "deadline-task",
+        occupantId: "dt-1",
+        message: expect.stringContaining("Huge Project"),
+      },
+    ]);
+  });
+
+  it("does not pack a day past the Slack minimum even when a task has plenty of hours left", () => {
+    const input = baseInput({
+      deadlineTasks: [
+        { id: "dt-1", title: "Big Task", dueAt: new Date("2026-07-16T23:00:00"), estimatedHours: 20 },
+      ],
+    });
+
+    const result = placeDeadlineTasks(input, []);
+
+    const byDay = new Map<string, number>();
+    for (const slot of result.slots) {
+      const key = slot.startAt.toDateString();
+      byDay.set(key, (byDay.get(key) ?? 0) + (slot.endAt.getTime() - slot.startAt.getTime()));
+    }
+    // 15h daily window * (1 - 0.2 slack share) = 12h max per day.
+    for (const usedMs of byDay.values()) {
+      expect(usedMs).toBeLessThanOrEqual(12 * 60 * 60 * 1000);
+    }
+  });
 });
 
 describe("placeHardConstraints", () => {
@@ -273,7 +340,7 @@ describe("placeHardConstraints", () => {
         { id: "fc-1", title: "All-day Retreat", dayOfWeek: 1, startTime: "08:00", endTime: "23:00", ignoreSemesterBounds: false },
       ],
       deadlineTasks: [
-        { id: "dt-1", title: "Quiz Prep", dueAt: new Date("2026-07-13T10:01:00"), estimatedDays: 1 },
+        { id: "dt-1", title: "Quiz Prep", dueAt: new Date("2026-07-13T10:01:00"), estimatedHours: 2 },
       ],
     });
 
@@ -296,7 +363,7 @@ describe("placeHardConstraints", () => {
         { id: "fc-1", title: "Morning Class", dayOfWeek: 1, startTime: "08:00", endTime: "09:00", ignoreSemesterBounds: false },
       ],
       deadlineTasks: [
-        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedDays: 1 },
+        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedHours: 2 },
       ],
     });
 

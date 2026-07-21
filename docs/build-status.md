@@ -620,3 +620,41 @@ new entry correcting it and say so explicitly.
   passes — still 182 tests, lint/typecheck/build clean. Verified via
   computed-style check: today's column now shows `border-color: rgb(249,
   115, 22)` (primary), `border-width: 2px`.
+- 2026-07-21: same-day follow-up — project owner asked what "預估天數"
+  did on the "新增截止任務" form and, on learning it was inert (every
+  `Deadline Task` got exactly one fixed 2-hour session regardless of the
+  field's value — `estimatedDays` was written but never read by
+  `placeDeadlineTasks`), asked for it to become "預估小時" driving an
+  actual hour budget the Scheduler splits across free slack ("the system
+  would assign it into empty 課表 spaces (ofcourse can split)...try best
+  to fit the requiemce and make the result most not squeezed"). Asked via
+  `AskUserQuestion` whether this should also apply to `Trackable Item`
+  and what should happen when hours don't fully fit; owner chose
+  `Deadline Task` only, and "surface a conflict" for any remainder.
+  `DeadlineTask.estimatedDays` (Int) renamed to `estimatedHours` (Float)
+  — migration `20260721102003_deadline_task_estimated_hours` (table was
+  empty, confirmed before migrating; no data loss). `placeDeadlineTasks`
+  rewritten to place up to one 2-hour-capped session per day across as
+  many days as needed before `dueAt`, further capped by each day's
+  `MIN_SLACK_SHARE_PER_DAY` budget; a new `MIN_DEADLINE_SESSION_MS` (30
+  min) skips a day not worth searching. Any hours still unplaced after
+  trying every day produce a `deadline-task-unplaceable`
+  `SchedulerConflict` alongside whatever did place. `dailyWindowMs`/
+  `usedMsOnDay` moved from `flexible-placement.ts` to `src/scheduler/
+  time.ts` so both placement layers share the same Slack-budget helpers
+  (`flexible-placement.ts` re-exports them — `repair.ts` still imports
+  from there). `/commitments`' Deadline Task form relabeled "預估工時
+  （小時）", `min={0.5} step={0.5}`. `npm run verify` passes — 185 tests
+  (3 new, covering multi-day splitting, partial-fit conflict-with-
+  partial-placement, and the per-day Slack cap), lint/typecheck/build
+  clean. Manually verified against the running dev server: created a
+  test `Deadline Task` ("Term Paper Test", 5h, due 3 days out), clicked
+  "產生課表", and confirmed it landed as three separate sessions — Mon
+  08:00–10:00, Tue 08:00–10:00, Wed 08:00–09:00 (2h + 2h + 1h = 5h) —
+  across three distinct days rather than one 5-hour block. Test task and
+  its three generated `Time Slot`s were removed afterward via a direct
+  Prisma script (matched by `occupantId`), leaving the project owner's
+  real data untouched. The Browser pane's click pipeline was again
+  intermittently unresponsive (a repeated form-submit click required a
+  JS-driven `button.click()` before it registered) — same known
+  environment issue as the previous entry, not an app defect.

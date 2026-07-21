@@ -94,9 +94,15 @@ two mutually exclusive kinds:
 - **Deadline Task（期限任務）**：has a `dueAt`（also drives the Weekly
   View's red deadline-day banner, see `Schedule / Weekly View` below）but
   flexible placement before that time — homework, quiz/exam prep, report
-  writing. Structurally closer to a `Trackable Item` (has `estimatedDays`,
-  gets units of work scheduled into `Time Slot`s) but is deadline-bound,
-  which a `Trackable Item` is not. Also carries `tags`（見 Tag）.
+  writing. Carries `estimatedHours`（a total work-hour budget, not a day
+  count — renamed from `estimatedDays`, 2026-07-21）: the Scheduler
+  (`placeDeadlineTasks`, `src/scheduler/hard-constraints.ts`) splits this
+  budget across one session per day (capped at 2h/day, and by each day's
+  Slack budget so it can't pack a day solid) over as many days as it
+  takes before `dueAt`, instead of one fixed-length session. Hours that
+  still don't fit before the deadline are surfaced as a
+  `SchedulerConflict` rather than silently dropped. Also carries `tags`
+  （見 Tag）.
 
 ### Ad-hoc Event（臨時事件）
 

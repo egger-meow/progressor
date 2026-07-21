@@ -75,7 +75,10 @@ export interface SchedulerDeadlineTask {
   id: string;
   title: string;
   dueAt: Date;
-  estimatedDays: number;
+  // Total estimated work, in hours — placeDeadlineTasks (hard-constraints.ts)
+  // splits this budget across one or more sessions in the week's free
+  // slack before dueAt, rather than one fixed-length session.
+  estimatedHours: number;
 }
 
 export interface SchedulerAdHocEvent {

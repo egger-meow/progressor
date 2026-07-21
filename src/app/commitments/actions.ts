@@ -81,7 +81,7 @@ export async function createDeadlineTaskAction(formData: FormData): Promise<void
     await createDeadlineTask({
       title: String(formData.get("title")),
       dueAt: new Date(String(formData.get("dueAt"))),
-      estimatedDays: Number(formData.get("estimatedDays")),
+      estimatedHours: Number(formData.get("estimatedHours")),
       tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {
@@ -96,7 +96,7 @@ export async function updateDeadlineTaskAction(formData: FormData): Promise<void
     await updateDeadlineTask(id, {
       title: String(formData.get("title")),
       dueAt: new Date(String(formData.get("dueAt"))),
-      estimatedDays: Number(formData.get("estimatedDays")),
+      estimatedHours: Number(formData.get("estimatedHours")),
       tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {

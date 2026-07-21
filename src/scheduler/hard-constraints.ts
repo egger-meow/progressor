@@ -16,13 +16,16 @@ import {
   findFreeInterval,
   sameCalendarDay,
   startOfWeek,
+  dailyWindowMs,
+  usedMsOnDay,
   type Interval,
 } from "./time";
 import {
   DAILY_WINDOW_START,
   DAILY_WINDOW_END,
   SESSION_DURATION_MS,
-  SESSION_HOURS_PER_DAY,
+  MIN_SLACK_SHARE_PER_DAY,
+  MIN_DEADLINE_SESSION_MS,
 } from "./constants";
 
 export interface HardConstraintResult {
@@ -165,20 +168,30 @@ function findFreeSlot(
   return findFreeInterval(windowStart, windowEnd, durationMs, busy, notAfter);
 }
 
-// Deadline Task sessions are flexible (unlike a Fixed Commitment, they have
-// no anchored time), so unlike placeFixedCommitments this genuinely can
-// fail to find room — that's the one real "unplaceable" case in this file.
+// Deadline Task work is a hour budget (SchedulerDeadlineTask.estimatedHours),
+// not one fixed-length session: this splits it across one session per day
+// (capped at SESSION_DURATION_MS each) over as many days before the
+// deadline as it takes, so a multi-hour task doesn't get crammed into a
+// single cramped block. Like placeFixedCommitments's Slack awareness in
+// flexible-placement.ts, each day's chunk is also capped by that day's
+// remaining MIN_SLACK_SHARE_PER_DAY budget, so Deadline Task placement
+// alone can't pack a day solid and starve Routines/flexible work that are
+// placed afterward.
+//
 // `busy` seeds the search with time already claimed by Fixed Commitments
 // and pre-existing Time Slots (e.g. Ad-hoc Events, prior manual
-// placements); each task placed here also adds to `busy` so two Deadline
+// placements); each chunk placed here also adds to `busy` so two Deadline
 // Tasks never double-book each other.
+//
+// Per the charter's never-silently-drop guardrail, any hours that don't
+// fit before the deadline (even after trying every day) are surfaced as a
+// SchedulerConflict — the hours that DID fit are still placed, not thrown
+// away just because the task couldn't be fully scheduled this week.
 //
 // A task whose dueAt has already passed relative to the target week (or
 // falls before weekStart entirely) is not special-cased: the day loop
 // below simply finds no valid day before an already-past deadline and
-// falls through to the conflict branch, which is the correct outcome
-// (surfaced, not silently dropped) rather than something that needs a
-// separate "is this overdue" check.
+// falls through to the conflict branch, which is the correct outcome.
 export function placeDeadlineTasks(
   input: SchedulerInput,
   busy: Interval[],
@@ -189,32 +202,53 @@ export function placeDeadlineTasks(
 
   for (const task of input.deadlineTasks) {
     const deadline = task.dueAt < input.weekEnd ? task.dueAt : input.weekEnd;
-    let placed = false;
+    const totalMs = Math.round(task.estimatedHours * 60 * 60 * 1000);
+    let remainingMs = totalMs;
+    const taskSlots: Interval[] = [];
 
-    for (let offset = 0; offset < 7 && !placed; offset++) {
+    for (let offset = 0; offset < 7 && remainingMs > 0; offset++) {
       const day = addDays(input.weekStart, offset);
       if (day >= deadline) {
         break;
       }
-      const found = findFreeSlot(day, SESSION_DURATION_MS, allBusy, deadline);
-      if (found) {
-        slots.push({
-          startAt: found.start,
-          endAt: found.end,
-          occupantType: "deadline-task",
-          occupantId: task.id,
-        });
-        allBusy.push(found);
-        placed = true;
+
+      const slackBudget = dailyWindowMs(day) * (1 - MIN_SLACK_SHARE_PER_DAY);
+      const dayBudget = slackBudget - usedMsOnDay(day, allBusy);
+      if (dayBudget < MIN_DEADLINE_SESSION_MS) {
+        continue;
       }
+
+      const chunkMs = Math.min(remainingMs, SESSION_DURATION_MS, dayBudget);
+      const found = findFreeSlot(day, chunkMs, allBusy, deadline);
+      if (!found) {
+        continue;
+      }
+
+      taskSlots.push(found);
+      allBusy.push(found);
+      remainingMs -= chunkMs;
     }
 
-    if (!placed) {
+    for (const slot of taskSlots) {
+      slots.push({
+        startAt: slot.start,
+        endAt: slot.end,
+        occupantType: "deadline-task",
+        occupantId: task.id,
+      });
+    }
+
+    if (remainingMs > 0) {
+      const placedHours = (totalMs - remainingMs) / (60 * 60 * 1000);
+      const message =
+        taskSlots.length > 0
+          ? `Deadline Task "${task.title}" (due ${task.dueAt.toISOString()}) needs ${task.estimatedHours}h but only ${placedHours}h fit before its deadline this week`
+          : `Deadline Task "${task.title}" (due ${task.dueAt.toISOString()}) has no free time before its deadline this week`;
       conflicts.push({
         reason: "deadline-task-unplaceable",
         occupantType: "deadline-task",
         occupantId: task.id,
-        message: `Deadline Task "${task.title}" (due ${task.dueAt.toISOString()}) has no free ${SESSION_HOURS_PER_DAY}-hour window before its deadline this week`,
+        message,
       });
     }
   }

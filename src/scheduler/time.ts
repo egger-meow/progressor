@@ -1,6 +1,8 @@
 // Pure date/time helpers for the Scheduler. No Prisma, no I/O — see
 // types.ts's header comment for why.
 
+import { DAILY_WINDOW_START, DAILY_WINDOW_END } from "./constants";
+
 export function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
@@ -87,4 +89,33 @@ export function findFreeInterval(
     return { start: candidateStart, end: candidateEnd };
   }
   return null;
+}
+
+// How many ms wide `day`'s daily scheduling window is (DAILY_WINDOW_START/
+// END). Shared by flexible-placement.ts and hard-constraints.ts, both of
+// which cap how much of a day they'll fill.
+export function dailyWindowMs(day: Date): number {
+  return (
+    combineDateAndTime(day, DAILY_WINDOW_END).getTime() -
+    combineDateAndTime(day, DAILY_WINDOW_START).getTime()
+  );
+}
+
+// Sums how much of `day`'s daily window is already claimed by `busy`
+// (hard constraints, Routine occurrences, and flexible sessions already
+// placed this run) — the budget findFreeInterval alone can't express,
+// since a technically-free interval can still exist inside a day that's
+// otherwise packed past the Slack minimum.
+export function usedMsOnDay(day: Date, busy: Interval[]): number {
+  const windowStart = combineDateAndTime(day, DAILY_WINDOW_START);
+  const windowEnd = combineDateAndTime(day, DAILY_WINDOW_END);
+  let total = 0;
+  for (const interval of busy) {
+    const clippedStart = interval.start > windowStart ? interval.start : windowStart;
+    const clippedEnd = interval.end < windowEnd ? interval.end : windowEnd;
+    if (clippedEnd > clippedStart) {
+      total += clippedEnd.getTime() - clippedStart.getTime();
+    }
+  }
+  return total;
 }

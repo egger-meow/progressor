@@ -301,6 +301,25 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   checkmark) to match the rest of the app instead of standing out —
   project owner, 2026-07-21: "checkbox a bit 突兀 and location not
   horizontally aligned."
+- `DeadlineTask.estimatedDays` renamed to `estimatedHours` (Float; "預估
+  工時（小時）" on `/commitments`) and `placeDeadlineTasks`
+  (`src/scheduler/hard-constraints.ts`) rewritten to actually use it: it
+  previously placed exactly one fixed 2-hour session per task regardless
+  of the field's value (the field did nothing). It now splits the task's
+  total hour budget across one session per day (capped at 2h/day, and by
+  each day's `MIN_SLACK_SHARE_PER_DAY` budget so it can't pack a day
+  solid) over as many days as needed before the deadline. Hours that
+  still don't fit are surfaced as a `deadline-task-unplaceable`
+  `SchedulerConflict` alongside whatever did get placed, never silently
+  dropped — project owner, 2026-07-21, on seeing "預估天數": "what i
+  supposed is 預估小時...the system would assign it into empty 課表
+  spaces (ofcourse can split)...try best to fit the requirement and make
+  the result most not squeezed." Scoped to `DeadlineTask` only (not
+  `Trackable Item`), per the project owner's explicit answer when asked.
+  `dailyWindowMs`/`usedMsOnDay` moved from `flexible-placement.ts` to the
+  shared `src/scheduler/time.ts` so both placement layers use the same
+  Slack-budget logic (`flexible-placement.ts` re-exports them for
+  `repair.ts`'s existing import).
 
 ### Fixed
 

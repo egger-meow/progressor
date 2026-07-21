@@ -32,14 +32,16 @@ export interface UpdateFixedCommitmentInput {
 export interface CreateDeadlineTaskInput {
   title: string;
   dueAt: Date;
-  estimatedDays: number;
+  // Total estimated work, in hours (fractional allowed, e.g. 1.5). The
+  // Scheduler splits this across sessions — see hard-constraints.ts.
+  estimatedHours: number;
   tags?: string[];
 }
 
 export interface UpdateDeadlineTaskInput {
   title?: string;
   dueAt?: Date;
-  estimatedDays?: number;
+  estimatedHours?: number;
   tags?: string[];
 }
 
@@ -147,21 +149,21 @@ function assertValidDueAt(dueAt: Date | undefined): asserts dueAt is Date {
   }
 }
 
-function assertValidEstimatedDays(estimatedDays: number): void {
-  if (estimatedDays <= 0) {
-    throw new Error("estimatedDays must be > 0");
+function assertValidEstimatedHours(estimatedHours: number): void {
+  if (!Number.isFinite(estimatedHours) || estimatedHours <= 0) {
+    throw new Error("estimatedHours must be > 0");
   }
 }
 
 export async function createDeadlineTask(input: CreateDeadlineTaskInput) {
   assertValidDueAt(input.dueAt);
-  assertValidEstimatedDays(input.estimatedDays);
+  assertValidEstimatedHours(input.estimatedHours);
 
   const task = await prisma.deadlineTask.create({
     data: {
       title: input.title,
       dueAt: input.dueAt,
-      estimatedDays: input.estimatedDays,
+      estimatedHours: input.estimatedHours,
       tags: serializeTags(input.tags),
     },
   });
@@ -180,8 +182,8 @@ export async function updateDeadlineTask(
   if (input.dueAt !== undefined) {
     assertValidDueAt(input.dueAt);
   }
-  if (input.estimatedDays !== undefined) {
-    assertValidEstimatedDays(input.estimatedDays);
+  if (input.estimatedHours !== undefined) {
+    assertValidEstimatedHours(input.estimatedHours);
   }
 
   const task = await prisma.deadlineTask.update({
@@ -189,7 +191,7 @@ export async function updateDeadlineTask(
     data: {
       title: input.title,
       dueAt: input.dueAt,
-      estimatedDays: input.estimatedDays,
+      estimatedHours: input.estimatedHours,
       tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });

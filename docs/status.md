@@ -226,7 +226,7 @@ separate service modules, deliberately not sharing a type or a
 create/update function (`src/server/semester-commitments.ts`):
 `FixedCommitment` (`dayOfWeek` 0-6, `startTime`/`endTime` as `"HH:mm"`,
 validated so `startTime < endTime`) and `DeadlineTask` (`dueAt`,
-`estimatedDays`). Passing one kind's shape to the other's create function
+`estimatedHours`). Passing one kind's shape to the other's create function
 is rejected at runtime, not just by the type checker.
 
 `Ad-hoc Event` (`src/server/ad-hoc-events.ts`) and `Time Slot`
@@ -277,19 +277,29 @@ detect and flag two `Fixed Commitment`s, or a `Fixed Commitment` and an
 existing `Ad-hoc Event` `Time Slot`, landing on the same time, as a
 `SchedulerConflict` (reason `"fixed-commitment-unplaceable"`) — surfaced,
 not silently hidden, per the charter's guardrail against silently dropping
-a fixed-deadline affair. `placeDeadlineTasks` searches each day of the
-target week, in order, for a free window (within the configured daily
-scheduling window, see Configuration below) before the task's `dueAt`
-(clamped to the week), and places one session there; if no day has room,
-it reports a `SchedulerConflict` (reason `"deadline-task-unplaceable"`)
-instead of fabricating an overlapping placement — unlike a `Fixed
+a fixed-deadline affair. `placeDeadlineTasks` treats `estimatedHours` as a
+total work-hour budget (renamed from `estimatedDays`, 2026-07-21 —
+previously present but unused: every task got exactly one fixed 2-hour
+session regardless of its value) and splits it across the target week: it
+walks each day before the task's `dueAt` (clamped to the week) in order,
+placing at most one session per day, each capped at 2 hours and further
+capped by that day's remaining `Slack` budget (`dailyWindowMs`/
+`usedMsOnDay`, shared with `flexible-placement.ts` via `src/scheduler/
+time.ts`) so Deadline Task placement alone can't pack a day solid ahead of
+`Routine`/flexible-item placement that runs after it. Any hours that still
+don't fit anywhere before the deadline are reported as a
+`SchedulerConflict` (reason `"deadline-task-unplaceable"`, message notes
+how many hours placed vs. needed when some did fit) rather than fabricated
+as an overlapping placement or silently dropped — unlike a `Fixed
 Commitment`, a `Deadline Task` session is flexible/movable, so a
 fabricated overlap would misrepresent real availability. A task already
 past its deadline (or due exactly at `weekStart`) naturally falls through
 to this same conflict path — no separate "is this overdue" branch exists.
 `placeHardConstraints` combines both and ensures a `Deadline Task` session
 never double-books a `Fixed Commitment` occurrence or an existing `Time
-Slot`.
+Slot`. Scoped to `Deadline Task` only — `Trackable Item`'s `estimatedDays`
+is unaffected and still drives nothing (project owner's explicit choice
+when asked, 2026-07-21).
 
 `src/scheduler/routine-placement.ts`'s `placeRoutines` places each
 `Routine`'s occurrence(s) for the target week: `daily` occurs every day,
@@ -390,8 +400,12 @@ these types and functions mirror, but don't import, the shapes in
 project owner on 2026-07-18 when the Scheduler needed them, not silently
 inferred: the daily window the Scheduler may place flexible work in is
 `08:00`–`23:00` (`Fixed Commitment`s outside this window still place as
-normal); one "day" of an item's `estimatedDays` becomes one 2-hour session
-per calendar day it's scheduled.
+normal); a flexible work session (`Trackable Item`, `Routine` occurrence,
+or one chunk of a split `Deadline Task`) runs at most 2 hours;
+`MIN_DEADLINE_SESSION_MS` (30 minutes, added 2026-07-21) is the floor
+below which `placeDeadlineTasks` won't bother searching a day for room —
+it moves on to the next day instead, though a genuinely small *final*
+remainder of a task's hours still places normally.
 
 ### Core Entity Creation UI (Phase 4)
 

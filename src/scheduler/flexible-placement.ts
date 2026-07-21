@@ -10,7 +10,14 @@
 // discretionary reading/study progress.
 
 import { SchedulerInput, ScheduledTimeSlot, SchedulerTrackableItem, TrackableItemType } from "./types";
-import { addDays, combineDateAndTime, findFreeInterval, type Interval } from "./time";
+import {
+  addDays,
+  combineDateAndTime,
+  findFreeInterval,
+  dailyWindowMs,
+  usedMsOnDay,
+  type Interval,
+} from "./time";
 import {
   DAILY_WINDOW_START,
   DAILY_WINDOW_END,
@@ -22,31 +29,7 @@ export interface FlexiblePlacementResult {
   slots: ScheduledTimeSlot[];
 }
 
-export function dailyWindowMs(day: Date): number {
-  return (
-    combineDateAndTime(day, DAILY_WINDOW_END).getTime() -
-    combineDateAndTime(day, DAILY_WINDOW_START).getTime()
-  );
-}
-
-// Sums how much of `day`'s daily window is already claimed by `busy`
-// (hard constraints, Routine occurrences, and flexible sessions already
-// placed this run) — the budget findFreeInterval alone can't express,
-// since a technically-free interval can still exist inside a day that's
-// otherwise packed past the Slack minimum.
-export function usedMsOnDay(day: Date, busy: Interval[]): number {
-  const windowStart = combineDateAndTime(day, DAILY_WINDOW_START);
-  const windowEnd = combineDateAndTime(day, DAILY_WINDOW_END);
-  let total = 0;
-  for (const interval of busy) {
-    const clippedStart = interval.start > windowStart ? interval.start : windowStart;
-    const clippedEnd = interval.end < windowEnd ? interval.end : windowEnd;
-    if (clippedEnd > clippedStart) {
-      total += clippedEnd.getTime() - clippedStart.getTime();
-    }
-  }
-  return total;
-}
+export { dailyWindowMs, usedMsOnDay };
 
 // Which items get a session at all this run: every already-`in-progress`
 // item (already inside its type's WIP Limit by definition), plus

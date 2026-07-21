@@ -95,14 +95,18 @@ model FixedCommitment {
 }
 
 model DeadlineTask {
-  id            String   @id @default(cuid())
-  title         String
-  dueAt         DateTime
-  estimatedDays Int
+  id             String   @id @default(cuid())
+  title          String
+  dueAt          DateTime
+  // Total estimated work, in hours — the Scheduler splits this budget
+  // across one or more sessions in the week's free slack before dueAt
+  // (src/scheduler/hard-constraints.ts's placeDeadlineTasks), rather than
+  // placing a single fixed-length session per task.
+  estimatedHours Float
   // JSON-encoded string array — see TrackableItem.tags above.
-  tags          String   @default("[]")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  tags           String   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // Singleton (fixed id — this is a single-user app, one active semester
