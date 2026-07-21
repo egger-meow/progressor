@@ -230,6 +230,29 @@ describe("listTimeSlots", () => {
   });
 });
 
+describe("listTimeSlotsWithLabels — occupantTags", () => {
+  it("surfaces the occupant's tags, and an empty array for slack/ad-hoc", async () => {
+    const item = await createTrackableItem({
+      title: "Trading 101",
+      type: "book",
+      priority: 1,
+      unitCount: 10,
+      estimatedDays: 5,
+      tags: ["trader"],
+    });
+    const bookSlot = await createTimeSlot({
+      ...hourSlot(9),
+      occupantType: "trackable-item",
+      occupantId: item.id,
+    });
+    const slackSlot = await createTimeSlot({ ...hourSlot(10), occupantType: "slack" });
+
+    const labeled = await listTimeSlotsWithLabels();
+    expect(labeled.find((s) => s.id === bookSlot.id)?.occupantTags).toEqual(["trader"]);
+    expect(labeled.find((s) => s.id === slackSlot.id)?.occupantTags).toEqual([]);
+  });
+});
+
 describe("listTimeSlotsWithLabels — occupant deleted out from under a Time Slot", () => {
   it("degrades to a placeholder label instead of throwing (Core Entity Creation UI's delete guarantee)", async () => {
     const item = await createTrackableItem({

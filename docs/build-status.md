@@ -576,3 +576,35 @@ new entry correcting it and say so explicitly.
   `durationMinutes: 30` placed exactly a 30-minute block, not 2 hours;
   the checkbox rows on `/commitments` and `/routines` now center with
   their sibling fields and render as a themed checkmark square.
+- 2026-07-21: same-day follow-up, three requests in one message — free-
+  text `Tag`s on `Trackable Item`/`Routine`/`Fixed Commitment`/`Deadline
+  Task` ("add function that we can add tags to items like 資料探勘would
+  be 學校課 and books related to 交易 we can tag it trader"); a "顯示："
+  field selector above the Weekly View toggling 時間／標籤／類別
+  ("maybe add a kind of like what we want to show selector...default
+  time and tag is enough"); a red banner above a day's column when a
+  `Deadline Task` is due that day ("the event would show above the
+  day...to highlight that day is a deadline, maybe with red"). New
+  `tags` column (JSON string array, migration
+  `20260721094338_add_tags_columns`) plus `src/server/tags.ts`
+  (normalize/serialize/parse), wired into all four models' service
+  functions and forms; `occupantInfo`/`TimeSlotWithLabel` gained
+  `occupantTags`. `DisplayOptionsControl` (`src/app/display-options.tsx`,
+  new client component) sets `data-show-*` attributes on `#weekly-view`,
+  read by CSS in `page.module.css` (not React conditional rendering),
+  persisted in `localStorage`. Deadline banner computed in `page.tsx` by
+  matching `listDeadlineTasks()` against each day's calendar date. `npm
+  run verify` passes — 182 tests (16 new), lint/typecheck/build all
+  clean. Manually verified against the running dev server: tagged the
+  project owner's own real "資料探勘" `Fixed Commitment` with "學校課"
+  (their own example) — chip appeared on `/commitments`; a test `Time
+  Slot` referencing it showed the tag chip by default and the kind chip
+  only after checking "類別" in the selector, and that choice survived a
+  full page reload; a test `Deadline Task` due mid-week produced a red
+  banner (`rgb(220, 38, 38)`, matching `--color-destructive`) above that
+  day's column. The Browser pane's click/screenshot pipeline became
+  unresponsive partway through verification (unrelated to the app code —
+  confirmed via `preview_logs` showing no request landing for repeated
+  identical clicks); test artifacts were removed via a direct one-off
+  Prisma script instead, leaving the project owner's own commitment (now
+  carrying the tag) untouched.

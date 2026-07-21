@@ -16,9 +16,19 @@ discrete units over multiple sittings. Concrete kinds: `Book`, `Course`.
 Fields: `id`, `title`, `type` (`book` | `course`), `priority` (使用者指定的
 整數優先度，數字越小越優先), `status` (`not-started` | `in-progress` |
 `paused` | `done`), `unitCount`（總單元數）, `unitsCompleted`（已完成單元數）,
-`estimatedDays`（使用者輸入的預估完成天數）. A Trackable Item may have many
-`Time Slot` occurrences assigned to it across many weeks, but at most one
-`status` at a time.
+`estimatedDays`（使用者輸入的預估完成天數）, `tags`（見下方 Tag）. A
+Trackable Item may have many `Time Slot` occurrences assigned to it across
+many weeks, but at most one `status` at a time.
+
+### Tag（標籤）
+
+Added 2026-07-21: free-text labels the user assigns to a record —
+independent of `type`/`category`, multiple per record (e.g. a `Fixed
+Commitment` "資料探勘" tagged `學校課`, a `Book` about trading tagged
+`trader`). Not its own model — a `tags` field (JSON-encoded string array,
+`src/server/tags.ts`) on `Trackable Item`, `Routine`, `Fixed Commitment`,
+and `Deadline Task`. Surfaced on a `Time Slot`'s `occupantTags` for display
+in the Weekly View (see `Schedule / Weekly View` below).
 
 ### Book（書籍）
 
@@ -44,7 +54,7 @@ A recurring, non-deadline commitment. Fields: `id`, `title`, `category`
 `anchor`（依 cadence 決定：weekly 存星期幾，可多個；monthly 存日期）,
 `timeOfDayPreference`（見下）, `durationMinutes`（每次發生的時長，預設
 120 分鐘 — 取代了 Scheduler 過去對所有 Routine 一律套用的固定
-`SESSION_DURATION_MS`）. A `Routine` occurrence recurs indefinitely
+`SESSION_DURATION_MS`）. `tags`（見 Tag）. A `Routine` occurrence recurs indefinitely
 until the user edits or deletes the `Routine` itself — it is not a
 `Deadline Task` and never has a due date.
 
@@ -80,11 +90,13 @@ two mutually exclusive kinds:
   `Semester` window by default (`ignoreSemesterBounds = false`); a
   commitment not actually tied to term dates (e.g. a standing meeting with
   a professor) can set `ignoreSemesterBounds = true` to show every week
-  regardless — see `Semester` below.
-- **Deadline Task（期限任務）**：has a `dueAt` but flexible placement before
-  that time — homework, quiz/exam prep, report writing. Structurally closer
-  to a `Trackable Item` (has `estimatedDays`, gets units of work scheduled
-  into `Time Slot`s) but is deadline-bound, which a `Trackable Item` is not.
+  regardless — see `Semester` below. Also carries `tags`（見 Tag）.
+- **Deadline Task（期限任務）**：has a `dueAt`（also drives the Weekly
+  View's red deadline-day banner, see `Schedule / Weekly View` below）but
+  flexible placement before that time — homework, quiz/exam prep, report
+  writing. Structurally closer to a `Trackable Item` (has `estimatedDays`,
+  gets units of work scheduled into `Time Slot`s) but is deadline-bound,
+  which a `Trackable Item` is not. Also carries `tags`（見 Tag）.
 
 ### Ad-hoc Event（臨時事件）
 
@@ -113,7 +125,11 @@ The full set of `Time Slot`s for one calendar week, labelled 本週／下週 in
 the UI. This is the primary surface the user reads and edits. Phase 1's
 Schedule is populated entirely by hand (no `Scheduler` yet); from Phase 2 on
 it is generated/repaired by the `Scheduler` and still remains manually
-editable per the charter's Guardrails.
+editable per the charter's Guardrails. A "顯示：" selector above the grid
+(added 2026-07-21) toggles which fields each `Time Slot`'s card shows —
+time／`Tag`／occupant kind — a per-browser display preference, not part of
+the `Schedule` data itself. A day with a `Deadline Task` due on it shows a
+red banner above that day's column.
 
 ### Scheduler（自動排程引擎）
 

@@ -14,6 +14,7 @@ export interface PriorityListItem {
   unitsCompleted: number;
   unitCount: number;
   estimatedDays: number;
+  tags: string[];
 }
 
 const TYPE_LABELS: Record<PriorityListItem["type"], string> = {
@@ -144,6 +145,15 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
                   {STATUS_LABELS[item.status] ?? item.status} · {item.unitsCompleted}/
                   {item.unitCount} 單元 · 預估 {item.estimatedDays} 天
                 </span>
+                {item.tags.length > 0 ? (
+                  <span className={styles.tagList}>
+                    {item.tags.map((tag) => (
+                      <span key={tag} className={styles.tagChip}>
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
               </span>
               <span className={styles.slotActions}>
                 <a className={styles.linkAction} href={`/items?edit=${item.id}`}>

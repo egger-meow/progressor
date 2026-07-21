@@ -230,6 +230,65 @@ describe("get / list", () => {
   });
 });
 
+describe("tags", () => {
+  it("defaults to an empty array for both kinds when omitted", async () => {
+    const commitment = await createFixedCommitment({
+      title: "資料探勘",
+      dayOfWeek: 2,
+      startTime: "09:00",
+      endTime: "10:00",
+    });
+    expect(commitment.tags).toEqual([]);
+
+    const task = await createDeadlineTask({
+      title: "Homework 1",
+      dueAt: new Date("2026-08-01T00:00:00"),
+      estimatedDays: 3,
+    });
+    expect(task.tags).toEqual([]);
+  });
+
+  it("trims/dedupes on create and round-trips through list/get", async () => {
+    const commitment = await createFixedCommitment({
+      title: "資料探勘",
+      dayOfWeek: 2,
+      startTime: "09:00",
+      endTime: "10:00",
+      tags: [" 學校課 ", "學校課"],
+    });
+    expect(commitment.tags).toEqual(["學校課"]);
+    expect((await getFixedCommitment(commitment.id))?.tags).toEqual(["學校課"]);
+    expect((await listFixedCommitments()).find((c) => c.id === commitment.id)?.tags).toEqual([
+      "學校課",
+    ]);
+  });
+
+  it("updateFixedCommitment / updateDeadlineTask replace tags when provided, leave untouched otherwise", async () => {
+    const commitment = await createFixedCommitment({
+      title: "Class",
+      dayOfWeek: 1,
+      startTime: "09:00",
+      endTime: "10:00",
+      tags: ["school"],
+    });
+    const unchanged = await updateFixedCommitment(commitment.id, { title: "Class renamed" });
+    expect(unchanged.tags).toEqual(["school"]);
+    const retagged = await updateFixedCommitment(commitment.id, { tags: ["work"] });
+    expect(retagged.tags).toEqual(["work"]);
+
+    const task = await createDeadlineTask({
+      title: "Homework",
+      dueAt: new Date("2026-08-01T00:00:00"),
+      estimatedDays: 3,
+      tags: ["school"],
+    });
+    const taskUnchanged = await updateDeadlineTask(task.id, { title: "Homework renamed" });
+    expect(taskUnchanged.tags).toEqual(["school"]);
+    const taskRetagged = await updateDeadlineTask(task.id, { tags: ["urgent"] });
+    expect(taskRetagged.tags).toEqual(["urgent"]);
+  });
+});
+
 describe("removeFixedCommitment / removeDeadlineTask", () => {
   it("deletes an existing FixedCommitment", async () => {
     const commitment = await createFixedCommitment({

@@ -258,6 +258,41 @@ describe("getRoutine / listRoutines", () => {
   });
 });
 
+describe("tags", () => {
+  it("defaults to an empty array when omitted", async () => {
+    const routine = await createRoutine({ title: "Gym", category: "gym", cadence: "daily" });
+    expect(routine.tags).toEqual([]);
+  });
+
+  it("trims and dedupes on create, and round-trips through listRoutines", async () => {
+    const created = await createRoutine({
+      title: "資料探勘",
+      category: "school",
+      cadence: "weekly",
+      anchor: [2],
+      tags: [" 學校課 ", "學校課"],
+    });
+    expect(created.tags).toEqual(["學校課"]);
+
+    const listed = await listRoutines();
+    expect(listed.find((r) => r.id === created.id)?.tags).toEqual(["學校課"]);
+  });
+
+  it("updateRoutine replaces tags when provided, leaves them untouched otherwise", async () => {
+    const routine = await createRoutine({
+      title: "Gym",
+      category: "gym",
+      cadence: "daily",
+      tags: ["health"],
+    });
+    const unchanged = await updateRoutine(routine.id, { title: "Gym renamed" });
+    expect(unchanged.tags).toEqual(["health"]);
+
+    const retagged = await updateRoutine(routine.id, { tags: ["fitness"] });
+    expect(retagged.tags).toEqual(["fitness"]);
+  });
+});
+
 describe("removeRoutine", () => {
   it("deletes an existing routine", async () => {
     const routine = await createRoutine({ title: "Gym", category: "gym", cadence: "daily" });

@@ -8,6 +8,7 @@ import {
   type RoutineCadence,
   type TimeOfDayPreference,
 } from "@/server/routines";
+import { parseTagsInput } from "../tag-utils";
 
 function redirectToRoutines(error?: string): never {
   const params = new URLSearchParams();
@@ -60,6 +61,7 @@ function readEditableFields(formData: FormData) {
     timeOfDayPreference: timeOfDayRaw
       ? (timeOfDayRaw as TimeOfDayPreference)
       : undefined,
+    tags: parseTagsInput(String(formData.get("tags") ?? "")),
   };
 }
 
@@ -88,6 +90,7 @@ export async function updateRoutineAction(formData: FormData): Promise<void> {
       timeOfDayPreference: timeOfDayRaw ? (timeOfDayRaw as TimeOfDayPreference) : null,
       preferredStartTime: readPreferredStartTime(formData) ?? null,
       durationMinutes: readDurationMinutes(formData),
+      tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {
     redirectToRoutines(error instanceof Error ? error.message : "更新常規事件失敗");

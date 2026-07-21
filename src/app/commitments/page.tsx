@@ -12,6 +12,7 @@ import {
 import { formatDateParam } from "../week";
 import { TimePicker } from "../time-picker";
 import { DatePicker } from "../date-picker";
+import { formatTagsInput } from "../tag-utils";
 import styles from "../page.module.css";
 
 const DAY_OPTIONS = [
@@ -129,6 +130,15 @@ export default async function CommitmentsPage({
                       />
                       忽略學期範圍（不限 16 週，每週都顯示）
                     </label>
+                    <label>
+                      標籤（用逗號分隔）
+                      <input
+                        type="text"
+                        name="tags"
+                        defaultValue={formatTagsInput(c.tags)}
+                        placeholder="例如：學校課"
+                      />
+                    </label>
                     <div className={styles.slotFormActions}>
                       <button type="submit" className={styles.button}>
                         儲存
@@ -149,6 +159,15 @@ export default async function CommitmentsPage({
                   <span className={styles.recordMeta}>
                     {DAY_OPTIONS[c.dayOfWeek].label} {c.startTime}–{c.endTime}
                   </span>
+                  {c.tags.length > 0 ? (
+                    <span className={styles.tagList}>
+                      {c.tags.map((tag) => (
+                        <span key={tag} className={styles.tagChip}>
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
                 </span>
                 <span className={styles.slotActions}>
                   <a href={`/commitments?editFC=${c.id}`} className={styles.linkAction}>
@@ -195,6 +214,10 @@ export default async function CommitmentsPage({
             <input type="checkbox" name="ignoreSemesterBounds" />
             忽略學期範圍（不限 16 週，每週都顯示）
           </label>
+          <label>
+            標籤（用逗號分隔）
+            <input type="text" name="tags" placeholder="例如：學校課" />
+          </label>
           <button type="submit" className={styles.button}>
             新增
           </button>
@@ -229,6 +252,15 @@ export default async function CommitmentsPage({
                         required
                       />
                     </label>
+                    <label>
+                      標籤（用逗號分隔）
+                      <input
+                        type="text"
+                        name="tags"
+                        defaultValue={formatTagsInput(t.tags)}
+                        placeholder="例如：學校課"
+                      />
+                    </label>
                     <div className={styles.slotFormActions}>
                       <button type="submit" className={styles.button}>
                         儲存
@@ -249,6 +281,15 @@ export default async function CommitmentsPage({
                   <span className={styles.recordMeta}>
                     截止 {formatDateParam(new Date(t.dueAt))} · 預估 {t.estimatedDays} 天
                   </span>
+                  {t.tags.length > 0 ? (
+                    <span className={styles.tagList}>
+                      {t.tags.map((tag) => (
+                        <span key={tag} className={styles.tagChip}>
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
                 </span>
                 <span className={styles.slotActions}>
                   <a href={`/commitments?editDT=${t.id}`} className={styles.linkAction}>
@@ -280,6 +321,10 @@ export default async function CommitmentsPage({
           <label>
             預估天數
             <input type="number" name="estimatedDays" required />
+          </label>
+          <label>
+            標籤（用逗號分隔）
+            <input type="text" name="tags" placeholder="例如：學校課" />
           </label>
           <button type="submit" className={styles.button}>
             新增

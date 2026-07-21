@@ -1,6 +1,7 @@
 import { listRoutines } from "@/server/routines";
 import { createRoutineAction, deleteRoutineAction, updateRoutineAction } from "./actions";
 import { TimePicker } from "../time-picker";
+import { formatTagsInput } from "../tag-utils";
 import styles from "../page.module.css";
 
 const CADENCES = [
@@ -124,6 +125,15 @@ export default async function RoutinesPage({
                         defaultValue={routine.preferredStartTime ?? "09:00"}
                       />
                     </label>
+                    <label>
+                      標籤（用逗號分隔）
+                      <input
+                        type="text"
+                        name="tags"
+                        defaultValue={formatTagsInput(routine.tags)}
+                        placeholder="例如：學校課"
+                      />
+                    </label>
                     <div className={styles.slotFormActions}>
                       <button type="submit" className={styles.button}>
                         儲存
@@ -153,6 +163,15 @@ export default async function RoutinesPage({
                         : ""}
                     {` · ${routine.durationMinutes} 分鐘`}
                   </span>
+                  {routine.tags.length > 0 ? (
+                    <span className={styles.tagList}>
+                      {routine.tags.map((tag) => (
+                        <span key={tag} className={styles.tagChip}>
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
                 </span>
                 <span className={styles.slotActions}>
                   <a href={`/routines?edit=${routine.id}`} className={styles.linkAction}>
@@ -225,6 +244,10 @@ export default async function RoutinesPage({
           <label>
             指定時間
             <TimePicker name="preferredStartTime" />
+          </label>
+          <label>
+            標籤（用逗號分隔）
+            <input type="text" name="tags" placeholder="例如：學校課" />
           </label>
           <button type="submit" className={styles.button}>
             新增

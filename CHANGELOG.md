@@ -174,6 +174,25 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   pre-filled "新增時段" form in place (same `createTimeSlotAction`, no new
   Server Action), via the same URL-query-param pattern the existing
   `?edit=` inline edit already used — no new client-side JavaScript.
+- Free-text tags (`tags`, JSON-encoded string array, `src/server/tags.ts`)
+  on `Trackable Item`, `Routine`, `Fixed Commitment`, and `Deadline Task` —
+  a "標籤（用逗號分隔）" field on each record's create/edit form on
+  `/items`, `/routines`, and `/commitments`, shown as chips on the record
+  list and, when set, on that occupant's `SlotCard` in the Weekly View —
+  project owner, 2026-07-21: "add function that we can add tags to items
+  like 資料探勘would be 學校課 and books related to 交易 we can tag it
+  trader."
+- A "顯示：" field selector above the Weekly View (`DisplayOptionsControl`,
+  `src/app/display-options.tsx`) toggles which fields a `SlotCard` shows —
+  時間／標籤／類別 — persisted per-browser in `localStorage` (not
+  server/Prisma state). Defaults to 時間 and 標籤 on, 類別 off, per the
+  project owner's stated default; category ("固定事務"/"常規事件"/...)
+  is reachable via the toggle instead of a permanent prefix.
+- `Deadline Task`s due on a given calendar day now show a red banner above
+  that day's column in the Weekly View (`.deadlineBanner`,
+  `src/app/page.tsx`) — project owner, 2026-07-21: "If a day have a
+  deadline event, the event would show above the day...to highlight that
+  day is a deadline, maybe with red."
 
 ### Changed
 

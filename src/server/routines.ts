@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { parseTags, serializeTags } from "./tags";
 
 export type RoutineCadence = "daily" | "weekly" | "monthly";
 export type TimeOfDayPreference = "morning" | "afternoon" | "evening" | "night";
@@ -26,6 +27,7 @@ export interface CreateRoutineInput {
   // How long one occurrence runs, in minutes. Defaults to 120 (the
   // Scheduler's old hardcoded SESSION_DURATION_MS) when omitted.
   durationMinutes?: number;
+  tags?: string[];
 }
 
 export interface UpdateRoutineInput {
@@ -37,6 +39,7 @@ export interface UpdateRoutineInput {
   timeOfDayPreference?: TimeOfDayPreference | null;
   preferredStartTime?: string | null;
   durationMinutes?: number;
+  tags?: string[];
 }
 
 function assertValidCadence(cadence: string): asserts cadence is RoutineCadence {
@@ -98,6 +101,12 @@ function withParsedAnchor<T extends { anchor: string | null }>(
   return { ...routine, anchor: parseAnchor(routine.anchor) };
 }
 
+function withParsedTags<T extends { tags: string }>(
+  routine: T,
+): Omit<T, "tags"> & { tags: string[] } {
+  return { ...routine, tags: parseTags(routine.tags) };
+}
+
 export async function createRoutine(input: CreateRoutineInput) {
   assertValidCadence(input.cadence);
   if (input.timeOfDayPreference) {
@@ -120,9 +129,10 @@ export async function createRoutine(input: CreateRoutineInput) {
       timeOfDayPreference: input.timeOfDayPreference ?? null,
       preferredStartTime: input.preferredStartTime ?? null,
       durationMinutes: input.durationMinutes ?? 120,
+      tags: serializeTags(input.tags),
     },
   });
-  return withParsedAnchor(routine);
+  return withParsedTags(withParsedAnchor(routine));
 }
 
 export async function removeRoutine(id: string): Promise<void> {
@@ -175,19 +185,20 @@ export async function updateRoutine(id: string, input: UpdateRoutineInput) {
       preferredStartTime:
         input.preferredStartTime === undefined ? undefined : input.preferredStartTime,
       durationMinutes: input.durationMinutes,
+      tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });
-  return withParsedAnchor(routine);
+  return withParsedTags(withParsedAnchor(routine));
 }
 
 export async function getRoutine(id: string) {
   const routine = await prisma.routine.findUnique({ where: { id } });
-  return routine ? withParsedAnchor(routine) : null;
+  return routine ? withParsedTags(withParsedAnchor(routine)) : null;
 }
 
 export async function listRoutines() {
   const routines = await prisma.routine.findMany({
     orderBy: { title: "asc" },
   });
-  return routines.map(withParsedAnchor);
+  return routines.map((r) => withParsedTags(withParsedAnchor(r)));
 }

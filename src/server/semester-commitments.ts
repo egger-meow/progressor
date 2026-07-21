@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { parseTags, serializeTags } from "./tags";
 
 // FixedCommitment and DeadlineTask are the two kinds of
 // docs/domain-model.md's "Semester Commitment". Deliberately no shared
@@ -16,6 +17,7 @@ export interface CreateFixedCommitmentInput {
   // inside the semester's range unless this is true — see
   // src/scheduler/hard-constraints.ts.
   ignoreSemesterBounds?: boolean;
+  tags?: string[];
 }
 
 export interface UpdateFixedCommitmentInput {
@@ -24,18 +26,21 @@ export interface UpdateFixedCommitmentInput {
   startTime?: string;
   endTime?: string;
   ignoreSemesterBounds?: boolean;
+  tags?: string[];
 }
 
 export interface CreateDeadlineTaskInput {
   title: string;
   dueAt: Date;
   estimatedDays: number;
+  tags?: string[];
 }
 
 export interface UpdateDeadlineTaskInput {
   title?: string;
   dueAt?: Date;
   estimatedDays?: number;
+  tags?: string[];
 }
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -60,21 +65,29 @@ function assertValidTimeRange(startTime: string, endTime: string): void {
   }
 }
 
+function withParsedTags<T extends { tags: string }>(
+  record: T,
+): Omit<T, "tags"> & { tags: string[] } {
+  return { ...record, tags: parseTags(record.tags) };
+}
+
 export async function createFixedCommitment(input: CreateFixedCommitmentInput) {
   assertValidDayOfWeek(input.dayOfWeek);
   assertValidTime("startTime", input.startTime);
   assertValidTime("endTime", input.endTime);
   assertValidTimeRange(input.startTime, input.endTime);
 
-  return prisma.fixedCommitment.create({
+  const commitment = await prisma.fixedCommitment.create({
     data: {
       title: input.title,
       dayOfWeek: input.dayOfWeek,
       startTime: input.startTime,
       endTime: input.endTime,
       ignoreSemesterBounds: input.ignoreSemesterBounds ?? false,
+      tags: serializeTags(input.tags),
     },
   });
+  return withParsedTags(commitment);
 }
 
 export async function updateFixedCommitment(
@@ -94,7 +107,7 @@ export async function updateFixedCommitment(
   assertValidTime("endTime", endTime);
   assertValidTimeRange(startTime, endTime);
 
-  return prisma.fixedCommitment.update({
+  const commitment = await prisma.fixedCommitment.update({
     where: { id },
     data: {
       title: input.title,
@@ -102,8 +115,10 @@ export async function updateFixedCommitment(
       startTime,
       endTime,
       ignoreSemesterBounds: input.ignoreSemesterBounds,
+      tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });
+  return withParsedTags(commitment);
 }
 
 export async function removeFixedCommitment(id: string): Promise<void> {
@@ -114,14 +129,16 @@ export async function removeFixedCommitment(id: string): Promise<void> {
   await prisma.fixedCommitment.delete({ where: { id } });
 }
 
-export function getFixedCommitment(id: string) {
-  return prisma.fixedCommitment.findUnique({ where: { id } });
+export async function getFixedCommitment(id: string) {
+  const commitment = await prisma.fixedCommitment.findUnique({ where: { id } });
+  return commitment ? withParsedTags(commitment) : null;
 }
 
-export function listFixedCommitments() {
-  return prisma.fixedCommitment.findMany({
+export async function listFixedCommitments() {
+  const commitments = await prisma.fixedCommitment.findMany({
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
   });
+  return commitments.map(withParsedTags);
 }
 
 function assertValidDueAt(dueAt: Date | undefined): asserts dueAt is Date {
@@ -140,13 +157,15 @@ export async function createDeadlineTask(input: CreateDeadlineTaskInput) {
   assertValidDueAt(input.dueAt);
   assertValidEstimatedDays(input.estimatedDays);
 
-  return prisma.deadlineTask.create({
+  const task = await prisma.deadlineTask.create({
     data: {
       title: input.title,
       dueAt: input.dueAt,
       estimatedDays: input.estimatedDays,
+      tags: serializeTags(input.tags),
     },
   });
+  return withParsedTags(task);
 }
 
 export async function updateDeadlineTask(
@@ -165,14 +184,16 @@ export async function updateDeadlineTask(
     assertValidEstimatedDays(input.estimatedDays);
   }
 
-  return prisma.deadlineTask.update({
+  const task = await prisma.deadlineTask.update({
     where: { id },
     data: {
       title: input.title,
       dueAt: input.dueAt,
       estimatedDays: input.estimatedDays,
+      tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });
+  return withParsedTags(task);
 }
 
 export async function removeDeadlineTask(id: string): Promise<void> {
@@ -183,10 +204,12 @@ export async function removeDeadlineTask(id: string): Promise<void> {
   await prisma.deadlineTask.delete({ where: { id } });
 }
 
-export function getDeadlineTask(id: string) {
-  return prisma.deadlineTask.findUnique({ where: { id } });
+export async function getDeadlineTask(id: string) {
+  const task = await prisma.deadlineTask.findUnique({ where: { id } });
+  return task ? withParsedTags(task) : null;
 }
 
-export function listDeadlineTasks() {
-  return prisma.deadlineTask.findMany({ orderBy: { dueAt: "asc" } });
+export async function listDeadlineTasks() {
+  const tasks = await prisma.deadlineTask.findMany({ orderBy: { dueAt: "asc" } });
+  return tasks.map(withParsedTags);
 }

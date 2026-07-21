@@ -11,6 +11,7 @@ import {
 } from "@/server/trackable-items";
 import { runScheduler } from "@/server/scheduler-runs";
 import { addDays, startOfWeek } from "../week";
+import { parseTagsInput } from "../tag-utils";
 
 function redirectToItems(error?: string): never {
   const params = new URLSearchParams();
@@ -28,6 +29,7 @@ function readEditableFields(formData: FormData) {
     unitsCompleted: Number(formData.get("unitsCompleted") ?? 0),
     estimatedDays: Number(formData.get("estimatedDays")),
     status: String(formData.get("status")) as TrackableItemStatus,
+    tags: parseTagsInput(String(formData.get("tags") ?? "")),
   };
 }
 

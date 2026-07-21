@@ -4,6 +4,7 @@ import { prisma } from "./db";
 import {
   createTrackableItem,
   DEFAULT_WIP_LIMIT,
+  getTrackableItem,
   getWipLimit,
   listTrackableItems,
   removeTrackableItem,
@@ -115,6 +116,36 @@ describe("listTrackableItems / getTrackableItem", () => {
 
     const all = await listTrackableItems();
     expect(all).toHaveLength(3);
+  });
+});
+
+describe("tags", () => {
+  it("defaults to an empty array when omitted", async () => {
+    const book = await createTrackableItem(bookInput());
+    expect(book.tags).toEqual([]);
+  });
+
+  it("trims, dedupes, and drops empty entries on create", async () => {
+    const book = await createTrackableItem(
+      bookInput({ tags: [" trader ", "trader", "", "  "] }),
+    );
+    expect(book.tags).toEqual(["trader"]);
+  });
+
+  it("round-trips through listTrackableItems and getTrackableItem", async () => {
+    const created = await createTrackableItem(bookInput({ tags: ["trader", "學校課"] }));
+    const listed = await listTrackableItems("book");
+    expect(listed.find((b) => b.id === created.id)?.tags).toEqual(["trader", "學校課"]);
+    expect((await getTrackableItem(created.id))?.tags).toEqual(["trader", "學校課"]);
+  });
+
+  it("updateTrackableItem replaces tags when provided, leaves them untouched otherwise", async () => {
+    const book = await createTrackableItem(bookInput({ tags: ["trader"] }));
+    const withoutTagsChange = await updateTrackableItem(book.id, { title: "Renamed" });
+    expect(withoutTagsChange.tags).toEqual(["trader"]);
+
+    const retagged = await updateTrackableItem(book.id, { tags: ["學校課"] });
+    expect(retagged.tags).toEqual(["學校課"]);
   });
 });
 

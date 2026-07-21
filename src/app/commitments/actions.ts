@@ -10,6 +10,7 @@ import {
   updateFixedCommitment,
 } from "@/server/semester-commitments";
 import { setSemester } from "@/server/semester";
+import { parseTagsInput } from "../tag-utils";
 
 function redirectToCommitments(error?: string): never {
   const params = new URLSearchParams();
@@ -28,6 +29,7 @@ export async function createFixedCommitmentAction(formData: FormData): Promise<v
       startTime: String(formData.get("startTime")),
       endTime: String(formData.get("endTime")),
       ignoreSemesterBounds: formData.get("ignoreSemesterBounds") === "on",
+      tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {
     redirectToCommitments(error instanceof Error ? error.message : "新增固定事務失敗");
@@ -44,6 +46,7 @@ export async function updateFixedCommitmentAction(formData: FormData): Promise<v
       startTime: String(formData.get("startTime")),
       endTime: String(formData.get("endTime")),
       ignoreSemesterBounds: formData.get("ignoreSemesterBounds") === "on",
+      tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {
     redirectToCommitments(error instanceof Error ? error.message : "更新固定事務失敗");
@@ -79,6 +82,7 @@ export async function createDeadlineTaskAction(formData: FormData): Promise<void
       title: String(formData.get("title")),
       dueAt: new Date(String(formData.get("dueAt"))),
       estimatedDays: Number(formData.get("estimatedDays")),
+      tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {
     redirectToCommitments(error instanceof Error ? error.message : "新增截止任務失敗");
@@ -93,6 +97,7 @@ export async function updateDeadlineTaskAction(formData: FormData): Promise<void
       title: String(formData.get("title")),
       dueAt: new Date(String(formData.get("dueAt"))),
       estimatedDays: Number(formData.get("estimatedDays")),
+      tags: parseTagsInput(String(formData.get("tags") ?? "")),
     });
   } catch (error) {
     redirectToCommitments(error instanceof Error ? error.message : "更新截止任務失敗");

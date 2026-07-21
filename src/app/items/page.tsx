@@ -1,6 +1,7 @@
 import { listTrackableItems } from "@/server/trackable-items";
 import { createTrackableItemAction, updateTrackableItemAction } from "./actions";
 import { PriorityList } from "./priority-list";
+import { formatTagsInput } from "../tag-utils";
 import styles from "../page.module.css";
 
 const STATUSES = [
@@ -71,6 +72,15 @@ export default async function ItemsPage({
                 ))}
               </select>
             </label>
+            <label>
+              標籤（用逗號分隔）
+              <input
+                type="text"
+                name="tags"
+                defaultValue={formatTagsInput(editingItem.tags)}
+                placeholder="例如：trader, 學校課"
+              />
+            </label>
             <div className={styles.slotFormActions}>
               <button type="submit" className={styles.button}>
                 儲存
@@ -92,6 +102,7 @@ export default async function ItemsPage({
           unitsCompleted: item.unitsCompleted,
           unitCount: item.unitCount,
           estimatedDays: item.estimatedDays,
+          tags: item.tags,
         }))}
       />
 
@@ -130,6 +141,10 @@ export default async function ItemsPage({
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            標籤（用逗號分隔）
+            <input type="text" name="tags" placeholder="例如：trader, 學校課" />
           </label>
           <button type="submit" className={styles.button}>
             新增

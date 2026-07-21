@@ -231,6 +231,117 @@
   padding-bottom: var(--space-2);
 }
 
+/* Which SlotCard fields show in the grid, driven by the "顯示" selector
+   above it (src/app/display-options.tsx sets these as data-* attributes
+   on #weekly-view == this element). .slotTime/.slotTags default visible
+   (shown unless explicitly turned off); .slotKindChip defaults hidden
+   (shown only once explicitly turned on) — matches
+   DEFAULT_OPTIONS = { time: true, tags: true, kind: false } so the
+   pre-hydration SSR markup already renders correctly with no attributes
+   present. */
+.weekGrid[data-show-time="false"] .slotTime {
+  display: none;
+}
+
+.weekGrid[data-show-tags="false"] .slotTags {
+  display: none;
+}
+
+.slotKindChip {
+  display: none;
+}
+
+.weekGrid[data-show-kind="true"] .slotKindChip {
+  display: inline-flex;
+}
+
+/* --- "顯示" field selector above the weekly grid
+   (src/app/display-options.tsx) --- */
+
+.displayOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.displayOptionsLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-muted-foreground);
+}
+
+.displayOptionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.displayOptionChip input[type="checkbox"] {
+  appearance: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.displayOptionChip input[type="checkbox"]:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  position: relative;
+}
+
+.displayOptionChip input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 3px;
+  height: 6px;
+  border: solid var(--color-primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* --- Deadline-day banner (Deadline Task due that calendar day) — see the
+   day-column render loop in page.tsx. Red to stand out from the rest of
+   the (warm/neutral) palette, per project owner, 2026-07-21: "highlight
+   that day is a deadline, maybe with red". --- */
+
+.dayColumnDeadline {
+  border-color: color-mix(in srgb, var(--color-destructive) 45%, var(--color-border));
+}
+
+.deadlineBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-destructive);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.deadlineBannerItem {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-destructive-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dayColumn {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -413,6 +524,40 @@
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+/* Category chip ("常規事件"/"固定事務"/...) inside a SlotCard — off by
+   default (see .weekGrid's [data-show-kind] rule below and
+   src/app/display-options.tsx); project owner, 2026-07-21, wanted the
+   prefix out of the compact card by default but reachable via the "顯示"
+   selector rather than gone entirely. */
+.slotKindChip {
+  align-self: flex-start;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+  white-space: nowrap;
+}
+
+.slotTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 1px;
+}
+
+.slotTagChip {
+  display: inline-flex;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--color-accent);
+  white-space: nowrap;
 }
 
 .slotDeleteForm {
@@ -679,6 +824,29 @@
 .recordMeta {
   color: var(--color-muted-foreground);
   font-size: var(--text-xs);
+}
+
+/* Tag chips on /items, /routines, /commitments record cards — same
+   underlying data as a SlotCard's .slotTags in the Weekly View
+   (src/server/tags.ts), styled slightly larger since these cards have
+   more room than a timetable cell. */
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: 2px;
+}
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--color-accent);
+  white-space: nowrap;
 }
 
 .badge {

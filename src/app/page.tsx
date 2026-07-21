@@ -10,6 +10,7 @@ import { TimePicker } from "./time-picker";
 import { DatePicker } from "./date-picker";
 import { OccupantPicker, type OccupantOption } from "./occupant-picker";
 import { HourCellOverlay } from "./hour-cell-overlay";
+import { DisplayOptionsControl, WEEKLY_VIEW_ID } from "./display-options";
 import {
   createTimeSlotAction,
   updateTimeSlotAction,
@@ -172,10 +173,22 @@ function SlotCard({ slot, weekParam }: { slot: TimeSlotWithLabel; weekParam: str
         className={styles.slotItemMain}
         aria-label={`編輯：${slot.occupantLabel}`}
       >
+        {slot.occupantKind ? (
+          <span className={styles.slotKindChip}>{slot.occupantKind}</span>
+        ) : null}
         <span className={styles.slotTime}>
           {formatTimeLabel(new Date(slot.startAt))}–{formatTimeLabel(new Date(slot.endAt))}
         </span>
         <span className={styles.slotOccupant}>{slot.occupantLabel}</span>
+        {slot.occupantTags.length > 0 ? (
+          <span className={styles.slotTags}>
+            {slot.occupantTags.map((tag) => (
+              <span key={tag} className={styles.slotTagChip}>
+                {tag}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </a>
       <form action={deleteTimeSlotAction} className={styles.slotDeleteForm}>
         <input type="hidden" name="id" value={slot.id} />
@@ -313,10 +326,11 @@ export default async function WeeklyView({
   const prevWeekParam = formatDateParam(addDays(weekStart, -7));
   const nextWeekParam = formatDateParam(addDays(weekStart, 7));
 
-  const [slots, occupantOptions, semester] = await Promise.all([
+  const [slots, occupantOptions, semester, deadlineTasks] = await Promise.all([
     listTimeSlotsWithLabels({ from: weekStart, to: weekEnd }),
     loadOccupantOptions(),
     getSemester(),
+    listDeadlineTasks(),
   ]);
   const weekIndex = semesterWeekIndex(weekStart, semester);
 
@@ -366,7 +380,9 @@ export default async function WeeklyView({
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
 
-      <div className={styles.weekGrid}>
+      <DisplayOptionsControl />
+
+      <div className={styles.weekGrid} id={WEEKLY_VIEW_ID}>
         {days.map((day, index) => {
           const daySlots = slots.filter((slot) => {
             const start = new Date(slot.startAt);
@@ -374,6 +390,19 @@ export default async function WeeklyView({
               start.getFullYear() === day.getFullYear() &&
               start.getMonth() === day.getMonth() &&
               start.getDate() === day.getDate()
+            );
+          });
+
+          // Deadline Tasks due on this calendar day — surfaced as a red
+          // banner above the day header (project owner, 2026-07-21: "If a
+          // day have a deadline event, the event would show above the
+          // day...to highlight that day is a deadline, maybe with red").
+          const dayDeadlines = deadlineTasks.filter((task) => {
+            const due = new Date(task.dueAt);
+            return (
+              due.getFullYear() === day.getFullYear() &&
+              due.getMonth() === day.getMonth() &&
+              due.getDate() === day.getDate()
             );
           });
 
@@ -414,7 +443,23 @@ export default async function WeeklyView({
           }
 
           return (
-            <section key={index} className={styles.dayColumn}>
+            <section
+              key={index}
+              className={
+                dayDeadlines.length > 0
+                  ? `${styles.dayColumn} ${styles.dayColumnDeadline}`
+                  : styles.dayColumn
+              }
+            >
+              {dayDeadlines.length > 0 ? (
+                <div className={styles.deadlineBanner}>
+                  {dayDeadlines.map((task) => (
+                    <span key={task.id} className={styles.deadlineBannerItem}>
+                      截止：{task.title}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <h2>
                 {DAY_LABELS[index]} <span className={styles.dayDate}>{formatDateLabel(day)}</span>
               </h2>

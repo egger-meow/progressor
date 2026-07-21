@@ -959,6 +959,50 @@ checkmark when checked. `npm run verify` passes — 166 tests (5 new: 3 in
 `routine-placement.test.ts` confirming a custom duration is honored, 1
 update test), lint/typecheck/build all clean.
 
+**Tags, Weekly View display selector, and deadline-day banner (2026-07-21,
+follow-up):** three requests from the project owner in one message. (1)
+Free-text `Tag`s (`tags`, new JSON-encoded-string-array column,
+`src/server/tags.ts`'s `normalizeTags`/`serializeTags`/`parseTags`) on
+`Trackable Item`, `Routine`, `Fixed Commitment`, and `Deadline Task` — a
+"標籤（用逗號分隔）" input on each record's create/edit form (`/items`,
+`/routines`, `/commitments`), shown as chips on the record list
+(`.tagList`/`.tagChip`) and, when set, on that occupant's `SlotCard` in the
+Weekly View. `occupantInfo` (`src/server/time-slots.ts`) now also returns
+`tags`, surfaced as `TimeSlotWithLabel.occupantTags`. (2) A "顯示：" field
+selector above the Weekly View (`DisplayOptionsControl`,
+`src/app/display-options.tsx`, client component) toggles 時間／標籤／類別
+independently, applied via `data-show-*` attributes on `#weekly-view` (not
+React conditional rendering, so the CSS in `page.module.css` does the
+show/hide) and persisted per-browser in `localStorage` — a display
+preference, not `Schedule` data, so it never touches Prisma. Defaults:
+時間 on, 標籤 on, 類別 off (project owner: "default time and tag is
+enough"), reconciling the same session's earlier "no need prefix" request
+(the kind badge is now opt-in via this selector instead of gone). (3) A
+`Deadline Task` due on a given calendar day now renders a red banner
+(`.deadlineBanner`, background `var(--color-destructive)`) above that
+day's column in the Weekly View, computed by matching each `listDeadlineTasks()`
+result's `dueAt` against the day's calendar date — project owner: "the
+event should show above the day...to highlight that day is a deadline,
+maybe with red." Manually verified against the running dev server: tagged
+the project owner's own real `Fixed Commitment` ("資料探勘") with "學校課"
+(matching their own example) and confirmed the chip appears on
+`/commitments`' record card; placed a test `Time Slot` referencing it and
+confirmed the compact `SlotCard` shows the tag chip by default and the
+kind chip only after checking "類別" (verified via computed-style checks:
+`display: none` → `flex` on toggle); confirmed the toggle choice persists
+across a full page reload via `localStorage`; created a test `Deadline
+Task` due inside the current week and confirmed a red banner
+(`rgb(220, 38, 38)` computed background, matching `--color-destructive`)
+rendered above that day's column. `npm run verify` passes — 182 tests (16
+new: `tags.test.ts` plus new coverage in `trackable-items.test.ts`,
+`routines.test.ts`, `semester-commitments.test.ts`, `time-slots.test.ts`),
+lint/typecheck/build all clean. Test artifacts (the temporary `Time Slot`
+and `Deadline Task`) were removed afterward via a direct Prisma script
+after the Browser pane's click/screenshot pipeline became unresponsive
+mid-session — the project owner's own "資料探勘" `Fixed Commitment` (now
+carrying the "學校課" tag, matching their stated example) was left
+untouched.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all

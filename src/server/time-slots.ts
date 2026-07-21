@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { parseTags } from "./tags";
 
 // The six occupant kinds from docs/domain-model.md's "Time Slot" — five
 // real occupant tables plus "slack" (deliberately empty, occupantId null).
@@ -189,35 +190,35 @@ export function listTimeSlots(range?: ListTimeSlotsRange) {
 async function occupantInfo(
   occupantType: OccupantType,
   occupantId: string | null,
-): Promise<{ kind: string; label: string }> {
+): Promise<{ kind: string; label: string; tags: string[] }> {
   if (occupantType === "slack" || !occupantId) {
-    return { kind: "", label: "留白" };
+    return { kind: "", label: "留白", tags: [] };
   }
   switch (occupantType) {
     case "routine": {
       const routine = await prisma.routine.findUnique({ where: { id: occupantId } });
       return routine
-        ? { kind: "常規事件", label: routine.title }
-        : { kind: "常規事件", label: "（常規事件已刪除）" };
+        ? { kind: "常規事件", label: routine.title, tags: parseTags(routine.tags) }
+        : { kind: "常規事件", label: "（常規事件已刪除）", tags: [] };
     }
     case "fixed-commitment": {
       const commitment = await prisma.fixedCommitment.findUnique({
         where: { id: occupantId },
       });
       return commitment
-        ? { kind: "固定事務", label: commitment.title }
-        : { kind: "固定事務", label: "（固定事務已刪除）" };
+        ? { kind: "固定事務", label: commitment.title, tags: parseTags(commitment.tags) }
+        : { kind: "固定事務", label: "（固定事務已刪除）", tags: [] };
     }
     case "deadline-task": {
       const task = await prisma.deadlineTask.findUnique({ where: { id: occupantId } });
       return task
-        ? { kind: "截止任務", label: task.title }
-        : { kind: "截止任務", label: "（截止任務已刪除）" };
+        ? { kind: "截止任務", label: task.title, tags: parseTags(task.tags) }
+        : { kind: "截止任務", label: "（截止任務已刪除）", tags: [] };
     }
     case "trackable-item": {
       const item = await prisma.trackableItem.findUnique({ where: { id: occupantId } });
       if (!item) {
-        return { kind: "書籍／課程", label: "（書籍／課程已刪除）" };
+        return { kind: "書籍／課程", label: "（書籍／課程已刪除）", tags: [] };
       }
       // Domain-model.md: Book's unit is Chapter, Course's unit is Video —
       // surfaced here (not just the title) so a Weekly View block tells you
@@ -229,13 +230,14 @@ async function occupantInfo(
       return {
         kind,
         label: `${item.title}（第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}）`,
+        tags: parseTags(item.tags),
       };
     }
     case "ad-hoc-event": {
       const event = await prisma.adHocEvent.findUnique({ where: { id: occupantId } });
       return event
-        ? { kind: "臨時事件", label: event.title }
-        : { kind: "臨時事件", label: "（臨時事件已刪除）" };
+        ? { kind: "臨時事件", label: event.title, tags: [] }
+        : { kind: "臨時事件", label: "（臨時事件已刪除）", tags: [] };
     }
   }
 }
@@ -248,6 +250,7 @@ export interface TimeSlotWithLabel {
   occupantId: string | null;
   occupantKind: string;
   occupantLabel: string;
+  occupantTags: string[];
 }
 
 export async function listTimeSlotsWithLabels(
@@ -265,6 +268,7 @@ export async function listTimeSlotsWithLabels(
         occupantId: slot.occupantId,
         occupantKind: info.kind,
         occupantLabel: info.label,
+        occupantTags: info.tags,
       };
     }),
   );

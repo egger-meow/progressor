@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { parseTags, serializeTags } from "./tags";
 
 export type TrackableItemType = "book" | "course";
 export type TrackableItemStatus =
@@ -37,6 +38,7 @@ export interface CreateTrackableItemInput {
   estimatedDays: number;
   status?: TrackableItemStatus;
   unitsCompleted?: number;
+  tags?: string[];
 }
 
 export interface UpdateTrackableItemInput {
@@ -46,6 +48,7 @@ export interface UpdateTrackableItemInput {
   unitCount?: number;
   unitsCompleted?: number;
   estimatedDays?: number;
+  tags?: string[];
 }
 
 function assertValidType(type: string): asserts type is TrackableItemType {
@@ -102,15 +105,23 @@ async function assertWipLimitNotExceeded(
   }
 }
 
-export function listTrackableItems(type?: TrackableItemType) {
-  return prisma.trackableItem.findMany({
+function withParsedTags<T extends { tags: string }>(
+  item: T,
+): Omit<T, "tags"> & { tags: string[] } {
+  return { ...item, tags: parseTags(item.tags) };
+}
+
+export async function listTrackableItems(type?: TrackableItemType) {
+  const items = await prisma.trackableItem.findMany({
     where: type ? { type } : undefined,
     orderBy: { priority: "asc" },
   });
+  return items.map(withParsedTags);
 }
 
-export function getTrackableItem(id: string) {
-  return prisma.trackableItem.findUnique({ where: { id } });
+export async function getTrackableItem(id: string) {
+  const item = await prisma.trackableItem.findUnique({ where: { id } });
+  return item ? withParsedTags(item) : null;
 }
 
 async function nextPriority(): Promise<number> {
@@ -134,7 +145,7 @@ export async function createTrackableItem(input: CreateTrackableItemInput) {
 
   const priority = input.priority ?? (await nextPriority());
 
-  return prisma.trackableItem.create({
+  const item = await prisma.trackableItem.create({
     data: {
       title: input.title,
       type: input.type,
@@ -143,8 +154,10 @@ export async function createTrackableItem(input: CreateTrackableItemInput) {
       unitCount: input.unitCount,
       unitsCompleted,
       estimatedDays: input.estimatedDays,
+      tags: serializeTags(input.tags),
     },
   });
+  return withParsedTags(item);
 }
 
 // Persists a full drag-and-drop reorder in one go: `orderedIds` is every
@@ -187,7 +200,7 @@ export async function updateTrackableItem(
     await assertWipLimitNotExceeded(existing.type);
   }
 
-  return prisma.trackableItem.update({
+  const item = await prisma.trackableItem.update({
     where: { id },
     data: {
       title: input.title,
@@ -196,6 +209,8 @@ export async function updateTrackableItem(
       unitCount: nextUnitCount,
       unitsCompleted: nextUnitsCompleted,
       estimatedDays: input.estimatedDays,
+      tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });
+  return withParsedTags(item);
 }
