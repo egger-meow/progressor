@@ -679,6 +679,46 @@ Weekly View ending immediately after the grid when closed (the default).
 new logic), lint/typecheck/build all clean. Test data cleared from
 `prisma/dev.db` afterward.
 
+**Click-based Time/Date pickers (2026-07-21, via the ui-ux-pro-max
+skill):** every `<input type="time">`/`<input type="date">` in the app
+(12 across `src/app/page.tsx` and `src/app/commitments/page.tsx`) was
+replaced with `TimePicker`/`DatePicker` (`src/app/time-picker.tsx`,
+`date-picker.tsx`) — project owner wanted setting an hour/minute/上午-
+下午/day to be entirely mouse-driven instead of typing into or nudging a
+native input's tiny segments.
+
+- `TimePicker`: a button trigger showing e.g. `上午 9:00`; the popover
+  offers a 上午/下午 toggle, a 1–12 hour grid, and a 5-minute-increment
+  grid (00, 05, …, 55) — all click targets, no typing. Internally still
+  tracks and submits a 24-hour `"HH:MM"` string via a hidden input, so
+  no Server Action or `combineDateAndTime` (`src/app/week.ts`) needed
+  any changes.
+- `DatePicker`: a button trigger showing e.g. `2026/7/20（週一）`; the
+  popover is a real month calendar (prev/next month nav, Monday-first
+  weekday header matching `DAY_LABELS`, muted padding days from the
+  adjacent month, today outlined, the selected day filled) — submits a
+  `"YYYY-MM-DD"` string via a hidden input, same contract as before.
+- Both popovers are portaled to `document.body` with `position: fixed`
+  (`src/app/use-popover.ts`) rather than positioned relative to their
+  trigger in-place, specifically because `.weekGrid` scrolls
+  (`overflow-x/y: auto`) and would otherwise clip the panel when a
+  picker is opened inside the Weekly View's grid. The hook also closes
+  the popover on outside click, `Escape`, or any scroll/resize.
+
+Manually verified against the running dev server: opened a `TimePicker`
+inside the Weekly View grid and confirmed the panel rendered fully
+outside the grid's clipping (not cut off); clicked an hour and a minute
+and confirmed the trigger label updated live; submitted a slot and
+confirmed the created `Time Slot` had the exact picked time; opened a
+`DatePicker`, navigated to the next month, clicked a day, and confirmed
+the trigger updated and the panel auto-closed; created a `Fixed
+Commitment` via the new pickers on `/commitments` and confirmed it
+persisted with the exact picked start/end time. `npm run verify`
+passes — still 137 tests (these are pure UI replacements over the same
+Server Action contracts; no service-layer behavior changed), lint/
+typecheck/build all clean. Test data cleared from `prisma/dev.db`
+afterward.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
@@ -697,10 +737,14 @@ new logic), lint/typecheck/build all clean. Test data cleared from
   interaction, consistent with the bootstrap platform decision (local web
   app first, see `../ROADMAP.md`'s Proposed section on a mobile view).
 - The Weekly View's click-to-create grid cells are hourly only — clicking
-  a cell pre-fills a whole-hour start/end, adjustable in the revealed
-  form before submitting. A slot starting on a half hour, or spanning
-  many hours, still needs the bottom "新增時段" form (or editing the
-  hour-aligned defaults after clicking).
+  a cell pre-fills a whole-hour start/end, adjustable via the revealed
+  form's `TimePicker`s before submitting (their minute grid supports any
+  5-minute increment; anything finer needs a follow-up edit).
+- `TimePicker`/`DatePicker` (`src/app/time-picker.tsx`, `date-picker.tsx`)
+  are mouse-first by design — clicking a grid cell — and don't yet
+  support arrow-key navigation between cells (Tab still moves focus
+  between individual buttons, and Escape/outside-click still close the
+  popover, but there's no roving-tabindex grid navigation).
 
 ## Configuration / Environment Notes
 

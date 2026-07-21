@@ -413,3 +413,35 @@ new entry correcting it and say so explicitly.
   before then) — removing it would break `placeDeadlineTasks`
   (`src/scheduler/hard-constraints.ts`), so this needs a decision from
   the project owner, not a silent code change.
+- 2026-07-21: `/ui-ux-pro-max` invoked directly by the project owner —
+  "enhance experience for the system when we editing times (like days,
+  上午, hour, minute, everything more intuitive and easily interact and
+  set with mouse)". Consulted the skill's `--domain ux` search for form/
+  input guidance (labels, input affordance) before building. Added
+  `src/app/use-popover.ts` (shared open/close/position hook — portals
+  the panel to `document.body` with `position: fixed` since `.weekGrid`
+  scrolls and would otherwise clip an in-place popover),
+  `src/app/time-picker.tsx` (`TimePicker`: 上午/下午 toggle + 1-12 hour
+  grid + 5-minute-increment grid, all click targets, submitting a
+  24-hour `"HH:MM"` hidden input) and `src/app/date-picker.tsx`
+  (`DatePicker`: full month calendar with prev/next nav, Monday-first
+  weekdays matching `DAY_LABELS`, muted adjacent-month days, today
+  outlined, selected day filled, submitting a `"YYYY-MM-DD"` hidden
+  input). Replaced all 12 native `<input type="time"/"date">` instances
+  across `src/app/page.tsx` (`SlotEditForm`, `InlineAddForm`, the
+  quick-event ad-hoc form) and `src/app/commitments/page.tsx` (Fixed
+  Commitment and Deadline Task create/edit forms) — zero changes to any
+  Server Action or service-layer code, since both components preserve
+  the exact string contract (`combineDateAndTime`, `src/app/week.ts`)
+  the existing actions already parsed. `npm run verify` passes — still
+  137 tests (pure UI swap over unchanged contracts, no new logic to
+  test), lint/typecheck/build all clean. Manually verified against the
+  running dev server: opened a `TimePicker` inside the Weekly View grid
+  and confirmed the panel rendered fully outside `.weekGrid`'s clipping,
+  not cut off; clicked hour 2 + minute 30, confirmed the trigger updated
+  live to "上午 2:30"; submitted a slot via the picker and confirmed the
+  persisted `Time Slot` had the exact picked time; opened `DatePicker`,
+  navigated to next month, clicked a day, confirmed the trigger updated
+  and the panel auto-closed; created a `Fixed Commitment` via the new
+  pickers on `/commitments` and confirmed `09:00–10:00` persisted
+  exactly. Test data cleared from `prisma/dev.db` afterward.

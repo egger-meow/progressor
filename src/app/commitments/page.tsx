@@ -8,6 +8,8 @@ import {
   updateFixedCommitmentAction,
 } from "./actions";
 import { formatDateParam } from "../week";
+import { TimePicker } from "../time-picker";
+import { DatePicker } from "../date-picker";
 import styles from "../page.module.css";
 
 const DAY_OPTIONS = [
@@ -73,11 +75,11 @@ export default async function CommitmentsPage({
                     </label>
                     <label>
                       開始
-                      <input type="time" name="startTime" defaultValue={c.startTime} required />
+                      <TimePicker name="startTime" defaultValue={c.startTime} />
                     </label>
                     <label>
                       結束
-                      <input type="time" name="endTime" defaultValue={c.endTime} required />
+                      <TimePicker name="endTime" defaultValue={c.endTime} />
                     </label>
                     <div className={styles.slotFormActions}>
                       <button type="submit" className={styles.button}>
@@ -135,11 +137,11 @@ export default async function CommitmentsPage({
           </label>
           <label>
             開始
-            <input type="time" name="startTime" required />
+            <TimePicker name="startTime" />
           </label>
           <label>
             結束
-            <input type="time" name="endTime" required />
+            <TimePicker name="endTime" defaultValue="10:00" />
           </label>
           <button type="submit" className={styles.button}>
             新增
@@ -164,12 +166,7 @@ export default async function CommitmentsPage({
                     </label>
                     <label>
                       截止日期
-                      <input
-                        type="date"
-                        name="dueAt"
-                        defaultValue={formatDateParam(new Date(t.dueAt))}
-                        required
-                      />
+                      <DatePicker name="dueAt" defaultValue={formatDateParam(new Date(t.dueAt))} />
                     </label>
                     <label>
                       預估天數
@@ -226,7 +223,7 @@ export default async function CommitmentsPage({
           </label>
           <label>
             截止日期
-            <input type="date" name="dueAt" required />
+            <DatePicker name="dueAt" />
           </label>
           <label>
             預估天數

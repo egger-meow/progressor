@@ -632,3 +632,192 @@
   font-size: var(--text-xs);
   font-weight: 700;
 }
+
+/* --- Click-based Time/Date pickers (src/app/time-picker.tsx,
+   date-picker.tsx) — replace <input type="time"/"date"> so setting an
+   hour/minute/上午-下午/day is entirely mouse-driven instead of typing
+   or fiddling with a native input's tiny segments. The popover panel
+   itself is portaled to document.body with position:fixed (see
+   use-popover.ts) so it floats above .weekGrid's scroll clipping
+   instead of being cut off inside it. --- */
+
+.pickerField {
+  display: inline-flex;
+}
+
+.pickerTrigger {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.pickerTrigger:hover {
+  border-color: var(--color-primary);
+}
+
+.pickerTrigger:focus-visible,
+.pickerTrigger[aria-expanded="true"] {
+  border-color: var(--color-ring);
+}
+
+.timePickerPanel,
+.datePickerPanel {
+  z-index: 300;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-3);
+}
+
+.timePickerPanel {
+  min-width: 220px;
+}
+
+.timePickerMeridiem {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.timePickerColumns {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.timePickerColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.timePickerColumnLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-muted-foreground);
+  text-align: center;
+}
+
+.timePickerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.pickerCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--color-surface-alt);
+  color: var(--color-foreground);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.pickerCell:hover {
+  border-color: var(--color-primary);
+}
+
+.pickerCellActive {
+  composes: pickerCell;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.pickerCellActive:hover {
+  background: var(--color-primary-hover);
+}
+
+.pickerDoneButton {
+  composes: button;
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.datePickerPanel {
+  min-width: 260px;
+}
+
+.datePickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.datePickerNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-surface-alt);
+  color: var(--color-foreground);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.datePickerNav:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.datePickerWeekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.datePickerWeekdays span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-muted-foreground);
+}
+
+.datePickerGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+}
+
+.datePickerCell {
+  composes: pickerCell;
+  height: 32px;
+}
+
+.datePickerCellMuted {
+  opacity: 0.35;
+}
+
+.datePickerCellToday {
+  border-color: var(--color-primary);
+}

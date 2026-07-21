@@ -4,6 +4,8 @@ import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commi
 import { listTrackableItems } from "@/server/trackable-items";
 import { listAdHocEvents } from "@/server/ad-hoc-events";
 import { DAILY_WINDOW_START, DAILY_WINDOW_END } from "@/scheduler/constants";
+import { TimePicker } from "./time-picker";
+import { DatePicker } from "./date-picker";
 import {
   createTimeSlotAction,
   updateTimeSlotAction,
@@ -109,30 +111,15 @@ function SlotEditForm({
         <input type="hidden" name="week" value={weekParam} />
         <label>
           日期
-          <input
-            type="date"
-            name="date"
-            defaultValue={formatDateParam(new Date(slot.startAt))}
-            required
-          />
+          <DatePicker name="date" defaultValue={formatDateParam(new Date(slot.startAt))} />
         </label>
         <label>
           開始
-          <input
-            type="time"
-            name="startTime"
-            defaultValue={formatTimeLabel(new Date(slot.startAt))}
-            required
-          />
+          <TimePicker name="startTime" defaultValue={formatTimeLabel(new Date(slot.startAt))} />
         </label>
         <label>
           結束
-          <input
-            type="time"
-            name="endTime"
-            defaultValue={formatTimeLabel(new Date(slot.endAt))}
-            required
-          />
+          <TimePicker name="endTime" defaultValue={formatTimeLabel(new Date(slot.endAt))} />
         </label>
         <label>
           內容
@@ -218,15 +205,13 @@ function InlineAddForm({
         <input type="hidden" name="date" value={dateParam} />
         <label>
           開始
-          <input type="time" name="startTime" defaultValue={formatHourParam(hour)} required />
+          <TimePicker name="startTime" defaultValue={formatHourParam(hour)} />
         </label>
         <label>
           結束
-          <input
-            type="time"
+          <TimePicker
             name="endTime"
             defaultValue={endHour === 24 ? "23:59" : formatHourParam(endHour)}
-            required
           />
         </label>
         <label>
@@ -480,15 +465,15 @@ export default async function WeeklyView({
             </label>
             <label>
               日期
-              <input type="date" name="date" defaultValue={weekParam} required />
+              <DatePicker name="date" defaultValue={weekParam} />
             </label>
             <label>
               開始
-              <input type="time" name="startTime" required />
+              <TimePicker name="startTime" />
             </label>
             <label>
               結束
-              <input type="time" name="endTime" required />
+              <TimePicker name="endTime" defaultValue="10:00" />
             </label>
             <div className={styles.slotFormActions}>
               <button type="submit" className={styles.button}>

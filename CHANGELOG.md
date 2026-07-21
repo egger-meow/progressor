@@ -198,6 +198,14 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   create on the grid covers it), and "快速新增臨時事件" is now a
   `?quickEvent=1` toggle next to "產生課表" instead of an always-visible
   section — the page ends right after the grid by default.
+- Every `<input type="time">`/`<input type="date">` in the app (Weekly
+  View's edit/add/quick-event forms, `/commitments`' Fixed Commitment
+  and Deadline Task forms) was replaced with click-based `TimePicker`/
+  `DatePicker` components (`src/app/time-picker.tsx`, `date-picker.tsx`,
+  `use-popover.ts`) — a 上午/下午 toggle, hour/minute grids, and a real
+  month calendar, all mouse-driven, submitting the same `"HH:MM"`/
+  `"YYYY-MM-DD"` strings the existing Server Actions already expected
+  (no action or service-layer changes).
 
 ### Fixed
 
