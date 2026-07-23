@@ -129,7 +129,7 @@ describe("computeHorizonSchedule", () => {
   it("keeps a category-scheduled item going across weeks until its own remaining-chapter budget runs out, not before", () => {
     const input = baseInput({
       categoryItemSchedules: [categorySchedule()],
-      trackableItems: [trackableItem({ unitCount: 2, unitsCompleted: 0 })], // 2 units -> 2 sessions
+      trackableItems: [trackableItem({ unitCount: 2, unitsCompleted: 0, estimatedDays: 14 })], // 2 units -> 2 weekly sessions
       wipLimits: [{ type: "book", maxInProgress: 3 }],
       horizonWeeks: 3,
     });

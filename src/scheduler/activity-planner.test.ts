@@ -140,6 +140,37 @@ describe("planActivities — Trackable Items", () => {
     ]);
   });
 
+  it("spreads a book's sessions across its estimated completion days, independently of chapter weight", () => {
+    const activities = planActivities(
+      baseInput({ trackableItems: [trackableItem({ unitCount: 13, estimatedDays: 40 })] }),
+    );
+
+    expect(activities).toHaveLength(13);
+    expect(activities.slice(0, 4).map((activity) => activity.releaseDate)).toEqual([
+      new Date("2026-07-20T00:00:00"),
+      new Date("2026-07-23T00:00:00"),
+      new Date("2026-07-26T00:00:00"),
+      new Date("2026-07-29T00:00:00"),
+    ]);
+  });
+
+  it("uses an explicit target date instead of estimatedDays as the completion boundary", () => {
+    const activities = planActivities(
+      baseInput({
+        trackableItems: [
+          trackableItem({ unitCount: 3, estimatedDays: 40, targetDate: new Date("2026-07-29T00:00:00") }),
+        ],
+      }),
+    );
+
+    expect(activities.map((activity) => activity.releaseDate)).toEqual([
+      new Date("2026-07-20T00:00:00"),
+      new Date("2026-07-23T00:00:00"),
+      new Date("2026-07-26T00:00:00"),
+    ]);
+    expect(activities.every((activity) => activity.dueDate?.getTime() === new Date("2026-07-30T00:00:00").getTime())).toBe(true);
+  });
+
   it("subtracts currentUnitSessionsCompleted from the current unit's own (overridden) session budget", () => {
     const input = baseInput({
       trackableItems: [

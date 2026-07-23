@@ -113,7 +113,9 @@ export function solveRCPSP(
       const predecessorDay = activity.precedingActivityId
         ? (placedDayById.get(activity.precedingActivityId) as Date)
         : null;
-      const earliestDay = predecessorDay ? addDays(predecessorDay, 1) : activity.releaseDate;
+      const afterPredecessor = predecessorDay ? addDays(predecessorDay, 1) : activity.releaseDate;
+      const earliestDay =
+        afterPredecessor > activity.releaseDate ? afterPredecessor : activity.releaseDate;
       const latestDayExclusive = activity.dueDate ?? horizonEnd;
 
       let placedInterval: { start: Date; end: Date } | null = null;

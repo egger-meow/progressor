@@ -24,10 +24,9 @@ model TrackableItem {
   unitCount      Int
   unitsCompleted Int      @default(0)
   estimatedDays  Int
-  // Optional explicit target completion date — deliberately separate from
-  // estimatedDays (never auto-derived from it, never auto-frozen): most
-  // useful set directly on a not-yet-started item where "today + N days"
-  // doesn't mean anything yet. Not consumed by the Scheduler yet.
+  // Optional explicit target completion date. When present, it supplies
+  // the Scheduler's completion boundary instead of the rolling
+  // `estimatedDays` window.
   targetDate     DateTime?
   // "Chapters average Nx longer than normal" — the BASELINE multiplier
   // applied to any unit without its own entry in unitWeightOverrides below.

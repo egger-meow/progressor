@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { PendingCheckIn } from "@/server/check-ins";
 import { submitCheckInsAction } from "./check-in-actions";
 import { formatDateLabel, formatTimeLabel } from "./week";
@@ -16,9 +17,16 @@ type Answer = "yes" | "no";
 // round-trip, so the pressed button visibly highlights right away — and
 // nothing is sent until 提交 is pressed, sticky at the panel's bottom so
 // it's reachable without scrolling through every row first.
-export function CheckInGateForm({ pending }: { pending: PendingCheckIn[] }) {
+export function CheckInGateForm({
+  pending,
+  onSubmitted,
+}: {
+  pending: PendingCheckIn[];
+  onSubmitted: () => void;
+}) {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const answeredCount = pending.filter((slot) => answers[slot.id]).length;
   const allAnswered = answeredCount === pending.length;
@@ -33,7 +41,15 @@ export function CheckInGateForm({ pending }: { pending: PendingCheckIn[] }) {
       formData.set(`answer:${slotId}`, answer);
     }
     startTransition(async () => {
-      await submitCheckInsAction(formData);
+      const completed = await submitCheckInsAction(formData);
+      if (completed) {
+        // This form calls the Server Action directly, so revalidatePath()
+        // alone does not replace the layout's existing `pending` prop.
+        // Hide the gate immediately, then fetch the refreshed layout so it
+        // stays gone and the Weekly View reflects the recorded answers.
+        onSubmitted();
+        router.refresh();
+      }
     });
   }
 

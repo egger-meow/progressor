@@ -16,6 +16,7 @@ import type {
   SchedulerDeadlineTask,
   TrackableItemType,
 } from "./types";
+import { addDays } from "./time";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -100,6 +101,37 @@ export function computeRemainingSessions(item: SchedulerTrackableItem, alreadySc
   return Math.max(0, total - alreadyScheduled);
 }
 
+// `estimatedDays` is the completion window for the whole remaining item,
+// not a per-chapter multiplier. An explicit target date replaces that
+// rolling window. A session's release date spreads the weighted session
+// chain evenly through the window; the per-unit multipliers above only
+// affect how many positions each chapter occupies in that chain.
+export function completionDeadline(item: SchedulerTrackableItem, planningStart: Date): Date {
+  if (item.targetDate) {
+    // A date picker represents a whole calendar day, so make the boundary
+    // exclusive at the following midnight instead of excluding the target
+    // date itself.
+    return addDays(item.targetDate, 1);
+  }
+  return addDays(planningStart, item.estimatedDays);
+}
+
+export function scheduledSessionReleaseDate(
+  item: SchedulerTrackableItem,
+  planningStart: Date,
+  sessionOrdinal: number,
+): Date {
+  const totalSessions = computeRemainingSessions(item, 0);
+  if (totalSessions <= 1) {
+    return planningStart;
+  }
+  const completionDays = Math.max(
+    1,
+    Math.ceil((completionDeadline(item, planningStart).getTime() - planningStart.getTime()) / (24 * 60 * 60 * 1000)),
+  );
+  return addDays(planningStart, Math.floor((sessionOrdinal * completionDays) / totalSessions));
+}
+
 function chunkDeadlineBudget(remainingMs: number): number[] {
   const chunks: number[] = [];
   let left = remainingMs;
@@ -146,8 +178,8 @@ export function planActivities(input: ActivityPlannerInput): Activity[] {
           isChainHead && (item.status === "not-started" || item.status === "paused"),
         precedingActivityId: previousId,
         isLastInChain: i === remainingSessions - 1,
-        releaseDate: input.horizonStart,
-        dueDate: null,
+        releaseDate: scheduledSessionReleaseDate(item, input.horizonStart, alreadyScheduled + i),
+        dueDate: completionDeadline(item, input.horizonStart),
         itemPriority: item.priority,
       });
       previousId = id;

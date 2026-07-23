@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { PendingCheckIn } from "@/server/check-ins";
 import { CheckInGateForm } from "./check-in-gate-form";
 import styles from "./page.module.css";
@@ -9,7 +12,9 @@ import styles from "./page.module.css";
 // backdrop/panel shell stays a plain Server Component; only the
 // select-then-submit interaction (CheckInGateForm) needs client state.
 export function CheckInGate({ pending }: { pending: PendingCheckIn[] }) {
-  if (pending.length === 0) {
+  const [dismissed, setDismissed] = useState(false);
+
+  if (pending.length === 0 || dismissed) {
     return null;
   }
 
@@ -20,7 +25,7 @@ export function CheckInGate({ pending }: { pending: PendingCheckIn[] }) {
         <p className={styles.checkInGateHint}>
           以下時段已經過去，尚未確認是否完成 — 請先回答才能繼續使用。
         </p>
-        <CheckInGateForm pending={pending} />
+        <CheckInGateForm pending={pending} onSubmitted={() => setDismissed(true)} />
       </div>
     </div>
   );

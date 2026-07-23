@@ -16,10 +16,9 @@ discrete units over multiple sittings. Concrete kinds: `Book`, `Course`.
 Fields: `id`, `title`, `type` (`book` | `course`), `priority` (使用者指定的
 整數優先度，數字越小越優先), `status` (`not-started` | `in-progress` |
 `paused` | `done`), `unitCount`（總單元數）, `unitsCompleted`（已完成單元數）,
-`estimatedDays`（完成剩餘進度所需天數，不是整個項目的總天數 — 2026-07-21
-澄清）, `targetDate`（可選，明確指定的目標完成日期，與 `estimatedDays`
-互相獨立，不會自動互相推算——尚未開始的項目通常沒有「今天」可以當基準，
-2026-07-21 新增）, `unitWeightMultiplier`（BASELINE 倍率，預設 1.0，代表
+`estimatedDays`（從排程日開始完成剩餘進度的預計天數；排程器必須把剩餘工作平均
+分派於這個窗口內）, `targetDate`（可選，明確指定的目標完成日期；設定時取代
+`estimatedDays` 作為排程的完成上限）, `unitWeightMultiplier`（BASELINE 倍率，預設 1.0，代表
 「沒有個別設定的單元，平均比正常長 N 倍」；接入見下方
 `currentUnitSessionsCompleted`, 2026-07-21 新增）, `unitWeightOverrides`
 （選填，個別單元索引→倍率的覆蓋表，2026-07-23 新增——見下方「Per-Unit

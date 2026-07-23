@@ -75,6 +75,7 @@ export function computeHorizonSchedule(input: HorizonSchedulerInput): HorizonSch
       ...input,
       weekStart,
       weekEnd,
+      trackablePlanningStart: input.horizonStart,
       existingSlots: input.existingSlots.filter(
         (slot) => slot.startAt >= weekStart && slot.startAt < weekEnd,
       ),

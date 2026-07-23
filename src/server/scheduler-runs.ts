@@ -84,6 +84,7 @@ async function fetchSchedulerEntities() {
       unitCount: item.unitCount,
       unitsCompleted: item.unitsCompleted,
       estimatedDays: item.estimatedDays,
+      targetDate: item.targetDate,
       unitWeightMultiplier: item.unitWeightMultiplier,
       unitWeightOverrides: item.unitWeightOverrides,
       currentUnitSessionsCompleted: item.currentUnitSessionsCompleted,

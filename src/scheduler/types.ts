@@ -25,7 +25,11 @@ export interface SchedulerTrackableItem {
   status: TrackableItemStatus;
   unitCount: number;
   unitsCompleted: number;
+  // The whole item's intended completion window. The Scheduler spreads
+  // remaining work across `estimatedDays` from its planning start, unless
+  // targetDate supplies an explicit completion deadline instead.
   estimatedDays: number;
+  targetDate?: Date | null;
   // Baseline sessions-per-unit multiplier, and per-unit-index overrides
   // (1-based) — see prisma/schema.prisma's TrackableItem.unitWeightOverrides
   // comment. Consumed by activity-planner.ts's remaining-session count
@@ -159,6 +163,9 @@ export interface SchedulerInput {
   wipLimits: SchedulerWipLimit[];
   existingSlots: SchedulerExistingTimeSlot[];
   semester: SchedulerSemester | null;
+  // Set only by the whole-horizon orchestrator so every weekly Category
+  // Item Schedule call shares one completion-window origin.
+  trackablePlanningStart?: Date;
 }
 
 // A slot the Scheduler is proposing. occupantId is null only when

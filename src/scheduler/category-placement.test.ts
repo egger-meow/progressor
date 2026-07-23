@@ -63,7 +63,7 @@ describe("placeCategoryItemSchedules", () => {
 
     const result = placeCategoryItemSchedules(input, []);
 
-    expect(result.slots).toHaveLength(7);
+    expect(result.slots).toHaveLength(5);
     expect(result.slots[0]).toEqual({
       startAt: new Date("2026-07-13T08:00:00"),
       endAt: new Date("2026-07-13T10:00:00"),
@@ -338,6 +338,22 @@ describe("placeCategoryItemSchedules", () => {
 
     expect(result.slots).toHaveLength(3);
     expect(result.scheduledCountByItemId["ti-1"]).toBe(3);
+  });
+
+  it("spaces a daily shared-book schedule across each item's estimated completion window", () => {
+    const input = baseInput({
+      categoryItemSchedules: [schedule({ cadence: "daily" })],
+      trackableItems: [trackableItem({ unitCount: 13, estimatedDays: 40 })],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+
+    const result = placeCategoryItemSchedules(input, []);
+
+    expect(result.slots.map((slot) => slot.startAt.toDateString())).toEqual([
+      new Date("2026-07-13T00:00:00").toDateString(),
+      new Date("2026-07-16T00:00:00").toDateString(),
+      new Date("2026-07-19T00:00:00").toDateString(),
+    ]);
   });
 
   it("honors alreadyScheduledSessionsByItemId passed in (idempotency across a multi-week horizon run)", () => {

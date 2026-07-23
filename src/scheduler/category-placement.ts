@@ -25,7 +25,7 @@ import { addDays, type Interval } from "./time";
 import { hasExistingOccurrence } from "./hard-constraints";
 import { occurrenceDayOffsets, findOccurrenceWindow } from "./occurrence-timing";
 import { selectEligibleItems } from "./flexible-placement";
-import { computeRemainingSessions } from "./activity-planner";
+import { computeRemainingSessions, scheduledSessionReleaseDate, completionDeadline } from "./activity-planner";
 
 export interface CategoryPlacementResult {
   slots: ScheduledTimeSlot[];
@@ -55,6 +55,7 @@ export function placeCategoryItemSchedules(
   const slots: ScheduledTimeSlot[] = [];
   const allEligible = selectEligibleItems(input);
   const scheduledCount = new Map<string, number>(Object.entries(alreadyScheduledSessionsByItemId));
+  const planningStart = input.trackablePlanningStart ?? input.weekStart;
 
   for (const schedule of input.categoryItemSchedules) {
     const eligible = allEligible.filter((item) => item.type === schedule.type);
@@ -72,7 +73,9 @@ export function placeCategoryItemSchedules(
       const itemsNeedingSlot = eligible.filter(
         (item) =>
           !hasExistingOccurrence(input.existingSlots, "trackable-item", item.id, day) &&
-          computeRemainingSessions(item, scheduledCount.get(item.id) ?? 0) > 0,
+          computeRemainingSessions(item, scheduledCount.get(item.id) ?? 0) > 0 &&
+          day >= scheduledSessionReleaseDate(item, planningStart, scheduledCount.get(item.id) ?? 0) &&
+          day < completionDeadline(item, planningStart),
       );
       if (itemsNeedingSlot.length === 0) {
         continue;

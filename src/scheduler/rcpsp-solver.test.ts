@@ -61,6 +61,34 @@ describe("solveRCPSP — precedence", () => {
   });
 });
 
+describe("solveRCPSP — completion windows", () => {
+  it("does not schedule a 13-chapter, 40-day book daily just because every chapter is one session", () => {
+    const activities = planActivities({
+      trackableItems: [trackableItem({ unitCount: 13, estimatedDays: 40 })],
+      deadlineTasks: [],
+      categoryScheduledTypes: new Set(),
+      alreadyScheduledSessionsByItemId: {},
+      alreadyScheduledHoursByTaskId: {},
+      horizonStart,
+    });
+
+    const { slots } = solveRCPSP(
+      activities,
+      emptyCalendar([{ type: "book", maxInProgress: 3 }]),
+      horizonStart,
+      addDays(horizonStart, 42),
+    );
+
+    expect(slots).toHaveLength(13);
+    expect(slots.slice(0, 4).map((slot) => slot.startAt.toDateString())).toEqual([
+      new Date("2026-07-20T00:00:00").toDateString(),
+      new Date("2026-07-23T00:00:00").toDateString(),
+      new Date("2026-07-26T00:00:00").toDateString(),
+      new Date("2026-07-29T00:00:00").toDateString(),
+    ]);
+  });
+});
+
 describe("solveRCPSP — priority + WIP pool", () => {
   it("higher priority (lower number) not-started item wins the only pool slot when both chains outlast a short horizon", () => {
     // Both chains are far longer than the horizon can hold, so the pool

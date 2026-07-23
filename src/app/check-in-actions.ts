@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import { submitCheckIns, type CheckInAnswer } from "@/server/check-ins";
 import { addDays, startOfWeek } from "./week";
 
-export async function submitCheckInsAction(formData: FormData): Promise<void> {
+export async function submitCheckInsAction(formData: FormData): Promise<boolean> {
   const answers: CheckInAnswer[] = [];
   for (const [key, value] of formData.entries()) {
     if (!key.startsWith("answer:")) {
@@ -26,10 +26,12 @@ export async function submitCheckInsAction(formData: FormData): Promise<void> {
   const weekEnd = addDays(weekStart, 7);
   try {
     await submitCheckIns(answers, weekStart, weekEnd);
+    return true;
   } catch {
     // Nowhere at the layout level to surface a `?error=` banner — leaving
     // whatever's left pending (the gate keeps showing it) is the safe
     // failure mode, the user can just retry.
+    return false;
   } finally {
     // The gate is rendered from layout.tsx (wraps every route), calling
     // listPendingCheckIns() once per request — the form is invoked here as
