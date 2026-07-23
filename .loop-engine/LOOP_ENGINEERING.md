@@ -37,10 +37,10 @@ four separate, single-purpose places:
 
 | Kind of truth | Question it answers | Lives in | Changes how often |
 | --- | --- | --- | --- |
-| **Direction** | Where is this going, and what must never break? | [`docs/project-charter.md`](docs/project-charter.md), [`docs/domain-model.md`](docs/domain-model.md), [`docs/system-direction.md`](docs/system-direction.md) | Rarely — only when the human decides the goal itself changes |
-| **Current state** | What actually exists and works right now? | [`docs/status.md`](docs/status.md), [`docs/build-status.md`](docs/build-status.md) | Every loop that changes behavior |
-| **Priority** | What is the agent authorized to work on next? | [`ROADMAP.md`](ROADMAP.md) (phase-sized), [`PRIORITIES.md`](PRIORITIES.md) (task-sized) | Every loop — items are removed when done, reordered when danger/priority changes |
-| **History** | What happened, and when, with what evidence? | [`CHANGELOG.md`](CHANGELOG.md), `docs/audits/`, git commits | Append-only |
+| **Direction** | Where is this going, and what must never break? | [`docs/project-charter.md`](../docs/project-charter.md), [`docs/domain-model.md`](../docs/domain-model.md), [`docs/system-direction.md`](../docs/system-direction.md) | Rarely — only when the human decides the goal itself changes |
+| **Current state** | What actually exists and works right now? | [`docs/status.md`](../docs/status.md), [`docs/build-status.md`](../docs/build-status.md) | Every loop that changes behavior |
+| **Priority** | What is the agent authorized to work on next? | [`ROADMAP.md`](../ROADMAP.md) (phase-sized), [`PRIORITIES.md`](../PRIORITIES.md) (task-sized) | Every loop — items are removed when done, reordered when danger/priority changes |
+| **History** | What happened, and when, with what evidence? | [`CHANGELOG.md`](../CHANGELOG.md), `../docs/audits/`, git commits | Append-only |
 
 Every one of these has an owner and a shape. None of them is "just notes."
 If a fact doesn't fit one of these four, it probably doesn't need to be
@@ -48,7 +48,7 @@ written down — or it belongs in a code comment at the point of the actual
 constraint.
 
 There is one more file that is deliberately **not** a kind of truth:
-[`INBOX.md`](INBOX.md), the human-input channel. It holds a pending human
+[`INBOX.md`](../INBOX.md), the human-input channel. It holds a pending human
 instruction only until the agent translates it into one of the four homes
 above, then that item is deleted. It is a mailbox, not a document — see
 "The inbox" below.
@@ -56,33 +56,34 @@ above, then that item is deleted. It is a mailbox, not a document — see
 ## Reading discipline: write often, read on demand
 
 Not every file gets read every loop, and that split is deliberate, not an
-oversight. The **current-truth** files — `docs/status.md`,
-`docs/build-status.md`, `PRIORITIES.md`, `ROADMAP.md` — are read at every
-task-loop and phase-loop boundary (see below), which is exactly why they
-carry a shrinking-queue rule: a file that gets re-read constantly has to
-stay small, or every loop pays a growing token cost for zero new
+oversight. The **current-truth** files — `../docs/status.md`,
+`../docs/build-status.md`, `../PRIORITIES.md`, `../ROADMAP.md` — are read at
+every task-loop and phase-loop boundary (see below), which is exactly why
+they carry a shrinking-queue rule: a file that gets re-read constantly has
+to stay small, or every loop pays a growing token cost for zero new
 information.
 
-**History files — `CHANGELOG.md`, `docs/audits/`, `FRAMEWORK_FEEDBACK.md`,
-git — are the opposite: written to constantly (append-only), read rarely,
-on demand.** Neither the
+**History files — `../CHANGELOG.md`, `../docs/audits/`,
+`FRAMEWORK_FEEDBACK.md`, git — are the opposite: written to constantly
+(append-only), read rarely, on demand.** Neither the
 task loop nor the phase loop below includes them in routine orientation.
 Open one only for a specific reason — adding a new entry (a write, not a
 full read), preparing a release, or checking whether a specific past claim
 still holds — and even then, read narrowly: the `[Unreleased]` section of
-`CHANGELOG.md`, not its full history; the one audit file
-[`docs/audits/README.md`](docs/audits/README.md)'s index points you to, not
-every file in that folder. "Let me read the whole CHANGELOG for context" or
-"let me skim all the audits" is a mistake, not thoroughness — it's exactly
-the token cost append-only history exists to avoid paying every loop.
+`../CHANGELOG.md`, not its full history; the one audit file
+[`docs/audits/README.md`](../docs/audits/README.md)'s index points you to,
+not every file in that folder. "Let me read the whole CHANGELOG for
+context" or "let me skim all the audits" is a mistake, not thoroughness —
+it's exactly the token cost append-only history exists to avoid paying
+every loop.
 
 ## The two loops
 
 Work happens in two nested loops.
 
 - The **task loop** executes one authorized task at a time: take the top
-  `PRIORITIES.md` item, do it, prove it, update state, repeat.
-- The **phase loop** wraps it: decide which `ROADMAP.md` phase is active,
+  `../PRIORITIES.md` item, do it, prove it, update state, repeat.
+- The **phase loop** wraps it: decide which `../ROADMAP.md` phase is active,
   decompose it into the task queue, and — when the queue drains — prove the
   *whole phase* works before moving to the next one.
 
@@ -95,10 +96,10 @@ out or a genuine judgment call appears.
 
 **The authorization boundary, stated once:** the phase loop plans *within*
 authorization; it never *creates* authorization. It may activate the next
-phase a human already wrote into `ROADMAP.md`, and decompose that phase into
-`PRIORITIES.md` items. It may not invent a new phase, reorder phases, or
-promote a "Proposed" phase to authorized — those are human moves, made in
-writing, in `ROADMAP.md`.
+phase a human already wrote into `../ROADMAP.md`, and decompose that phase
+into `../PRIORITIES.md` items. It may not invent a new phase, reorder
+phases, or promote a "Proposed" phase to authorized — those are human
+moves, made in writing, in `../ROADMAP.md`.
 
 ```
 PHASE LOOP
@@ -123,33 +124,35 @@ TASK LOOP  (inside step 5, repeats while the queue has items)
 
 This is the inner procedure, one iteration per task:
 
-1. **Orient.** Read [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md) —
+1. **Orient.** Read [`AGENTS.md`](../AGENTS.md) / [`CLAUDE.md`](../CLAUDE.md) —
    these point at the canonical docs. Read
-   [`docs/project-charter.md`](docs/project-charter.md) and
-   [`docs/domain-model.md`](docs/domain-model.md) if this is a new session or
-   direction may have changed.
-2. **Check the inbox.** Open [`INBOX.md`](INBOX.md). If it has items, process
-   them per that file's protocol *before* taking new work: task-level input
-   gets translated into `PRIORITIES.md` edits or direct fixes and you
-   continue; direction-level input means exit to the phase loop now.
-3. **Check current truth.** Read [`docs/status.md`](docs/status.md) and
-   [`docs/build-status.md`](docs/build-status.md) to know what already exists
-   — don't re-derive this from chat memory, and don't trust a stale mental
-   model from a previous session.
-4. **Take the top item.** Open [`PRIORITIES.md`](PRIORITIES.md). The first
-   item under "Current Priorities" is the authorized next unit of work. Do
-   not skip down the list to something more interesting — order is a safety
-   decision, not a suggestion (see the rules inside that file).
+   [`docs/project-charter.md`](../docs/project-charter.md) and
+   [`docs/domain-model.md`](../docs/domain-model.md) if this is a new session
+   or direction may have changed.
+2. **Check the inbox.** Open [`INBOX.md`](../INBOX.md). If it has items,
+   process them per that file's protocol *before* taking new work:
+   task-level input gets translated into `../PRIORITIES.md` edits or direct
+   fixes and you continue; direction-level input means exit to the phase
+   loop now.
+3. **Check current truth.** Read [`docs/status.md`](../docs/status.md) and
+   [`docs/build-status.md`](../docs/build-status.md) to know what already
+   exists — don't re-derive this from chat memory, and don't trust a stale
+   mental model from a previous session.
+4. **Take the top item.** Open [`PRIORITIES.md`](../PRIORITIES.md). The
+   first item under "Current Priorities" is the authorized next unit of
+   work. Do not skip down the list to something more interesting — order is
+   a safety decision, not a suggestion (see the rules inside that file).
 5. **Do the work.**
 6. **Prove it with the task gate.** Run this project's task gate (defined in
-   `docs/status.md`). "It should work" is not evidence. A passing gate, a
+   `../docs/status.md`). "It should work" is not evidence. A passing gate, a
    manual walkthrough result, or a specific reproduction is evidence.
-7. **Update current truth.** Reflect what changed in `docs/status.md` and/or
-   `docs/build-status.md`.
-8. **Retire the priority item.** Remove it from `PRIORITIES.md` per that
+7. **Update current truth.** Reflect what changed in `../docs/status.md`
+   and/or `../docs/build-status.md`.
+8. **Retire the priority item.** Remove it from `../PRIORITIES.md` per that
    file's own rules — don't leave a trail of struck-through history there;
-   history belongs in `CHANGELOG.md` and git, not in the priority queue.
-9. **Record history.** Add a `CHANGELOG.md` entry if this is release-visible.
+   history belongs in `../CHANGELOG.md` and git, not in the priority queue.
+9. **Record history.** Add a `../CHANGELOG.md` entry if this is
+   release-visible.
 10. **Repeat from step 2** — or exit to the phase loop (below) when an exit
     trigger fires.
 
@@ -174,40 +177,43 @@ expensive, which is exactly the failure mode this repo exists to avoid.
 This is the outer procedure:
 
 1. **Process the inbox first.** Direction-level items land here — apply them
-   to `ROADMAP.md`, `docs/project-charter.md`, or
-   `docs/system-direction.md` (or stop and ask, if they need a decision only
-   a human can make) before planning anything else on top of stale direction.
-2. **Check the overall goal.** Read the charter and [`ROADMAP.md`](ROADMAP.md).
-   If there is no active phase and no authorized phase remaining, everything
-   pre-authorized is done: **stop and wait for a human.** This — not an empty
-   task queue — is the real "wait for human" condition.
+   to `../ROADMAP.md`, `../docs/project-charter.md`, or
+   `../docs/system-direction.md` (or stop and ask, if they need a decision
+   only a human can make) before planning anything else on top of stale
+   direction.
+2. **Check the overall goal.** Read the charter and
+   [`ROADMAP.md`](../ROADMAP.md). If there is no active phase and no
+   authorized phase remaining, everything pre-authorized is done: **stop and
+   wait for a human.** This — not an empty task queue — is the real "wait for
+   human" condition.
 3. **Close out a finished phase.** If the active phase's exit condition
    appears met: run the **phase gate** (see "Two verification gates" below),
-   write the audit in `docs/audits/` per
-   [`docs/audits/README.md`](docs/audits/README.md), add the `CHANGELOG.md`
-   entry, and remove the phase from `ROADMAP.md` per that file's rules. If
-   the phase gate fails, the gap goes into `PRIORITIES.md` and the phase
-   stays active.
+   write the audit in `../docs/audits/` per
+   [`docs/audits/README.md`](../docs/audits/README.md), add the
+   `../CHANGELOG.md` entry, and remove the phase from `../ROADMAP.md` per
+   that file's rules. If the phase gate fails, the gap goes into
+   `../PRIORITIES.md` and the phase stays active.
 4. **Activate the next authorized phase.** Take the first phase under
-   "Authorized Phases" in `ROADMAP.md`, mark it active, and decompose it into
-   concrete `PRIORITIES.md` items — each with a stated "done means" that the
-   task gate can verify. This decomposition is mechanical planning within
-   what the human already authorized, so it does not need per-item sign-off.
+   "Authorized Phases" in `../ROADMAP.md`, mark it active, and decompose it
+   into concrete `../PRIORITIES.md` items — each with a stated "done means"
+   that the task gate can verify. This decomposition is mechanical planning
+   within what the human already authorized, so it does not need per-item
+   sign-off.
 5. **Run the task loop** until an exit trigger fires.
 6. **Return to step 1.**
 
 ## The inbox: the human checkpoint
 
-[`INBOX.md`](INBOX.md) is how a human steers a running loop without sitting
-next to it. Drop a note in the file at any time; the agent checks it at every
-task-loop boundary and at the start of every phase loop. The full protocol
-lives in the file itself; the load-bearing rules are:
+[`INBOX.md`](../INBOX.md) is how a human steers a running loop without
+sitting next to it. Drop a note in the file at any time; the agent checks it
+at every task-loop boundary and at the start of every phase loop. The full
+protocol lives in the file itself; the load-bearing rules are:
 
 - **One-shot semantics.** An item lives in the inbox only until it's
   processed. This keeps the file near-empty at rest — no accumulating
   history to re-read every loop, no index needed, no token bloat.
 - **Translate, then clear, in the same commit.** The commit that deletes an
-  item must contain the edits that item turned into (a `PRIORITIES.md` entry,
+  item must contain the edits that item turned into (a `../PRIORITIES.md` entry,
   a charter change, a status fix). The diff is the receipt — the human
   reviews it to catch misreadings *before* the instruction is gone. Never
   "read and clear" without the translation in the same change.
@@ -244,7 +250,7 @@ Three rules keep it near-free, all inherited from patterns above:
 
 ## Two verification gates
 
-Both are defined per-project in [`docs/status.md`](docs/status.md):
+Both are defined per-project in [`docs/status.md`](../docs/status.md):
 
 - The **task gate** is fast and runs every task-loop iteration — typically
   lint + typecheck + unit tests + build, bundled as one command. It proves
@@ -266,14 +272,14 @@ the human's input is reserved for decisions that are actually theirs to make.
 Stop and wait when:
 
 - **The roadmap is exhausted.** No active phase, nothing under "Authorized
-  Phases" in `ROADMAP.md`. (An empty *task queue* alone is not this — that
-  just returns to the phase loop.)
+  Phases" in `../ROADMAP.md`. (An empty *task queue* alone is not this —
+  that just returns to the phase loop.)
 - **An inbox item needs a human decision** — it proposes a new phase, a
   danger-based reordering, or a direction change the written docs can't
   settle.
 - **Authorizing new phase-sized work.** The agent may *propose* a phase under
-  "Proposed — Not Yet Authorized" in `ROADMAP.md`, with a suggested goal and
-  exit condition, but a human moves it into the authorized queue.
+  "Proposed — Not Yet Authorized" in `../ROADMAP.md`, with a suggested goal
+  and exit condition, but a human moves it into the authorized queue.
 - **The action is destructive, irreversible, or touches production/secrets/
   money/access control**, regardless of what's written anywhere.
   Written authorization for *what* to build is not authorization to skip
@@ -301,7 +307,7 @@ direction, state, priority, and history live in specific files with specific
 shapes instead of in conversation, a fresh agent session (or a different
 agent entirely) can pick up exactly where the last one left off by reading a
 bounded set of files — not by reading the whole project history. And because
-steering happens through `INBOX.md` instead of live chat, the human can
+steering happens through `../INBOX.md` instead of live chat, the human can
 drop a correction at 9am and review the receipt-diff at noon — the loop
 doesn't block on their presence, and their input doesn't get lost in a
 scrollback. That's the actual point of this repo: make "the agent forgot the
@@ -309,33 +315,45 @@ context" a non-event, because the context was never only in its head.
 
 ## What's in this repo
 
-- [`README.md`](README.md) / [`README.zh-TW.md`](README.zh-TW.md) — what this
-  repo is and how to adopt it into a new project (English / 繁體中文).
+The framework's own "helper"/meta files live under `.loop-engine/` (this
+file's own directory); a small set of files a project actually authors and
+grows stays at the repo root alongside it.
+
+- [`../README.md`](../README.md) / [`../zh-TW/README.md`](../zh-TW/README.md)
+  — what this repo is and how to adopt it into a new project (English /
+  繁體中文). Stays at the repo root, not under `.loop-engine/`, because it's
+  the one file GitHub renders automatically and the one a project fully
+  rewrites for itself.
 - [`INIT_CHECKLIST.md`](INIT_CHECKLIST.md) /
-  [`INIT_CHECKLIST.zh-TW.md`](INIT_CHECKLIST.zh-TW.md) — the order to fill in
+  [`zh-TW/INIT_CHECKLIST.md`](zh-TW/INIT_CHECKLIST.md) — the order to fill in
   the templates when bootstrapping a new project from this scaffold.
-- [`BOOTSTRAP.md`](BOOTSTRAP.md) / [`BOOTSTRAP.zh-TW.md`](BOOTSTRAP.zh-TW.md)
+- [`BOOTSTRAP.md`](BOOTSTRAP.md) / [`zh-TW/BOOTSTRAP.md`](zh-TW/BOOTSTRAP.md)
   — the interview alternative to the checklist: an agent asks what it can't
   infer from your pasted idea, drafts every canonical file, and waits for
   one explicit written authorization before any loop starts.
-- [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) — agent entry points.
-  Keep both in sync; different tools read different files.
-- [`ROADMAP.md`](ROADMAP.md) — the pre-authorized phase queue the phase loop
-  plans from.
-- [`PRIORITIES.md`](PRIORITIES.md) — the task-level priority queue contract.
-- [`INBOX.md`](INBOX.md) — the human checkpoint mailbox. Ships ready to use
-  (no `TEMPLATE:` markers); just leave it empty until you have something to
-  say to a running loop.
+- [`../CLAUDE.md`](../CLAUDE.md) / [`../AGENTS.md`](../AGENTS.md) — agent
+  entry points. Stay at the repo root (that's where each tool looks for
+  them). Keep both in sync; different tools read different files.
+- [`../ROADMAP.md`](../ROADMAP.md) — the pre-authorized phase queue the phase
+  loop plans from. Stays at the repo root — a human edits it directly.
+- [`../PRIORITIES.md`](../PRIORITIES.md) — the task-level priority queue
+  contract. Stays at the repo root, same reason.
+- [`../INBOX.md`](../INBOX.md) — the human checkpoint mailbox. Stays at the
+  repo root. Ships ready to use (no `TEMPLATE:` markers); just leave it
+  empty until you have something to say to a running loop.
 - [`FRAMEWORK_FEEDBACK.md`](FRAMEWORK_FEEDBACK.md) — append-only flight
   recorder for defects in the framework itself, harvested upstream to
   loop-engine at phase close. Ships ready to use; empty is its normal
   state.
-- [`CHANGELOG.md`](CHANGELOG.md) — history.
-- [`docs/`](docs/README.md) — canonical direction and current-state docs, plus
-  `docs/audits/` for phase-completion evidence.
+- [`../CHANGELOG.md`](../CHANGELOG.md) — history. Stays at the repo root.
+- [`../docs/`](../docs/README.md) — canonical direction and current-state
+  docs, plus `../docs/audits/` for phase-completion evidence. This is the
+  project's *own* documentation, never touched by the framework reorg —
+  stays at the repo root.
 - [`scripts/check-templates.sh`](scripts/check-templates.sh) /
   [`.ps1`](scripts/check-templates.ps1) — finds leftover `TEMPLATE:` markers
-  so you can tell what's actually been filled in.
+  so you can tell what's actually been filled in. Run from the repo root as
+  `.loop-engine/scripts/check-templates.sh`.
 - [`examples/linkcheck/`](examples/linkcheck/) — a complete, fully-filled-in
   instance of every template in this repo, for a small hypothetical CLI
   tool. Read it alongside a template when the abstract version isn't enough.
@@ -344,5 +362,5 @@ Every template file below contains `TEMPLATE:` comments marking what to fill
 in and what to delete once filled in. Delete the `TEMPLATE:` comments
 themselves as you go — a template comment left in a doc that's supposedly
 "the source of truth" is a sign the doc hasn't actually been filled in yet.
-Run `scripts/check-templates.sh` to find every remaining one at once instead
-of hunting by eye.
+Run `.loop-engine/scripts/check-templates.sh` (from the repo root) to find
+every remaining one at once instead of hunting by eye.

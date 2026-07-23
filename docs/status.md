@@ -45,7 +45,7 @@ npm run build
 ```
 
 bundled as `npm run verify`. No task in the task loop may be claimed done
-without this command passing clean (see `../LOOP_ENGINEERING.md`, "Two
+without this command passing clean (see `../.loop-engine/LOOP_ENGINEERING.md`, "Two
 verification gates").
 
 ### Phase Gate
@@ -185,6 +185,28 @@ pin an exact time.
 
 Passed; see
 [`docs/audits/semester-scoping-and-concrete-routine-times-audit.md`](audits/semester-scoping-and-concrete-routine-times-audit.md).
+
+#### Phase 8 — Daily Check-In Gate for Missed Sessions (closed)
+
+Authorized by the project owner in chat (2026-07-22): a `Book`/`Course`/
+`Deadline Task` session that goes by unmarked just sits inert on the board
+forever — nothing ever asks whether it actually happened, and nothing
+reschedules the outstanding work if it didn't.
+
+1. A same-day, mandatory gate blocks the whole app (every route) whenever
+   a `Trackable Item`/`Deadline Task` `Time Slot` has already elapsed and
+   was never confirmed. `Routine`/`Fixed Commitment` occurrences are out of
+   scope.
+2. Answering "yes, done" for a pending session only records the
+   confirmation; it never changes `unitsCompleted`/`estimatedHours`.
+3. Answering "no, not done" removes that session and triggers a real
+   reschedule of the underlying item's outstanding work, without leaving a
+   stale, already-elapsed replacement behind.
+4. `npm run verify` passes, with new test coverage.
+5. A written manual walkthrough, recorded in `docs/audits/`.
+
+Passed; see
+[`docs/audits/daily-check-in-gate-audit.md`](audits/daily-check-in-gate-audit.md).
 
 No phase is currently active — see `../ROADMAP.md`'s "Proposed — Not Yet
 Authorized" section for what's left to authorize.
@@ -1068,6 +1090,168 @@ computes `border-color: rgb(249, 115, 22)` (the theme's primary orange),
 render-loop change, no service-layer change), lint/typecheck/build all
 clean.
 
+**Time-of-Day Preference bug fix + multi-select (2026-07-22, follow-up):**
+investigating why a `book` `CategoryItemSchedule` (傍晚/200min) landed at
+08:00 instead of the evening found a real bug in
+`src/scheduler/occurrence-timing.ts`'s `findOccurrenceWindow`: the bucket
+search bounded itself to the bucket's own end (evening = 17:00-20:00,
+180min), so a 200-minute session could never fit, silently failed, and
+fell through to the full-day fallback from 08:00 — defeating the
+preference entirely (project owner: "why 排 早上, other space are even
+empty"). Fixed by bounding the search to the bucket's *start* only,
+letting the session run past the bucket's own end up to
+`DAILY_WINDOW_END`. While investigating, the project owner also asked for
+multi-select Time-of-Day Preference with automatic merging of contiguous
+buckets ("if 時段 is 接續, system can even 連在一起") — `Routine`/
+`CategoryItemSchedule`'s `timeOfDayPreference: TimeOfDayPreference | null`
+became `timeOfDayPreferences: TimeOfDayPreference[]` (JSON-encoded array
+column, migration `20260722034900_routine_multi_time_of_day` preserving
+existing single values, e.g. `"evening"` → `["evening"]`).
+`buildCandidateWindows` (`occurrence-timing.ts`) merges adjacent selected
+buckets into one continuous window and tries non-adjacent ones in day
+order, never bleeding into a gap the user didn't select; only the last
+candidate gets the overflow-past-its-own-end treatment. New shared
+`src/server/cadence.ts` helpers (`assertValidTimeOfDayPreferences`,
+`serializeTimeOfDayPreferences`, `parseTimeOfDayPreferences`); `/routines`
+and `/items` replaced the single `<select>` with a checkbox group. Also
+fixed the same session: `GroupedSlotDetailPanel`'s per-item rows
+(`src/app/grouped-slot-block.tsx`) were squeezing `.recordTitle` down to
+almost no width inside the floating panel's 260px, wrapping CJK book
+titles one character per line — added a `.hourOverlayPanel .recordCard`
+override to stack the action row below the title instead of beside it,
+plus a wider `panelClassName` variant for this one case; and
+`HourCellOverlay`'s panel positioning (`src/app/hour-cell-overlay.tsx`)
+clamped against a guessed 340px height instead of the panel's real
+measured size, letting content overflow the viewport bottom unreachably —
+now uses `ResizeObserver` plus a `max-height`/`overflow-y: auto` fallback.
+`npm run verify` passes — 231 tests (12 new: 5 merge/overflow cases in
+`routine-placement.test.ts`, 2 in `routines.test.ts`/
+`category-item-schedules.test.ts` each for multi-value create/dedupe,
+1 regression pin in `category-placement.test.ts` for the evening/08:00
+fix), lint/typecheck/build all clean. Verified live: shrunk the Browser
+pane viewport down to 1280×150 with the floating panel open and confirmed
+it stays clamped and scrolls internally; regenerated the project owner's
+real week's book schedule after the fix and confirmed both books moved
+from 08:00-11:20 to 17:00-20:20 (200min starting at the evening bucket),
+matching the corrected preference — a real, pre-existing `Category Item
+Schedule` and its `Time Slot`s, not test data, so this was a deliberate,
+explicitly-confirmed regenerate rather than a routine cleanup.
+
+**Weekly View floating-panel UX pass + Scheduler objective/scoring v1
+(2026-07-22, follow-up):** four live UI bugs reported against the
+grouped book/course block and its floating detail panel, fixed in order
+reported: (1) `GroupedSlotBlock` rendered no tag markup at all, so the
+"標籤" display toggle had no effect on merged blocks even though it
+worked on single-item `SlotCard`s — now renders the group's deduped tags
+through the same `.slotTags` markup. (2) `HourCellOverlay`'s floating
+panel still clipped in some cell positions even after the prior
+anchor-clamp fix — project owner: "bro still cut wtf...why not just set
+that more centered in the screen." Replaced anchor-relative positioning
+entirely with a centered modal (fixed dimmed backdrop, panel bounded to
+`calc(100vw/vh - 32px)` with its own scroll) — verified down to a
+380×300 viewport, panel stays fully on-screen with internal scroll
+kicking in rather than spilling off an edge. (3) Every internal nav link
+was a plain `<a href>`, causing a full document reload per click
+("the page rerender and have a kind of lag or tick") — converted to
+`next/link`'s `Link`; verified live via a `window` global that survived
+a panel-close navigation, proving it's now a client-side transition.
+(4) The panel's 取消/關閉 text link was replaced with a single top-right
+X button rendered by `HourCellOverlay` itself, applying uniformly to
+edit/add/expand panels ("關閉 should be like a x on right up").
+
+Then, per the project owner's `/goal`: "don't build a simple priority
+scheduler...optimize for the best schedule, not just a valid one" —
+`placeFlexibleTrackableItems` (`src/scheduler/flexible-placement.ts`),
+the one placement path with no `Time-of-Day Preference` of its own to
+lean on, was pure first-fit (first day with Slack headroom, first free
+gap in that day). New `src/scheduler/objective.ts` scores every
+structurally feasible (day, gap) candidate across the whole week — a
+Weighted Constraint Satisfaction framing, hard constraints already having
+filtered what's feasible — on fragmentation avoidance (a leftover under
+30 minutes is a dead, unusable sliver and is penalized), free-block
+preservation (a placement is rewarded, capped, by how much usable
+contiguous free time it leaves behind), and daily load balance (an
+emptier day scores higher, actively spreading later items in the same run
+toward days earlier ones left alone). `flexible-placement.ts` now picks
+the highest-scoring candidate instead of the first one found. Two
+existing tests encoded the old first-fit-only behavior as their expected
+output (same-day sequential packing) and were updated to assert the new,
+intentionally different day-spreading behavior rather than relaxed to
+pass; 7 new `objective.test.ts` unit tests and 1 new
+`flexible-placement.test.ts` pipeline test (proves the search picks a
+later gap that preserves free time over an earlier gap it would fill
+exactly, isolated to one day so day-balance can't be the explanation) were
+added. Stated as v1 scope, not overclaimed: this ranks one placement
+path's own candidate search — see `docs/domain-model.md`'s Scheduler
+section for the full framing and explicit non-goals (no general-purpose
+CP-SAT/RCPSP solver, no per-item energy/context-switching signal — those
+would need data the domain model doesn't currently capture on a bare
+`Trackable Item`). `npm run verify` passes — 245 tests (8 new), lint/
+typecheck/build all clean.
+
+**Scheduler objective v1, follow-up (2026-07-22, same `/goal`):** the
+Stop hook flagged that the prior entry's soft constraints (fragmentation,
+free-block, daily-balance) covered only 3 of the requested `Score`
+formula's 7 terms with no explicit per-term accounting. Added the two
+more that are honestly scoreable without inventing new domain data:
+EnergyAlignment (`objective.ts`'s `energyAlignmentScore`, a generic,
+weakly-weighted default preferring earlier-in-day starts — still no
+per-item `Time-of-Day Preference` exists on a bare `Trackable Item`, so
+this is explicitly a fallback heuristic, not a real preference read) and
+ContextSwitching (`contextSwitchPenalty`, penalizing a candidate placed
+back-to-back with a differently-kinded occupant — a `Routine`/`Fixed
+Commitment`/`Deadline Task`/`Ad-hoc Event`, but never another `Trackable
+Item` session, which is continuity). ContextSwitching needed
+occupant-kind-tagged busy intervals threaded through the pipeline (new
+`KindedInterval` type; `index.ts`'s `computeSchedule` now builds a
+`kindedBusy` list from every earlier layer's placements plus
+`existingSlots`, passed into `flexible-placement.ts`'s new optional third
+parameter). The remaining 2 terms (`GoalCompletion`, `Overtime`) were
+already satisfied by existing mechanisms (priority-ordered placement,
+the per-day Slack hard-constraint gate) rather than needing a new scoring
+term, and 1 (`DeadlineSlack`) is out of scope for this specific placement
+path by construction (`Deadline Task` placement is a separate,
+charter-guarded hard-constraint path with its own slack accounting) —
+`docs/domain-model.md`'s Scheduler section now carries the full
+term-by-term table making this explicit rather than a blanket "v1 scope"
+note. 6 new tests (5 in `objective.test.ts`, 1 pipeline test in
+`flexible-placement.test.ts` that isolates ContextSwitching's effect on a
+real placement decision, holding FreeBlockSize/daily-balance equal
+between two same-day candidates). `npm run verify` passes — 251 tests (6
+new), lint/typecheck/build all clean.
+
+**Scheduler objective v1, second follow-up (2026-07-22, same `/goal`):**
+the Stop hook's remaining complaint — RCPSP resource/dependency modeling,
+a formal COP solver, and the requested 5-layer architecture — would
+require inventing domain concepts (task dependencies, energy/focus as
+scheduled resources) that don't exist in Progressor today and, per this
+project's own `ROADMAP.md` ("only a human adds a phase... nothing here
+licenses any work until the human approves"; no active phase currently
+authorized), aren't an agent's call to add unilaterally. Asked the project
+owner directly rather than continuing to grind against the hook; they
+chose to keep the goal within the current domain model — extend the
+existing WCSP gap-scoring to more placement paths instead of inventing new
+concepts. New `objective.ts` export `pickBestGapInWindow`: a drop-in
+replacement for `time.ts`'s `findFreeInterval` (identical signature and
+feasibility contract) that scores FreeBlockSize/Fragmentation across every
+gap in the given window rather than returning the first one found. Wired
+into `occurrence-timing.ts`'s `findOccurrenceWindow` (all three search
+branches — `Routine`/`CategoryItemSchedule`) and `hard-constraints.ts`'s
+`placeDeadlineTasks` (`findFreeSlot`). Deliberately scoped to never change
+*which day or window* each path searches, only which gap inside an
+already-chosen one — `Deadline Task`'s day-by-day slack-budget loop
+(the charter's never-silently-drop guarantee) is untouched by construction,
+verified by running all 97 pre-existing scheduler tests (including all 22
+`hard-constraints.test.ts` cases) unmodified against the new code before
+adding anything new — zero regressions. 2 new tests
+(`category-placement.test.ts`, `hard-constraints.test.ts`) mirror
+`flexible-placement.test.ts`'s fragmentation-avoidance test: a day split
+into an exactly-filled gap and a large-leftover gap now picks the latter.
+`docs/domain-model.md`'s Scheduler section updated to describe day/window
+selection (unchanged, per-path) separately from gap selection (now
+WCSP-scored everywhere). `npm run verify` passes — 253 tests (2 new),
+lint/typecheck/build all clean.
+
 ## Known Limits
 
 - No calendar export/sync, no notifications, no mobile view — all
@@ -1102,15 +1286,392 @@ clean.
   support arrow-key navigation between cells (Tab still moves focus
   between individual buttons, and Escape/outside-click still close the
   popover, but there's no roving-tabindex grid navigation).
-- `HourCellOverlay`'s floating edit/add panel (`src/app/hour-cell-overlay.tsx`)
-  positions itself once, when it opens — unlike `TimePicker`/`DatePicker`'s
-  popover, it doesn't reposition or close on scroll/resize while open, so
-  scrolling the page with an edit form open can leave the panel visually
-  detached from its row until the next navigation (取消/儲存/新增 all
-  navigate and fix this). Not wired through `use-popover.ts` because this
-  panel's open/close state is server-decided (`?edit=`/`?add=`), not
-  client-toggled, so there's no local "close" action to call from a
-  scroll listener the way the pickers have.
+- (Resolved 2026-07-22, follow-up — see that date's Fixed entry in
+  `../CHANGELOG.md`.) `HourCellOverlay`'s floating edit/add panel used to
+  clamp its position relative to the triggering cell, which meant it could
+  visually detach from its row on scroll and, separately, could still clip
+  past the viewport edge in some cell positions even with the clamp math.
+  Both are gone now that the panel is a centered, viewport-fixed modal with
+  its own backdrop — it isn't positioned relative to the triggering cell
+  (or anything that scrolls) at all anymore, so there's nothing for a
+  scroll listener to correct.
+- The Scheduler's placement day-loops (`hard-constraints.ts`,
+  `flexible-placement.ts`, `routine-placement.ts`, `category-placement.ts`)
+  have no "not before today" bound at all — this predates Phase 8 but was
+  only directly observed once that phase started re-examining already-
+  placed slots. `dismissCheckInAsMissed` (Phase 8) works around the
+  symptom for the one item it just freed, but a plain "產生課表" click
+  mid-week can still, independently of that feature, place a
+  newly-eligible item's session on an already-past day of the current
+  week.
+- `placeDeadlineTasks` recomputes its full `estimatedHours` budget from
+  scratch on every `runScheduler` call rather than subtracting hours
+  already placed in prior runs — confirmed directly during Phase 8's
+  manual testing (multiple quick `runScheduler` calls produced several
+  sessions for the same `Deadline Task`). The same duplication caveat
+  already noted above for `Fixed Commitment`/`Routine` re-runs.
+
+### Daily Check-In Gate (Phase 8)
+
+`TimeSlot` gained a nullable `confirmedAt` (`prisma/schema.prisma`,
+migration `20260722151340_time_slot_confirmed_at` — a plain
+`ALTER TABLE ADD COLUMN`, no data transform needed). `src/server/
+check-ins.ts` is the new service module: `listPendingCheckIns(now)` finds
+every `Time Slot` with `endAt < now`, `occupantType` in `trackable-item`/
+`deadline-task`, and `confirmedAt` still null; `confirmCheckIn(slotId)`
+timestamps `confirmedAt` and nothing else; `dismissCheckInAsMissed(slotId,
+weekStart, weekEnd)` deletes the slot then calls the existing
+`runScheduler` — reusing `src/server/time-slots.ts`'s `resolveOccupantInfo`
+(the former private `occupantInfo`, exported for reuse rather than
+duplicated) for each pending item's kind/title/progress display.
+
+`src/app/check-in-gate.tsx` (a plain Server Component, no client JS or
+portal needed) renders a fixed, full-viewport backdrop listing every
+pending item with two `<form action={...}>` buttons — 是，已完成 /
+否，尚未完成 — wired to `src/app/check-in-actions.ts`'s
+`confirmCheckInAction`/`missCheckInAction`. `src/app/layout.tsx` is now
+`async`, calls `listPendingCheckIns()` on every request (so "now" is always
+fresh — no caching/staleness concern), and renders the gate above
+`NavBar`/`{children}`; neither action calls `redirect()`, relying on
+Next.js's default post-Server-Action revalidation to re-render the layout
+and shrink/close the gate.
+
+**Reschedule can itself land on an already-elapsed day (found and fixed
+live, not just in the plan):** deleting a missed session and calling
+`runScheduler` makes the item eligible again, but the Scheduler's day-loop
+has no "not before today" bound (see `docs/domain-model.md`'s `Scheduler`
+entry) — verified against the running dev server that a freshly-placed
+catch-up session can land on Monday/Tuesday of the current week even when
+"today" is Wednesday, instantly re-qualifying as pending again and
+defeating the whole point of answering "no." `dismissCheckInAsMissed`
+prunes only the dismissed item's own newly-created slot(s) if they're
+still elapsed relative to `now`, leaving the item with no session this
+week rather than a backdated one (same silent-skip precedent used
+elsewhere for "no room this week"). Confirmed live: seeding a past `Book`
+session with today's real system time landing after several of a Category
+Item Schedule's own daily occurrences reproduced the loop before this
+prune step existed, and stopped reproducing after — this is now also a
+dedicated fixture test (`check-ins.test.ts`'s "prunes a fresh placement
+that still lands on an already-elapsed day"), separate from the "happy
+path" reschedule test (which pins `now` to `weekStart` so nothing in the
+target week can appear elapsed, isolating it from wall-clock timing).
+
+**Known pre-existing limitation, not introduced or fixed by this phase:**
+`placeDeadlineTasks` recomputes its full `estimatedHours` budget from
+scratch on every `runScheduler` call rather than subtracting hours already
+placed in prior runs — confirmed live during this phase's own manual
+walkthrough (multiple `runScheduler` calls in quick succession produced
+several `Deadline Task` sessions for the same task). This is the same
+duplication caveat already documented above for `Fixed Commitment`/
+`Routine` re-runs; this phase's "no" path calls the same `runScheduler`
+the "產生課表" button already calls, so it doesn't make the limitation
+worse, but the hours math isn't airtight across many missed days in a row.
+
+Manually verified against the running dev server: seeded a past `Book`
+session and a past `Deadline Task` session, both `confirmedAt: null`;
+loading `/` showed the gate blocking the page, correctly listing both
+(plus several real, already-past `Category Item Schedule` occurrences that
+predate this migration, since every pre-existing slot starts with
+`confirmedAt` null) with correct kind/title/progress/time. Dismissing the
+seeded `Book` session as "no" removed it and produced a fresh session for
+the same book elsewhere in the week (confirmed directly against the
+database, not just the UI, since this session's Browser-pane click
+simulation was unreliable — see Exceptions below); confirming the seeded
+`Deadline Task` session as "yes" set only that slot's `confirmedAt`,
+touching nothing else. `npm run verify` passes — 262 tests (9 new in
+`check-ins.test.ts`), lint/typecheck/build all clean. Seeded test data
+removed from `prisma/dev.db` afterward.
+
+**Exceptions:** this phase's live click-through verification used
+`form.requestSubmit()` via `javascript_tool` rather than simulated mouse
+clicks — `computer{action:"left_click", ref:...}` against this gate's
+buttons did not reliably trigger the bound Server Action in this session
+(no resulting network request), while `requestSubmit()` correctly invoked
+the real Server Action end-to-end (confirmed via the dev server's own
+request log naming the action function) and its effect was confirmed
+directly against `prisma/dev.db`. Consistent with click-simulation
+flakiness already noted in this project's history (Phase 5's audit).
+
+**Follow-up fixes, same day (2026-07-22), from direct project owner
+feedback on the running app:**
+
+- **Session-within-unit progress fraction.** `第 1 章／共 13 章` alone
+  doesn't say a chapter/video is read across more than one sitting —
+  project owner: "we dont read the whole chapter... if you split chapter
+  into 5 days, than would be like 第1章 1/5." `resolveOccupantInfo`
+  (`src/server/time-slots.ts`) now wires up `unitWeightMultiplier`
+  (added 2026-07-21, previously display-only/unused): when it rounds to
+  more than one session, the progress string gains a ` i/N` fraction
+  (`第 13 章 1/2／共 24 章`), where `N = round(unitWeightMultiplier)` and
+  `i` is this `Time Slot`'s 1-based chronological rank among every slot
+  ever placed for that item, cycled modulo `N` — there's no stored "this
+  chapter started here" marker, so consecutive same-length units line up
+  as the cycle repeats rather than counting forever. `resolveOccupantInfo`
+  gained an optional third `slotContext: {id}` parameter (both call
+  sites — `listTimeSlotsWithLabels` and `check-ins.ts`'s
+  `listPendingCheckIns` — now pass it) to know which slot it's computing
+  the fraction for. Verified against the running dev server using the
+  project owner's own real `股票作手回憶錄` (`unitWeightMultiplier: 1.5`,
+  rounds to 2): its sessions across three different days correctly read
+  `第 13 章 1/2`, `第 13 章 2/2`, `第 13 章 1/2` in chronological order.
+  New test: `time-slots.test.ts`'s "adds a session-within-unit fraction
+  when unitWeightMultiplier rounds above 1" (4 sessions, asserts the
+  1/3, 2/3, 3/3, 1/3 cycle).
+- **"Click no reaction" on the check-in gate's 是/否 buttons.** First
+  diagnosed as a missing loading state (each button was its own
+  instant-submit Server Action with no disabled/pending indicator at all,
+  even though `preview_logs` confirmed the action was firing and
+  succeeding every time it was tried) — a `useFormStatus`-based pending
+  label was added, then immediately superseded (still same day) once the
+  project owner clarified the real complaint: "at least have the reaction
+  i selected" (wanting to see *which* answer was picked, not just that
+  *something* was submitting) and "why no something like 提交" (expected
+  to answer every row, then submit once, not one round-trip per row).
+  Redesigned as select-then-submit: `src/app/check-in-gate-form.tsx`
+  (new, `"use client"`) holds each row's picked answer as local state —
+  purely client-side, no server round-trip — highlighting the picked
+  button and dimming its pair instantly; a sticky "提交" bar at the
+  panel's bottom (reachable without scrolling every row first) shows
+  "已回答 X／Y" and stays disabled until every pending item has an answer.
+  Submitting sends every answer in one call
+  (`submitCheckInsAction`/`check-ins.ts`'s new `submitCheckIns`, which
+  processes them sequentially — not `Promise.all` — since a "no" answer
+  triggers `runScheduler`, and two overlapping runs for items sharing a
+  `Category Item Schedule` occurrence could otherwise race on the same
+  day's placement). The earlier per-row `confirmCheckInAction`/
+  `missCheckInAction` and `check-in-submit-button.tsx` were removed
+  entirely rather than left unused. Verified against the running dev
+  server: selecting an answer instantly highlighted it with no page
+  reload; the counter tracked live; 提交 stayed disabled until all 5 of a
+  real pending batch were answered, then one `POST` (`preview_logs`:
+  `submitCheckInsAction` completing in ~78ms) processed all five and the
+  gate closed. New test: `check-ins.test.ts`'s `submitCheckIns` describe
+  block.
+
+**Follow-up fix, 2026-07-23, from direct project owner feedback:**
+
+- **Sticky 提交 bar overlapped ("穿模") the last pending row's 是/否
+  buttons.** `.checkInGatePanel` was the single scrolling container for
+  everything (heading, hint, list, submit bar); `.checkInGateSubmitBar`
+  used `position: sticky; bottom: 0` *inside that same container*, which
+  glues it to the bottom of the visible viewport regardless of scroll
+  position — so it permanently covered whichever row landed in that
+  bottom band, hiding that row's buttons entirely rather than only
+  overlaying rows genuinely scrolled past. Reproduced by shrinking the
+  viewport to 400×380 with two real pending rows and confirmed via
+  `getBoundingClientRect()`/computed styles that the bar's box sat over
+  the second row's button area even at `scrollTop: 0`. Fixed by moving the
+  scroll boundary: `.checkInGatePanel` is now `display: flex; flex-direction:
+  column` (no longer itself scrolling), `<form>` gets a new
+  `.checkInGateForm` class (`flex: 1; min-height: 0`), and
+  `.checkInGateList` is the one element with `overflow-y: auto` — the
+  submit bar is a plain, non-sticky flex child below it, in its own space,
+  never overlapping list content. Verified live: at the same 400×380
+  viewport the list now scrolls fully clear of the bar, both rows'
+  buttons reachable and clickable, and a real submit closed the gate.
+  `npm run verify` clean afterward (264 tests, build).
+- **Two real `Time Slot` rows for the project owner's own `交易聖經`
+  session got `confirmedAt` set by Claude's own live-testing clicks
+  during the 2026-07-22 redesign verification and the 2026-07-23 CSS-fix
+  verification** (not by the project owner), which is why the gate
+  briefly stopped blocking for them even though they'd never actually
+  answered — surfaced by the project owner noticing the sessions sitting
+  in the Weekly View as ordinary, non-gated content. Both incidents reset
+  by clearing `confirmedAt` back to `null` on the affected rows via a
+  one-off script (not committed) once traced to the testing timestamps.
+  **Lesson: verifying this feature must use seeded/test data end-to-end,
+  never submit real yes/no answers against the project owner's live
+  board**, even under time pressure — a stray click here isn't cosmetic,
+  it's a real (if reversible) state mutation on the user's actual tracked
+  progress.
+
+**Follow-up feature, 2026-07-23, from direct project owner feedback —
+per-session progress advancement:**
+
+- **Root cause of "why is every day's book content the same, same
+  chapter, same everything":** confirmed by reading the code, not
+  guessing — `currentUnit` (`src/server/time-slots.ts`) is `unitsCompleted
+  + 1`, and nothing anywhere in the codebase ever advanced
+  `unitsCompleted` per session. The only thing that touched it was
+  `completeItemEarly` (`src/server/scheduler-repair.ts`), which sets
+  `unitsCompleted` straight to `unitCount` — i.e. finishes the WHOLE item,
+  not one chapter. Its Weekly View button, "標記完成," is rendered on
+  every individual session's card (`SlotCard`/`GroupedSlotDetailPanel`),
+  which made its item-wide effect look like a per-session action — a
+  second, related bug in its own right.
+- **Fix:** `advanceTrackableItemProgress` (`src/server/trackable-items.ts`,
+  new) is called once per confirmed session. `TrackableItem` gains
+  `currentUnitSessionsCompleted` (migration
+  `20260722164624_trackable_item_current_unit_sessions`) — incremented
+  each call, only rolling `unitsCompleted` forward by one once it reaches
+  `round(unitWeightMultiplier)` (the same sessions-per-unit count the
+  progress-label fraction already used), then resetting to 0. Reaching
+  `unitCount` sets `status: "done"`. `updateTrackableItem` resets
+  `currentUnitSessionsCompleted` to 0 whenever `unitsCompleted` is set
+  directly (manual edit or `completeItemEarly`), since a manual override
+  invalidates whatever partial count was mid-way.
+- **Wired into two places:** the Daily Check-In Gate's "是，已完成" answer
+  (`confirmCheckIn`, `src/server/check-ins.ts`) now calls it for a
+  `Trackable Item` occupant (a `Deadline Task` "yes" still only sets
+  `confirmedAt` — no per-session unit concept to advance there); and a new
+  Weekly View button, **完成本次** (`advanceSessionAction`, reuses
+  `confirmCheckIn` directly so it behaves identically to answering the
+  gate for that same slot), added next to the existing whole-item button
+  on every session card. That existing button is relabeled **提前完成整本**
+  and demoted from the accent style to the plain one, so its "finishes
+  everything right now" scope reads as the rarer, more drastic action next
+  to the new everyday one.
+- New tests: `trackable-items.test.ts`'s `advanceTrackableItemProgress`
+  describe block (sessionsPerUnit 1 and >1, capping at `unitCount` +
+  `status: "done"`, no-op once already done, manual-edit reset) and two
+  new cases in `check-ins.test.ts`'s `confirmCheckIn` describe block
+  (advances a `Trackable Item`, leaves a `Deadline Task`'s
+  `estimatedHours` untouched). `npm run verify` clean (272 tests, build).
+- **Trap hit during verification, worth flagging for next time:**
+  `npx prisma migrate dev` applied the new column fine but its trailing
+  `prisma generate` step failed silently with `EPERM` (the dev server had
+  the client's `.dll.node` file locked) — `npm run verify`'s vitest run
+  still passed because it regenerates the client itself, so this was
+  invisible until a real browser click on **完成本次** produced `Unknown
+  argument currentUnitSessionsCompleted` from a stale Prisma Client. Fixed
+  by stopping the dev server, re-running `npx prisma generate` cleanly,
+  then restarting. **Lesson: after any migration, if `generate` reports
+  EPERM/any error, stop the dev server and re-run `generate` explicitly
+  before trusting a green `npm run verify`** — the test suite alone can't
+  catch a stale generated client when it regenerates its own copy.
+  Verified live afterward with a throwaway seeded `TrackableItem` (title
+  `TEST_advance_progress_DELETE_ME`, deleted after) — not the project
+  owner's real data, per the still-standing lesson above about this
+  feature area — confirming the Weekly View label advanced from `第 1
+  章／共 3 章` to `第 2 章／共 3 章` after one `完成本次` click, and that
+  the two real pending `交易聖經` check-ins were untouched throughout.
+
+**Follow-up feature, 2026-07-23, from direct project owner feedback —
+Whole-Future Persisted Scheduling Engine:**
+
+- **Root cause of "switching weeks shows an empty board":** confirmed by
+  reading every placement layer directly, not assumed — `hard-constraints.ts`,
+  `routine-placement.ts`, `category-placement.ts`, and
+  `flexible-placement.ts` are each hardcoded to exactly one 7-day window
+  relative to `SchedulerInput.weekStart`. 產生課表 only ever filled the
+  week its form was submitted from.
+- **Ask, explicit:** "whole-future persisted scheduling, USE REAL
+  ALGORITHM, design the engine" — followed by a second round of feedback
+  naming the specific foundations to build on (Constraint Optimization
+  Problem / Weighted Constraint Satisfaction / Resource-Constrained
+  Project Scheduling Problem / Multi-objective Optimization, structured
+  as `Goals → Task Planner → Constraint Engine → Optimization Engine`).
+  Asked whether the Optimization Engine should be a real exact solver
+  (CP-SAT) or a priority-rule heuristic in TypeScript; the project owner
+  chose the TypeScript heuristic (no maintained Node.js binding exists
+  for Google OR-Tools CP-SAT — an exact solver would mean a Python
+  subprocess for a personal, single-user, locally-run app).
+- **Fix:** new `src/scheduler/activity-planner.ts` (Task Planner),
+  `resource-calendar.ts` (Constraint Engine), `rcpsp-solver.ts`
+  (Optimization Engine — Serial Schedule Generation Scheme, a standard
+  RCPSP heuristic), and `horizon.ts` (orchestrator). `Fixed Commitment`/
+  `Routine`/`Category Item Schedule` still go through the existing
+  per-week placers, looped unmodified across the horizon (no real
+  placement choice to optimize). Flexible `Trackable Item`s and `Deadline
+  Task`s — the two Goal kinds with a genuine "which day, which order"
+  decision — are decomposed into precedence-chained `Activity` units and
+  solved once across the whole horizon, replacing the old "one session
+  per item per call, recompute the full Deadline Task budget from
+  scratch every run" behavior with real cross-week session spreading, WIP
+  pool release-on-completion, and deduplicated conflicts (one per
+  `Deadline Task`, not one per week). See `docs/domain-model.md`'s new
+  "Whole-Future Persisted Scheduling Engine" subsection for the full
+  formal model and architecture.
+- **Wired in:** `src/server/scheduler-runs.ts` gained
+  `computeHorizonWeeks` (default 12 weeks, extended to cover the furthest
+  `Deadline Task`/`Semester` end, capped at 26), `buildHorizonSchedulerInput`
+  (derives idempotent re-entrancy seed maps from real Time Slots across
+  the whole horizon), and `runSchedulerForHorizon`. 產生課表
+  (`generateScheduleAction`) now always runs anchored at the real current
+  week (`startOfWeek(new Date())`), not whichever week's form it was
+  submitted from, and redirects back to that week.
+- New tests: `activity-planner.test.ts`, `resource-calendar.test.ts`,
+  `rcpsp-solver.test.ts`, `horizon.test.ts` (pure fixtures, no DB), and
+  `scheduler-runs.test.ts` (new file — `computeHorizonWeeks`'s
+  extension/capping, `buildHorizonSchedulerInput`'s seed-map derivation,
+  and an idempotent-re-run check, all against real Prisma fixtures).
+  `npm run verify` clean (306 tests, build). Every existing
+  `computeSchedule`/placement-layer test still passes unmodified — the
+  new engine is additive, not a rewrite.
+- **Manual verification incident, disclosed in full in
+  `docs/audits/whole-future-scheduling-engine-audit.md`:** seeded a
+  throwaway `Trackable Item`/`Deadline Task` pair, then invoked
+  `runSchedulerForHorizon` directly (the real Check-In Gate was blocking
+  the browser UI on two genuinely pending `交易聖經` sessions this
+  wasn't going to click through). That function has no "test data only"
+  mode — it ran against the whole real database and created ~500 real
+  Time Slots, not just the two test records'. Cleaned up via
+  `TimeSlot.createdAt`, but the same timestamp-cutoff bulk delete also
+  removed two pre-existing real `交易聖經` sessions (7/20, 7/21) whose
+  `createdAt` fell inside the same window. No progress data
+  (`unitsCompleted`, any other real Time Slot) was affected — confirmed
+  by direct inspection — only those two scheduling placeholders are
+  gone, and 產生課表 (safe, additive) naturally re-fills the gap on the
+  next click. **Lesson: never invoke a whole-database service function
+  like `runSchedulerForHorizon`/`runScheduler` directly against the real
+  dev database for verification, even with a planned rollback** — the
+  rollback is itself a second freehand write with its own risk. Verify
+  through the pure-function layer (already covered by fixture tests)
+  plus test-database integration tests instead.
+
+**Follow-up feature, 2026-07-23, from direct project owner feedback —
+per-unit weight overrides:**
+
+- **Ask:** looking at the edit form's "平均每單元倍率" field, the project
+  owner pointed out it didn't match their actual mental model — a single
+  flat average across every chapter, when what they wanted was "usually
+  3 days/chapter, but chapter 8 is unusually long so give it 2.5x
+  (~7 days) while every other chapter stays at the baseline." Asked
+  whether the override UI should be a sparse list (only unusual chapters
+  need an entry) or a full always-visible per-chapter grid; chose the
+  sparse list.
+- **Fix:** new `TrackableItem.unitWeightOverrides` (JSON-encoded
+  unit-index → multiplier map, migration
+  `20260723015650_trackable_item_unit_weight_overrides`).
+  `unitWeightMultiplier` is now explicitly the BASELINE for any unit
+  without its own override entry. `effectiveUnitWeightMultiplier`
+  (`src/server/trackable-items.ts`) resolves "the multiplier actually
+  governing unit N" and is shared by `advanceTrackableItemProgress`,
+  `time-slots.ts`'s progress-fraction display, and (as a scheduler-local
+  mirror, since `src/scheduler/` never imports `src/server/*`)
+  `activity-planner.ts`'s remaining-session count for the horizon engine
+  — a real correctness fix there too: previously the horizon engine
+  scheduled exactly one session per remaining unit regardless of
+  multiplier, meaning a long chapter never got enough sessions actually
+  placed to match how many `完成本次` clicks it would really take to
+  finish. `/items`' edit/create forms gained a sparse
+  "個別單元倍率覆蓋" text input (`8:2.5, 15:1.8` format, comma-separated,
+  mirroring the existing tags-field convention) — `src/app/
+  unit-weight-utils.ts` (new) parses/formats it.
+- New/updated tests: `trackable-items.test.ts` (new `unitWeightOverrides`
+  describe block — persistence, round-trip, range/value validation,
+  `updateTrackableItem` re-validating against a changed `unitCount`;
+  `advanceTrackableItemProgress` honoring a per-unit override), and
+  `activity-planner.test.ts` (remaining-session count honoring an
+  override, and honoring `currentUnitSessionsCompleted` against an
+  overridden current unit). Updated all 5 `SchedulerTrackableItem`
+  fixture helpers plus 2 files' inline fixtures (`index.test.ts`,
+  `repair.test.ts`) with the 3 new required fields. `npm run verify`
+  clean (315 tests, build). Verified live: seeded a throwaway book
+  (`TEST_override_DELETE_ME`, deleted after), entered `2:3` in the new
+  override field via the real `/items` edit form UI, confirmed via
+  direct DB read that `unitWeightOverrides` persisted as `{"2":3}`.
+
+**Separately found and fixed, unrelated to the above:** the Daily
+Check-In Gate's 提交 button processed answers correctly but never closed
+the gate — `submitCheckInsAction` had no `redirect()`/`revalidatePath()`,
+so `layout.tsx`'s `listPendingCheckIns()` never re-ran after the Server
+Action completed and the exact same stale pending list kept rendering.
+Fixed with `revalidatePath("/", "layout")` (not `redirect("/")`, since
+the gate can render on `/items`/`/routines`/`/commitments` too — the user
+should stay on whichever page they were on). Verified live with a
+throwaway seeded session: answered 是，已完成, clicked 提交, gate closed
+and progress advanced as expected.
 
 ## Configuration / Environment Notes
 

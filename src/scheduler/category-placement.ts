@@ -25,18 +25,36 @@ import { addDays, type Interval } from "./time";
 import { hasExistingOccurrence } from "./hard-constraints";
 import { occurrenceDayOffsets, findOccurrenceWindow } from "./occurrence-timing";
 import { selectEligibleItems } from "./flexible-placement";
+import { computeRemainingSessions } from "./activity-planner";
 
 export interface CategoryPlacementResult {
   slots: ScheduledTimeSlot[];
+  // Running per-item session count after this call (seed count in, plus
+  // whatever this call placed) — horizon.ts threads this into the next
+  // week's call so a multi-week horizon stops each item at its own
+  // remaining-chapter budget instead of every eligible day forever.
+  scheduledCountByItemId: Record<string, number>;
 }
 
+// A CategoryItemSchedule occurrence fires every eligible day for as long
+// as the item stays "in-progress" — unlike a Routine (which has no
+// finish line), a Trackable Item has a finite unitCount. Without this
+// cap, a book with e.g. 13 chapters left got a NEW session every single
+// day all the way to the end of the horizon (project owner, 2026-07-23:
+// found scheduling 157 sessions for a 13-chapter book — "她媽13天讀完喔"
+// confusion traced back to this). Reuses activity-planner.ts's own
+// remaining-sessions formula (unitCount/unitsCompleted/multiplier/
+// overrides) so a shared-slot item runs out at the same place a
+// non-shared-slot item would.
 export function placeCategoryItemSchedules(
   input: SchedulerInput,
   busy: Interval[],
+  alreadyScheduledSessionsByItemId: Record<string, number> = {},
 ): CategoryPlacementResult {
   const allBusy = [...busy];
   const slots: ScheduledTimeSlot[] = [];
   const allEligible = selectEligibleItems(input);
+  const scheduledCount = new Map<string, number>(Object.entries(alreadyScheduledSessionsByItemId));
 
   for (const schedule of input.categoryItemSchedules) {
     const eligible = allEligible.filter((item) => item.type === schedule.type);
@@ -49,9 +67,12 @@ export function placeCategoryItemSchedules(
 
       // Only fill in items that don't already have a Time Slot this day —
       // handles re-runs (idempotency, same helper as Routine/Fixed
-      // Commitment) and an item newly promoted into eligibility mid-week.
+      // Commitment) and an item newly promoted into eligibility mid-week —
+      // and that still have remaining chapters left to schedule.
       const itemsNeedingSlot = eligible.filter(
-        (item) => !hasExistingOccurrence(input.existingSlots, "trackable-item", item.id, day),
+        (item) =>
+          !hasExistingOccurrence(input.existingSlots, "trackable-item", item.id, day) &&
+          computeRemainingSessions(item, scheduledCount.get(item.id) ?? 0) > 0,
       );
       if (itemsNeedingSlot.length === 0) {
         continue;
@@ -70,6 +91,7 @@ export function placeCategoryItemSchedules(
           occupantType: "trackable-item",
           occupantId: item.id,
         });
+        scheduledCount.set(item.id, (scheduledCount.get(item.id) ?? 0) + 1);
       }
       // The shared window itself is reserved once, not once per item —
       // the items intentionally overlap each other, not the window itself.
@@ -77,5 +99,5 @@ export function placeCategoryItemSchedules(
     }
   }
 
-  return { slots };
+  return { slots, scheduledCountByItemId: Object.fromEntries(scheduledCount) };
 }

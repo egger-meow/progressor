@@ -1,16 +1,17 @@
 # Examples(範例)
 
-[`linkcheck/`](linkcheck/) 是 loop-engine 腳手架的一份完整填寫實例,對象是一
+[`linkcheck/`](../linkcheck/) 是 loop-engine 腳手架的一份完整填寫實例,對象是一
 個小型的假想 CLI 工具。根目錄腳手架裡的每一則 `TEMPLATE:` 註解都已經換成真實
-內容——沒有殘留的佔位符
-(`../scripts/check-templates.sh examples/linkcheck` 回報乾淨)。
+內容——沒有殘留的佔位符(從 repo 根目錄執行
+`.loop-engine/scripts/check-templates.sh .loop-engine/examples/linkcheck` 回
+報乾淨)。
 
 這個範例本身只提供英文版,沒有繁體中文翻譯——它示範的是「填好之後長什麼樣
 子」,不是要逐字翻譯的說明文件;複製它的**形狀**,不是它的語言。
 
 它存在的目的,是回答「填好的版本實際上長什麼樣子」這個問題——光看模板很難想
-像。搭配 [`../INIT_CHECKLIST.md`](../INIT_CHECKLIST.md)(或其繁體中文版
-[`../INIT_CHECKLIST.zh-TW.md`](../INIT_CHECKLIST.zh-TW.md))一起讀:
+像。搭配 [`../../INIT_CHECKLIST.md`](../../INIT_CHECKLIST.md)(或其繁體中文版
+[`../../zh-TW/INIT_CHECKLIST.md`](../../zh-TW/INIT_CHECKLIST.md))一起讀:
 `linkcheck/` 裡的每一個檔案,都對應那份清單裡的一個步驟。
 
 linkcheck 本身不是一個真實、能運作的工具——它是一個合理的小型 CLI(掃描一棵

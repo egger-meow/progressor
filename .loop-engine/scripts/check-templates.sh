@@ -3,9 +3,10 @@
 # Exit 0 = clean (every template has been filled in and its markers removed).
 # Exit 1 = one or more TEMPLATE: markers remain.
 #
-# Usage:
-#   ./scripts/check-templates.sh            # scan whole repo
-#   ./scripts/check-templates.sh docs        # scan a subfolder
+# Usage (run from the repo root; this script now lives one level deeper,
+# under .loop-engine/scripts/):
+#   ./.loop-engine/scripts/check-templates.sh            # scan whole repo
+#   ./.loop-engine/scripts/check-templates.sh docs        # scan a subfolder
 #
 # This is what INIT_CHECKLIST.md step 10 asks you to do by hand; run this
 # instead once you believe every template is filled in. It's also the
@@ -18,9 +19,11 @@
 # own instructions) don't flag forever.
 #
 # Excluded by design: docs/audits/TEMPLATE.md (meant to stay a blank template
-# forever) and BOOTSTRAP.md/.zh-TW.md (they quote the bootstrap
-# awaiting-authorization marker verbatim as an instruction, and would
-# otherwise flag forever — their exit-0 state detection depends on this).
+# forever) and BOOTSTRAP.md (it quotes the bootstrap awaiting-authorization
+# marker verbatim as an instruction, and would otherwise flag forever — its
+# exit-0 state detection depends on this). The exclude matches by basename,
+# so it also covers the zh-TW/BOOTSTRAP.md translation without a separate
+# entry.
 
 set -euo pipefail
 
@@ -30,7 +33,7 @@ matches=$(grep -rnE --include='*.md' \
     --exclude-dir=.git --exclude-dir=node_modules \
     --exclude-dir=.venv --exclude-dir=venv --exclude-dir=__pycache__ \
     --exclude='TEMPLATE.md' \
-    --exclude='BOOTSTRAP.md' --exclude='BOOTSTRAP.zh-TW.md' \
+    --exclude='BOOTSTRAP.md' \
     '<!-- TEMPLATE:|`TEMPLATE: ' "$scan_path" || true)
 
 if [ -z "$matches" ]; then

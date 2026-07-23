@@ -19,6 +19,7 @@ import {
 import { runScheduler } from "@/server/scheduler-runs";
 import { addDays, startOfWeek } from "../week";
 import { parseTagsInput } from "../tag-utils";
+import { parseUnitWeightOverridesInput } from "../unit-weight-utils";
 
 function redirectToItems(error?: string): never {
   const params = new URLSearchParams();
@@ -44,6 +45,7 @@ function readEditableFields(formData: FormData) {
     unitsCompleted: Number(formData.get("unitsCompleted") ?? 0),
     estimatedDays: Number(formData.get("estimatedDays")),
     unitWeightMultiplier: Number(formData.get("unitWeightMultiplier") ?? 1),
+    unitWeightOverrides: parseUnitWeightOverridesInput(String(formData.get("unitWeightOverrides") ?? "")),
     targetDate: readTargetDate(formData),
     status: String(formData.get("status")) as TrackableItemStatus,
     tags: parseTagsInput(String(formData.get("tags") ?? "")),
@@ -106,14 +108,20 @@ function readDurationMinutes(formData: FormData): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+// A group of checked boxes sharing one name — formData.getAll returns
+// every checked value; unchecked boxes don't appear at all, so no explicit
+// "（無偏好）" sentinel option is needed anymore.
+function readTimeOfDayPreferences(formData: FormData): TimeOfDayPreference[] {
+  return formData.getAll("timeOfDayPreference").map(String) as TimeOfDayPreference[];
+}
+
 export async function setCategoryItemScheduleAction(formData: FormData): Promise<void> {
   const type = String(formData.get("type")) as TrackableItemType;
   try {
-    const timeOfDayRaw = String(formData.get("timeOfDayPreference") ?? "");
     await setCategoryItemSchedule(type, {
       cadence: String(formData.get("cadence")) as RoutineCadence,
       anchor: parseAnchor(String(formData.get("anchor") ?? "")),
-      timeOfDayPreference: timeOfDayRaw ? (timeOfDayRaw as TimeOfDayPreference) : null,
+      timeOfDayPreferences: readTimeOfDayPreferences(formData),
       preferredStartTime: readPreferredStartTime(formData) ?? null,
       durationMinutes: readDurationMinutes(formData),
     });

@@ -3,8 +3,8 @@
 [`linkcheck/`](linkcheck/) is a complete, fully-filled-in instance of the
 loop-engine scaffold for a small hypothetical CLI tool. Every `TEMPLATE:`
 comment from the root scaffold has been replaced with real content — no
-placeholders remain (`../scripts/check-templates.sh examples/linkcheck`
-reports clean).
+placeholders remain (from the repo root, `.loop-engine/scripts/
+check-templates.sh .loop-engine/examples/linkcheck` reports clean).
 
 It exists to answer "what does a *filled-in* version of this actually look
 like," which is hard to picture from templates alone. Read it alongside

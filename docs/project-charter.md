@@ -94,4 +94,4 @@ memory of a past session as the record of what was decided.
   translated into the docs above, then cleared).
 
 If a decision isn't answered by any doc listed here, that's a signal to stop
-and ask a human rather than infer — see `../LOOP_ENGINEERING.md`.
+and ask a human rather than infer — see `../.loop-engine/LOOP_ENGINEERING.md`.

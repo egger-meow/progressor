@@ -29,7 +29,7 @@ function schedule(
     type: "book",
     cadence: "daily",
     anchor: null,
-    timeOfDayPreference: null,
+    timeOfDayPreferences: [],
     preferredStartTime: null,
     durationMinutes: 120,
     ...overrides,
@@ -46,6 +46,9 @@ function trackableItem(overrides: Partial<SchedulerTrackableItem> = {}): Schedul
     unitCount: 10,
     unitsCompleted: 0,
     estimatedDays: 5,
+    unitWeightMultiplier: 1,
+    unitWeightOverrides: {},
+    currentUnitSessionsCompleted: 0,
     ...overrides,
   };
 }
@@ -185,7 +188,7 @@ describe("placeCategoryItemSchedules", () => {
   it("prefers the Time-of-Day Preference sub-window when it has room", () => {
     const input = baseInput({
       categoryItemSchedules: [
-        schedule({ cadence: "weekly", anchor: [1], timeOfDayPreference: "evening" }),
+        schedule({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["evening"] }),
       ],
       trackableItems: [trackableItem()],
       wipLimits: [{ type: "book", maxInProgress: 3 }],
@@ -197,6 +200,33 @@ describe("placeCategoryItemSchedules", () => {
       {
         startAt: new Date("2026-07-13T17:00:00"),
         endAt: new Date("2026-07-13T19:00:00"),
+        occupantType: "trackable-item",
+        occupantId: "ti-1",
+      },
+    ]);
+  });
+
+  it("still starts inside the Time-of-Day Preference bucket when duration is longer than the bucket itself", () => {
+    // Regression: evening's bucket is 17:00-20:00 (180min). A 200min session
+    // can never fit entirely inside it, so the search must not require
+    // ending by the bucket's own end — it should still start at 17:00 and
+    // run past 20:00, rather than silently failing the bucket search and
+    // falling through to the full-day fallback (which would ignore the
+    // preference entirely and land at 08:00 — project owner, 2026-07-22).
+    const input = baseInput({
+      categoryItemSchedules: [
+        schedule({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["evening"], durationMinutes: 200 }),
+      ],
+      trackableItems: [trackableItem()],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+
+    const result = placeCategoryItemSchedules(input, []);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T17:00:00"),
+        endAt: new Date("2026-07-13T20:20:00"),
         occupantType: "trackable-item",
         occupantId: "ti-1",
       },
@@ -227,7 +257,7 @@ describe("placeCategoryItemSchedules", () => {
   it("falls back to the full daily window when the preferred sub-window has no room", () => {
     const input = baseInput({
       categoryItemSchedules: [
-        schedule({ cadence: "weekly", anchor: [1], timeOfDayPreference: "evening" }),
+        schedule({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["evening"] }),
       ],
       trackableItems: [trackableItem()],
       wipLimits: [{ type: "book", maxInProgress: 3 }],
@@ -261,6 +291,68 @@ describe("placeCategoryItemSchedules", () => {
     const result = placeCategoryItemSchedules(input, busy);
 
     expect(result.slots).toEqual([]);
+  });
+
+  it("picks a gap that preserves free time over an earlier gap it would fill exactly (WCSP gap scoring, 2026-07-22)", () => {
+    // Same reasoning/construction as flexible-placement.test.ts's analogous
+    // test: the full daily window (08:00-23:00, no Time-of-Day Preference
+    // set, so this hits findOccurrenceWindow's full-day fallback) is split
+    // by one busy block into gap1 = 08:00-10:00 (exactly the 120min
+    // duration, zero leftover) and gap2 = 13:40-23:00 (large leftover).
+    // Plain first-fit (the old findFreeInterval) would take gap1 since
+    // it's found first; pickBestGapInWindow scores gap2 higher (a bigger
+    // leftover beats a zero leftover) and takes that instead.
+    const input = baseInput({
+      categoryItemSchedules: [schedule({ cadence: "weekly", anchor: [1] })], // Monday only
+      trackableItems: [trackableItem()],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T10:00:00"), end: new Date("2026-07-13T13:40:00") },
+    ];
+
+    const result = placeCategoryItemSchedules(input, busy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T13:40:00"),
+        endAt: new Date("2026-07-13T15:40:00"),
+        occupantType: "trackable-item",
+        occupantId: "ti-1",
+      },
+    ]);
+  });
+
+  it("stops placing an item once its own remaining-chapter budget is exhausted, even though the cadence would keep firing", () => {
+    // Project owner, 2026-07-23: a shared daily book slot kept handing out
+    // a NEW session every single day forever, with no regard for how many
+    // chapters the book actually had left — 157 sessions for a 13-chapter
+    // book. A daily cadence over 7 days must stop once unitCount is used up.
+    const input = baseInput({
+      categoryItemSchedules: [schedule({ cadence: "daily" })],
+      trackableItems: [trackableItem({ unitCount: 3, unitsCompleted: 0 })], // 3 sessions total
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+
+    const result = placeCategoryItemSchedules(input, []);
+
+    expect(result.slots).toHaveLength(3);
+    expect(result.scheduledCountByItemId["ti-1"]).toBe(3);
+  });
+
+  it("honors alreadyScheduledSessionsByItemId passed in (idempotency across a multi-week horizon run)", () => {
+    const input = baseInput({
+      categoryItemSchedules: [schedule({ cadence: "daily" })],
+      trackableItems: [trackableItem({ unitCount: 3, unitsCompleted: 0 })],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+
+    // 2 sessions already accounted for (e.g. placed by an earlier week in
+    // the same horizon run) — only 1 remains.
+    const result = placeCategoryItemSchedules(input, [], { "ti-1": 2 });
+
+    expect(result.slots).toHaveLength(1);
+    expect(result.scheduledCountByItemId["ti-1"]).toBe(3);
   });
 
   it("keeps book and course schedules independently configured, but each still avoids the other's window (can't watch both at once)", () => {

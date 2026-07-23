@@ -32,10 +32,20 @@ describe("createRoutine", () => {
       category: "gym",
       cadence: "weekly",
       anchor: [1, 3],
-      timeOfDayPreference: "morning",
+      timeOfDayPreferences: ["morning"],
     });
     expect(routine.anchor).toEqual([1, 3]);
-    expect(routine.timeOfDayPreference).toBe("morning");
+    expect(routine.timeOfDayPreferences).toEqual(["morning"]);
+  });
+
+  it("creates a routine with multiple time-of-day preferences, deduped and sorted", async () => {
+    const routine = await createRoutine({
+      title: "Reading",
+      category: "reading",
+      cadence: "daily",
+      timeOfDayPreferences: ["night", "morning", "morning"],
+    });
+    expect(routine.timeOfDayPreferences).toEqual(["morning", "night"]);
   });
 
   it("creates a monthly routine with a day-of-month anchor", async () => {
@@ -94,7 +104,7 @@ describe("createRoutine", () => {
         category: "gym",
         cadence: "daily",
         // @ts-expect-error deliberately invalid input to prove runtime validation
-        timeOfDayPreference: "midnight",
+        timeOfDayPreferences: ["midnight"],
       }),
     ).rejects.toThrow(/Invalid Time-of-Day Preference/);
   });
@@ -217,18 +227,18 @@ describe("updateRoutine", () => {
     ).rejects.toThrow(/requires a non-empty anchor/);
   });
 
-  it("clears timeOfDayPreference when explicitly set to null", async () => {
+  it("clears timeOfDayPreferences when explicitly set to []", async () => {
     const routine = await createRoutine({
       title: "Gym",
       category: "gym",
       cadence: "weekly",
       anchor: [1],
-      timeOfDayPreference: "morning",
+      timeOfDayPreferences: ["morning"],
     });
     const updated = await updateRoutine(routine.id, {
-      timeOfDayPreference: null,
+      timeOfDayPreferences: [],
     });
-    expect(updated.timeOfDayPreference).toBeNull();
+    expect(updated.timeOfDayPreferences).toEqual([]);
   });
 
   it("throws for a nonexistent routine", async () => {

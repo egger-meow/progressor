@@ -29,7 +29,7 @@ function routine(overrides: Partial<SchedulerRoutine> = {}): SchedulerRoutine {
     category: "gym",
     cadence: "daily",
     anchor: null,
-    timeOfDayPreference: null,
+    timeOfDayPreferences: [],
     preferredStartTime: null,
     durationMinutes: 120,
     ...overrides,
@@ -106,7 +106,7 @@ describe("placeRoutines", () => {
   it("prefers the Time-of-Day Preference sub-window when it has room", () => {
     const input = baseInput({
       routines: [
-        routine({ cadence: "weekly", anchor: [1], timeOfDayPreference: "evening" }),
+        routine({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["evening"] }),
       ],
     });
 
@@ -125,7 +125,7 @@ describe("placeRoutines", () => {
   it("falls back to the full daily window when the preferred sub-window has no room", () => {
     const input = baseInput({
       routines: [
-        routine({ cadence: "weekly", anchor: [1], timeOfDayPreference: "evening" }),
+        routine({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["evening"] }),
       ],
     });
     const busy = [
@@ -150,7 +150,7 @@ describe("placeRoutines", () => {
         routine({
           cadence: "weekly",
           anchor: [1],
-          timeOfDayPreference: "evening", // would otherwise land at 17:00
+          timeOfDayPreferences: ["evening"], // would otherwise land at 17:00
           preferredStartTime: "14:30",
         }),
       ],
@@ -198,7 +198,7 @@ describe("placeRoutines", () => {
         routine({
           cadence: "weekly",
           anchor: [1],
-          timeOfDayPreference: "evening",
+          timeOfDayPreferences: ["evening"],
           preferredStartTime: "14:30",
         }),
       ],
@@ -230,6 +230,135 @@ describe("placeRoutines", () => {
     const result = placeRoutines(input, busy);
 
     expect(result.slots).toEqual([]);
+  });
+
+  it("merges adjacent selected Time-of-Day buckets into one continuous window", () => {
+    // morning (08:00-12:00) + afternoon (12:00-17:00) are back-to-back, so
+    // a duration that can't fit in morning alone should still be found
+    // inside the merged 08:00-17:00 window, landing right at 12:00 rather
+    // than falling through to the full-day fallback.
+    const input = baseInput({
+      routines: [
+        routine({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["morning", "afternoon"] }),
+      ],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T08:00:00"), end: new Date("2026-07-13T12:00:00") },
+    ];
+
+    const result = placeRoutines(input, busy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T12:00:00"),
+        endAt: new Date("2026-07-13T14:00:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("selecting all 4 buckets is equivalent to the full daily window", () => {
+    const input = baseInput({
+      routines: [
+        routine({
+          cadence: "weekly",
+          anchor: [1],
+          timeOfDayPreferences: ["morning", "afternoon", "evening", "night"],
+          durationMinutes: 60,
+        }),
+      ],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T08:00:00"), end: new Date("2026-07-13T21:00:00") },
+    ];
+
+    const result = placeRoutines(input, busy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T21:00:00"),
+        endAt: new Date("2026-07-13T22:00:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("respects a gap between non-adjacent selected buckets instead of bleeding into it", () => {
+    // morning + night, skipping afternoon/evening. Morning is fully busy,
+    // so it must move to night's own window, never into the unselected
+    // afternoon/evening gap in between.
+    const input = baseInput({
+      routines: [
+        routine({ cadence: "weekly", anchor: [1], timeOfDayPreferences: ["morning", "night"] }),
+      ],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T08:00:00"), end: new Date("2026-07-13T12:00:00") },
+    ];
+
+    const result = placeRoutines(input, busy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T20:00:00"),
+        endAt: new Date("2026-07-13T22:00:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("only the last selected candidate overflows past its own end; an earlier one does not", () => {
+    // morning + night. Morning's own bucket (08:00-12:00, 240min) can't
+    // fit a 300min session even though there's technically room later in
+    // the day before night — it must not silently expand into the
+    // afternoon/evening gap. It should move on to night, which (being
+    // last) is allowed to run past its own 23:00 window... but the daily
+    // window ends at 23:00 too, so with nothing free there either, this
+    // falls all the way through to the true full-day fallback.
+    const input = baseInput({
+      routines: [
+        routine({
+          cadence: "weekly",
+          anchor: [1],
+          timeOfDayPreferences: ["morning", "night"],
+          durationMinutes: 300,
+        }),
+      ],
+    });
+
+    const result = placeRoutines(input, []);
+
+    // Nothing is busy, so the true full-day fallback (08:00 start) is what
+    // actually has room first — this pins that morning's own bucket end
+    // (12:00) was never silently extended into the gap to "make room."
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T08:00:00"),
+        endAt: new Date("2026-07-13T13:00:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
+  });
+
+  it("empty timeOfDayPreferences behaves exactly like no preference at all", () => {
+    const input = baseInput({
+      routines: [routine({ cadence: "weekly", anchor: [1], timeOfDayPreferences: [] })],
+    });
+
+    const result = placeRoutines(input, []);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T08:00:00"),
+        endAt: new Date("2026-07-13T10:00:00"),
+        occupantType: "routine",
+        occupantId: "r-1",
+      },
+    ]);
   });
 
   it("does not double-book two Routines competing for the same window", () => {

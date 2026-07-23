@@ -17,9 +17,10 @@ data layer + manual weekly view only — no auto-scheduling yet. See
 ## Before you change anything
 
 **Not initialized yet?** If the files below still carry `TEMPLATE:`
-markers (`./scripts/check-templates.sh` lists them), there is nothing to
-loop on — this project hasn't been through init. Don't improvise: follow
-the agent procedure in [`BOOTSTRAP.md`](BOOTSTRAP.md); if the human has
+markers (`.loop-engine/scripts/check-templates.sh` lists them), there is
+nothing to loop on — this project hasn't been through init. Don't
+improvise: follow the agent procedure in
+[`BOOTSTRAP.md`](.loop-engine/BOOTSTRAP.md); if the human has
 already described their project in chat, that's your intake — start from
 it. If a bootstrap was already underway, use that file's "Locating
 yourself" table. Everything below applies once init is complete.
@@ -39,17 +40,18 @@ Read, in this order, if you haven't already this session:
 6. [`docs/status.md`](docs/status.md) and
    [`docs/build-status.md`](docs/build-status.md) — what currently exists.
 
-Do **not** add `CHANGELOG.md`, `docs/audits/`, or `FRAMEWORK_FEEDBACK.md`
-to this routine orientation read. They're append-only history — read on
-demand only (a specific audit via its index, the `[Unreleased]` section
-when adding an entry), never as a blanket read for context. See
-`LOOP_ENGINEERING.md`, "Reading discipline." `FRAMEWORK_FEEDBACK.md` is
-write-only during loops: when the framework itself misleads you or wastes
-tokens, append a short entry per that file's header and move on — nothing
-in it licenses work.
+Do **not** add `CHANGELOG.md`, `docs/audits/`, or
+`.loop-engine/FRAMEWORK_FEEDBACK.md` to this routine orientation read.
+They're append-only history — read on demand only (a specific audit via
+its index, the `[Unreleased]` section when adding an entry), never as a
+blanket read for context. See `.loop-engine/LOOP_ENGINEERING.md`,
+"Reading discipline." `.loop-engine/FRAMEWORK_FEEDBACK.md` is write-only
+during loops: when the framework itself misleads you or wastes tokens,
+append a short entry per that file's header and move on — nothing in it
+licenses work.
 
 Full procedure (the two loops, the inbox protocol, both verification gates):
-[`LOOP_ENGINEERING.md`](LOOP_ENGINEERING.md).
+[`LOOP_ENGINEERING.md`](.loop-engine/LOOP_ENGINEERING.md).
 
 ## Commands
 

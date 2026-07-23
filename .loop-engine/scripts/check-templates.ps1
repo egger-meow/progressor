@@ -4,9 +4,10 @@ Scans the repo for leftover `TEMPLATE:` markers left in doc scaffolding.
 Exit 0 = clean (every template has been filled in and its markers removed).
 Exit 1 = one or more TEMPLATE: markers remain.
 
-Usage:
-  pwsh scripts/check-templates.ps1            # scan whole repo
-  pwsh scripts/check-templates.ps1 -Path docs # scan a subfolder
+Usage (run from the repo root; this script now lives one level deeper,
+under .loop-engine/scripts/):
+  pwsh .loop-engine/scripts/check-templates.ps1            # scan whole repo
+  pwsh .loop-engine/scripts/check-templates.ps1 -Path docs # scan a subfolder
 
 This is what INIT_CHECKLIST.md step 10 asks you to do by hand; run this
 instead once you believe every template is filled in. It's also the natural
@@ -18,9 +19,11 @@ and inline placeholders (`TEMPLATE: <...>`) -- so docs that merely mention
 TEMPLATE: markers in prose don't flag forever.
 
 Excluded by design: docs/audits/TEMPLATE.md (meant to stay a blank template
-forever) and BOOTSTRAP.md/.zh-TW.md (they quote the bootstrap
-awaiting-authorization marker verbatim as an instruction, and would
-otherwise flag forever -- their exit-0 state detection depends on this).
+forever) and BOOTSTRAP.md (it quotes the bootstrap awaiting-authorization
+marker verbatim as an instruction, and would otherwise flag forever -- its
+exit-0 state detection depends on this). The exclude matches by basename,
+so it also covers the zh-TW/BOOTSTRAP.md translation without a separate
+entry.
 #>
 param(
     [string]$Path = "."
@@ -33,7 +36,6 @@ $files = Get-ChildItem -Path $Path -Recurse -File -Include *.md |
         $full = $_.FullName
         $_.Name -ne 'TEMPLATE.md' -and
         $_.Name -ne 'BOOTSTRAP.md' -and
-        $_.Name -ne 'BOOTSTRAP.zh-TW.md' -and
         -not ($excludeDirs | Where-Object { $full -match [regex]::Escape("\$_\") })
     }
 

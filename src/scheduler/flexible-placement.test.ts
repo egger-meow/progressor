@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { placeFlexibleTrackableItems } from "./flexible-placement";
+import type { KindedInterval } from "./objective";
 import type { SchedulerInput, SchedulerTrackableItem } from "./types";
 
 const weekStart = new Date("2026-07-13T00:00:00"); // Monday
@@ -42,6 +43,9 @@ function trackableItem(overrides: Partial<SchedulerTrackableItem> = {}): Schedul
     unitCount: 10,
     unitsCompleted: 0,
     estimatedDays: 5,
+    unitWeightMultiplier: 1,
+    unitWeightOverrides: {},
+    currentUnitSessionsCompleted: 0,
     ...overrides,
   };
 }
@@ -131,7 +135,18 @@ describe("placeFlexibleTrackableItems", () => {
     expect(result.slots.map((s) => s.occupantId).sort()).toEqual(["ti-1", "ti-2"]);
   });
 
-  it("places higher-priority items in earlier free time than lower-priority items", () => {
+  it("places higher-priority items first, and lets day-balance spread the next one to a still-empty day", () => {
+    // Both candidates start with an identical, maximally-good free-block
+    // score (a fully empty 08:00-23:00 day) since nothing is busy yet, so
+    // ties resolve to the earliest day in search order -- ti-first lands
+    // Monday 08:00. Once ti-first occupies part of Monday, every other day
+    // is *more* empty than Monday (objective.ts's daily-balance term), so
+    // ti-second is steered to Tuesday instead of stacking onto Monday's
+    // remaining 10:00-23:00 gap the way plain first-fit packing would have
+    // done -- this is the intended "optimize for the best schedule, not
+    // just a valid one" behavior (project owner, 2026-07-22 /goal), not a
+    // regression: priority still decides placement *order*, but "best slot"
+    // now also accounts for spreading load across the week.
     const input = baseInput({
       trackableItems: [
         trackableItem({ id: "ti-second", status: "in-progress", priority: 2 }),
@@ -144,8 +159,8 @@ describe("placeFlexibleTrackableItems", () => {
 
     const first = result.slots.find((s) => s.occupantId === "ti-first")!;
     const second = result.slots.find((s) => s.occupantId === "ti-second")!;
-    expect(first.startAt).toEqual(new Date("2026-07-13T08:00:00"));
-    expect(second.startAt).toEqual(new Date("2026-07-13T10:00:00"));
+    expect(first.startAt).toEqual(new Date("2026-07-13T08:00:00")); // Monday
+    expect(second.startAt).toEqual(new Date("2026-07-14T08:00:00")); // Tuesday
   });
 
   it("respects the daily Slack minimum, skipping to the next day once a day is packed enough", () => {
@@ -176,10 +191,22 @@ describe("placeFlexibleTrackableItems", () => {
 
     const result = placeFlexibleTrackableItems(input, busy);
 
+    // The core invariant this test protects: never overlaps the busy
+    // interval, on any day. Where exactly it lands beyond that is
+    // objective.ts's call -- here, Monday's remaining 10:00-23:00 gap and
+    // every other day's fully-empty 08:00-23:00 window both score a
+    // maximal free-block, so the daily-balance term picks the emptier day
+    // (Tuesday) over Monday's partially-used one, same reasoning as the
+    // priority-order test above.
+    for (const slot of result.slots) {
+      const overlapsHardConstraint =
+        slot.startAt < busy[0].end && busy[0].start < slot.endAt;
+      expect(overlapsHardConstraint).toBe(false);
+    }
     expect(result.slots).toEqual([
       {
-        startAt: new Date("2026-07-13T10:00:00"),
-        endAt: new Date("2026-07-13T12:00:00"),
+        startAt: new Date("2026-07-14T08:00:00"),
+        endAt: new Date("2026-07-14T10:00:00"),
         occupantType: "trackable-item",
         occupantId: "ti-1",
       },
@@ -204,5 +231,93 @@ describe("placeFlexibleTrackableItems", () => {
     const result = placeFlexibleTrackableItems(input, busy);
 
     expect(result.slots).toEqual([]);
+  });
+
+  it("picks a gap that preserves free time over an earlier gap it would fill exactly, when both are on the only available day", () => {
+    // Monday's window (08:00-23:00) is carved into two gaps by one busy
+    // block: gap1 = 08:00-10:00 (exactly 2h -- fits the session with zero
+    // leftover) and gap2 = 13:40-23:00 (9h20m -- fits with a large, useful
+    // leftover). Plain first-fit would take gap1 (the earlier one) since
+    // it's found first; objective.ts's free-block term scores gap2 higher
+    // (leftoverMs 0 vs. ~7h20m), so the optimizer takes gap2 instead. Every
+    // other day is filled solid so this isolates the choice to these two
+    // gaps rather than day-balance picking a different day entirely.
+    const input = baseInput({
+      trackableItems: [trackableItem({ status: "in-progress" })],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+    const otherDaysFull = Array.from({ length: 6 }, (_, offset) => {
+      const day = new Date(weekStart);
+      day.setDate(day.getDate() + offset + 1);
+      const param = dateParam(day);
+      return {
+        start: new Date(`${param}T08:00:00`),
+        end: new Date(`${param}T23:00:00`),
+      };
+    });
+    const busy = [
+      { start: new Date("2026-07-13T10:00:00"), end: new Date("2026-07-13T13:40:00") },
+      ...otherDaysFull,
+    ];
+
+    const result = placeFlexibleTrackableItems(input, busy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T13:40:00"),
+        endAt: new Date("2026-07-13T15:40:00"),
+        occupantType: "trackable-item",
+        occupantId: "ti-1",
+      },
+    ]);
+  });
+
+  it("avoids a gap that's back-to-back with a different-kind occupant when an equally-good gap without one exists (ContextSwitching)", () => {
+    // Monday's window is carved into two gaps, both leftover 310min (well
+    // past the free-block cap, so they tie on that term) and both on the
+    // same day (tying on daily-balance too) -- the only difference is what
+    // touches each gap's start: gap1 is preceded by a Fixed Commitment (a
+    // genuine activity switch), gap2 is preceded by another Trackable Item
+    // session (continuity, never penalized). Every other day is filled
+    // solid so day-balance can't be the explanation for whichever gap
+    // wins.
+    const input = baseInput({
+      trackableItems: [trackableItem({ status: "in-progress" })],
+      wipLimits: [{ type: "book", maxInProgress: 3 }],
+    });
+    const fixedCommitmentBlock = {
+      start: new Date("2026-07-13T08:00:00"),
+      end: new Date("2026-07-13T08:20:00"),
+    };
+    const anotherTrackableItemSession = {
+      start: new Date("2026-07-13T15:30:00"),
+      end: new Date("2026-07-13T15:50:00"),
+    };
+    const otherDaysFull = Array.from({ length: 6 }, (_, offset) => {
+      const day = new Date(weekStart);
+      day.setDate(day.getDate() + offset + 1);
+      const param = dateParam(day);
+      return {
+        start: new Date(`${param}T08:00:00`),
+        end: new Date(`${param}T23:00:00`),
+      };
+    });
+    const busy = [fixedCommitmentBlock, anotherTrackableItemSession, ...otherDaysFull];
+    const kindedBusy: KindedInterval[] = [
+      { ...fixedCommitmentBlock, occupantType: "fixed-commitment" },
+      { ...anotherTrackableItemSession, occupantType: "trackable-item" },
+      ...otherDaysFull.map((interval) => ({ ...interval, occupantType: "fixed-commitment" as const })),
+    ];
+
+    const result = placeFlexibleTrackableItems(input, busy, kindedBusy);
+
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T15:50:00"),
+        endAt: new Date("2026-07-13T17:50:00"),
+        occupantType: "trackable-item",
+        occupantId: "ti-1",
+      },
+    ]);
   });
 });

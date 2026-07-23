@@ -229,6 +229,34 @@ describe("placeDeadlineTasks", () => {
     ]);
   });
 
+  it("picks a gap that preserves free time over an earlier gap it would fill exactly, within the day it already chose (WCSP gap scoring, 2026-07-22)", () => {
+    // Monday is split by one busy block into gap1 = 08:00-10:00 (exactly
+    // the 2h chunk, zero leftover) and gap2 = 13:40-23:00 (large leftover).
+    // Which *day* placeDeadlineTasks picks is untouched by this (still
+    // Monday, same as the tests above) -- only which gap within that day
+    // changes, from the old first-fit (gap1) to the higher-scoring gap2.
+    const input = baseInput({
+      deadlineTasks: [
+        { id: "dt-1", title: "Essay", dueAt: new Date("2026-07-16T12:00:00"), estimatedHours: 2 },
+      ],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T10:00:00"), end: new Date("2026-07-13T13:40:00") },
+    ];
+
+    const result = placeDeadlineTasks(input, busy);
+
+    expect(result.conflicts).toEqual([]);
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T13:40:00"),
+        endAt: new Date("2026-07-13T15:40:00"),
+        occupantType: "deadline-task",
+        occupantId: "dt-1",
+      },
+    ]);
+  });
+
   it("reports a conflict, and places nothing, when the deadline has already passed", () => {
     const input = baseInput({
       deadlineTasks: [
@@ -311,6 +339,63 @@ describe("placeDeadlineTasks", () => {
         message: expect.stringContaining("Huge Project"),
       },
     ]);
+  });
+
+  it("still places a genuinely small final remainder even on a day whose slack headroom alone is below MIN_DEADLINE_SESSION_MS", () => {
+    // Regression: the day-budget gate used to compare the day's whole
+    // slack headroom (20min here) against MIN_DEADLINE_SESSION_MS
+    // (30min) and skip the day outright — even though the task's actual
+    // remaining work (10min) easily fits within that 20min headroom (and
+    // within the literal free 19:40-23:00 gap). constants.ts's own
+    // comment on MIN_DEADLINE_SESSION_MS promises this doesn't block a
+    // genuinely small final remainder; this pins that it actually doesn't.
+    const input = baseInput({
+      deadlineTasks: [
+        { id: "dt-1", title: "Tiny Leftover", dueAt: new Date("2026-07-14T00:00:00"), estimatedHours: 1 / 6 }, // 10 minutes
+      ],
+    });
+    // Slack-bounded daily budget is 12h (720min); filling 700min of it
+    // leaves only 20min of budget headroom, below the 30min
+    // MIN_DEADLINE_SESSION_MS threshold — but still enough for 10min.
+    const busy = [
+      { start: new Date("2026-07-13T08:00:00"), end: new Date("2026-07-13T19:40:00") },
+    ];
+
+    const result = placeDeadlineTasks(input, busy);
+
+    expect(result.conflicts).toEqual([]);
+    expect(result.slots).toEqual([
+      {
+        startAt: new Date("2026-07-13T19:40:00"),
+        endAt: new Date("2026-07-13T19:50:00"),
+        occupantType: "deadline-task",
+        occupantId: "dt-1",
+      },
+    ]);
+  });
+
+  it("skips a day whose slack headroom is a tiny sliver when more of the task remains, instead of wedging in", () => {
+    // Contrast with the test above: here remainingMs (2h) is much bigger
+    // than the day's 20min headroom, so this is NOT the final remainder —
+    // the tiny sliver should still be skipped in favor of trying the next
+    // day, matching MIN_DEADLINE_SESSION_MS's "isn't worth searching a day
+    // for" intent for non-final chunks.
+    const input = baseInput({
+      deadlineTasks: [
+        { id: "dt-1", title: "Big Task", dueAt: new Date("2026-07-16T23:00:00"), estimatedHours: 2 },
+      ],
+    });
+    const busy = [
+      { start: new Date("2026-07-13T08:00:00"), end: new Date("2026-07-13T19:40:00") },
+    ];
+
+    const result = placeDeadlineTasks(input, busy);
+
+    expect(result.conflicts).toEqual([]);
+    expect(result.slots).toHaveLength(1);
+    // Placed on 07-14 (a fully free day), not squeezed into 07-13's 20min
+    // sliver.
+    expect(result.slots[0].startAt).toEqual(new Date("2026-07-14T08:00:00"));
   });
 
   it("does not pack a day past the Slack minimum even when a task has plenty of hours left", () => {

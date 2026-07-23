@@ -3,9 +3,11 @@ import {
   assertValidCadence,
   assertValidDurationMinutes,
   assertValidPreferredStartTime,
-  assertValidTimeOfDay,
+  assertValidTimeOfDayPreferences,
   normalizeAnchor,
   parseAnchor,
+  parseTimeOfDayPreferences,
+  serializeTimeOfDayPreferences,
   type RoutineCadence,
   type TimeOfDayPreference,
 } from "./cadence";
@@ -18,7 +20,8 @@ export interface SetCategoryItemScheduleInput {
   // Weekday(s) 0-6 for "weekly", day(s)-of-month 1-31 for "monthly".
   // Ignored (must be omitted) for "daily".
   anchor?: number[];
-  timeOfDayPreference?: TimeOfDayPreference | null;
+  // Multi-select (2026-07-22) — omitted or [] means no preference.
+  timeOfDayPreferences?: TimeOfDayPreference[];
   preferredStartTime?: string | null;
   durationMinutes?: number;
 }
@@ -35,6 +38,15 @@ function withParsedAnchor<T extends { anchor: string | null }>(
   return { ...schedule, anchor: parseAnchor(schedule.anchor) };
 }
 
+function withParsedTimeOfDayPreferences<T extends { timeOfDayPreferences: string }>(
+  schedule: T,
+): Omit<T, "timeOfDayPreferences"> & { timeOfDayPreferences: TimeOfDayPreference[] } {
+  return {
+    ...schedule,
+    timeOfDayPreferences: parseTimeOfDayPreferences(schedule.timeOfDayPreferences),
+  };
+}
+
 // Upsert-by-type (like setWipLimit) — this is configuration, one row per
 // TrackableItemType, not a growing list of records.
 export async function setCategoryItemSchedule(
@@ -43,8 +55,8 @@ export async function setCategoryItemSchedule(
 ) {
   assertValidType(type);
   assertValidCadence(input.cadence, "CategoryItemSchedule");
-  if (input.timeOfDayPreference) {
-    assertValidTimeOfDay(input.timeOfDayPreference);
+  if (input.timeOfDayPreferences) {
+    assertValidTimeOfDayPreferences(input.timeOfDayPreferences);
   }
   if (input.preferredStartTime) {
     assertValidPreferredStartTime(input.preferredStartTime);
@@ -57,7 +69,7 @@ export async function setCategoryItemSchedule(
   const data = {
     cadence: input.cadence,
     anchor,
-    timeOfDayPreference: input.timeOfDayPreference ?? null,
+    timeOfDayPreferences: serializeTimeOfDayPreferences(input.timeOfDayPreferences),
     preferredStartTime: input.preferredStartTime ?? null,
     durationMinutes: input.durationMinutes ?? 120,
   };
@@ -67,7 +79,7 @@ export async function setCategoryItemSchedule(
     create: { type, ...data },
     update: data,
   });
-  return withParsedAnchor(schedule);
+  return withParsedAnchor(withParsedTimeOfDayPreferences(schedule));
 }
 
 export async function removeCategoryItemSchedule(type: TrackableItemType): Promise<void> {
@@ -78,10 +90,10 @@ export async function removeCategoryItemSchedule(type: TrackableItemType): Promi
 export async function getCategoryItemSchedule(type: TrackableItemType) {
   assertValidType(type);
   const schedule = await prisma.categoryItemSchedule.findUnique({ where: { type } });
-  return schedule ? withParsedAnchor(schedule) : null;
+  return schedule ? withParsedAnchor(withParsedTimeOfDayPreferences(schedule)) : null;
 }
 
 export async function listCategoryItemSchedules() {
   const schedules = await prisma.categoryItemSchedule.findMany({ orderBy: { type: "asc" } });
-  return schedules.map(withParsedAnchor);
+  return schedules.map((s) => withParsedAnchor(withParsedTimeOfDayPreferences(s)));
 }

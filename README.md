@@ -10,7 +10,7 @@ Phase 1-5 已完成並關閉（資料層、自動排程引擎、彈性修正/臨
 建立/編輯/刪除 UI、中文化與拖曳排序優先度即時重新排程）。目前沒有 active
 phase——`ROADMAP.md` 剩下三個尚未授權的提案（行事曆匯出、通知提醒、行動裝置
 檢視）在等人類撰寫 goal/exit condition。
-專案用 [`LOOP_ENGINEERING.md`](LOOP_ENGINEERING.md) 這套 loop-engineering
+專案用 [`LOOP_ENGINEERING.md`](.loop-engine/LOOP_ENGINEERING.md) 這套 loop-engineering
 框架管理方向與優先序：人類在書面文件裡一次性授權，agent 依照
 `PRIORITIES.md` / `ROADMAP.md` 自主推進，不用每一步都問。
 
@@ -31,4 +31,4 @@ If you're an agent picking this repo up: read [`CLAUDE.md`](CLAUDE.md) or
 [`AGENTS.md`](AGENTS.md) first — they point at everything else in the
 correct reading order, including [`INBOX.md`](INBOX.md) (check it before any
 new work) and the full loop procedure in
-[`LOOP_ENGINEERING.md`](LOOP_ENGINEERING.md).
+[`LOOP_ENGINEERING.md`](.loop-engine/LOOP_ENGINEERING.md).

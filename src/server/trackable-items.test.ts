@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { prisma } from "./db";
 import {
+  advanceTrackableItemProgress,
   createTrackableItem,
   DEFAULT_WIP_LIMIT,
   getTrackableItem,
@@ -197,6 +198,126 @@ describe("targetDate / unitWeightMultiplier", () => {
 
     const updated = await updateTrackableItem(book.id, { unitWeightMultiplier: 2 });
     expect(updated.unitWeightMultiplier).toBe(2);
+  });
+});
+
+describe("advanceTrackableItemProgress", () => {
+  it("advances unitsCompleted by one per session when unitWeightMultiplier is 1 (default)", async () => {
+    const book = await createTrackableItem(bookInput({ unitCount: 3 }));
+
+    const first = await advanceTrackableItemProgress(book.id);
+    expect(first).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 0, completed: false });
+
+    const second = await advanceTrackableItemProgress(book.id);
+    expect(second.unitsCompleted).toBe(2);
+  });
+
+  it("only rolls unitsCompleted forward once round(unitWeightMultiplier) sessions are logged", async () => {
+    const book = await createTrackableItem(bookInput({ unitCount: 3, unitWeightMultiplier: 2 }));
+
+    const afterOne = await advanceTrackableItemProgress(book.id);
+    expect(afterOne).toEqual({ unitsCompleted: 0, currentUnitSessionsCompleted: 1, completed: false });
+
+    const afterTwo = await advanceTrackableItemProgress(book.id);
+    expect(afterTwo).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 0, completed: false });
+  });
+
+  it("caps at unitCount and marks the item done", async () => {
+    const book = await createTrackableItem(bookInput({ unitCount: 1, status: "in-progress" }));
+
+    const result = await advanceTrackableItemProgress(book.id);
+    expect(result).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 0, completed: true });
+
+    const updated = await getTrackableItem(book.id);
+    expect(updated?.status).toBe("done");
+  });
+
+  it("is a no-op once the item is already fully completed", async () => {
+    const book = await createTrackableItem(bookInput({ unitCount: 1, unitsCompleted: 1, status: "done" }));
+
+    const result = await advanceTrackableItemProgress(book.id);
+    expect(result).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 0, completed: true });
+  });
+
+  it("throws for an unknown id", async () => {
+    await expect(advanceTrackableItemProgress("missing-id")).rejects.toThrow(/not found/);
+  });
+
+  it("updateTrackableItem resets currentUnitSessionsCompleted whenever unitsCompleted is manually set", async () => {
+    const book = await createTrackableItem(bookInput({ unitCount: 5, unitWeightMultiplier: 3 }));
+    await advanceTrackableItemProgress(book.id);
+    let raw = await prisma.trackableItem.findUnique({ where: { id: book.id } });
+    expect(raw?.currentUnitSessionsCompleted).toBe(1);
+
+    await updateTrackableItem(book.id, { unitsCompleted: 2 });
+    raw = await prisma.trackableItem.findUnique({ where: { id: book.id } });
+    expect(raw?.currentUnitSessionsCompleted).toBe(0);
+    expect(raw?.unitsCompleted).toBe(2);
+  });
+
+  it("uses a unit's own unitWeightOverrides entry instead of the baseline for that unit only", async () => {
+    // Baseline 1 (default): every unit rolls forward in one session,
+    // EXCEPT unit 2 (unitsCompleted 0 -> currentUnitIndex 1 first, so this
+    // override targets the SECOND unit worked on) which needs 3.
+    const book = await createTrackableItem(
+      bookInput({ unitCount: 3, unitWeightOverrides: { 2: 3 } }),
+    );
+
+    const firstUnitDone = await advanceTrackableItemProgress(book.id); // unit 1, baseline 1x
+    expect(firstUnitDone).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 0, completed: false });
+
+    const secondUnitSession1 = await advanceTrackableItemProgress(book.id); // unit 2, override 3x
+    expect(secondUnitSession1).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 1, completed: false });
+    const secondUnitSession2 = await advanceTrackableItemProgress(book.id);
+    expect(secondUnitSession2).toEqual({ unitsCompleted: 1, currentUnitSessionsCompleted: 2, completed: false });
+    const secondUnitSession3 = await advanceTrackableItemProgress(book.id);
+    expect(secondUnitSession3).toEqual({ unitsCompleted: 2, currentUnitSessionsCompleted: 0, completed: false });
+  });
+});
+
+describe("unitWeightOverrides", () => {
+  it("defaults to an empty object when omitted", async () => {
+    const book = await createTrackableItem(bookInput());
+    expect(book.unitWeightOverrides).toEqual({});
+  });
+
+  it("persists and round-trips a per-unit override map", async () => {
+    const book = await createTrackableItem(
+      bookInput({ unitCount: 20, unitWeightOverrides: { 8: 2.5, 15: 1.8 } }),
+    );
+    expect(book.unitWeightOverrides).toEqual({ 8: 2.5, 15: 1.8 });
+
+    const fetched = await getTrackableItem(book.id);
+    expect(fetched?.unitWeightOverrides).toEqual({ 8: 2.5, 15: 1.8 });
+  });
+
+  it("rejects an override key outside [1, unitCount]", async () => {
+    await expect(
+      createTrackableItem(bookInput({ unitCount: 5, unitWeightOverrides: { 6: 2 } })),
+    ).rejects.toThrow(/unitWeightOverrides key 6 must be an integer between 1 and 5/);
+  });
+
+  it("rejects a non-positive override value", async () => {
+    await expect(
+      createTrackableItem(bookInput({ unitCount: 5, unitWeightOverrides: { 2: 0 } })),
+    ).rejects.toThrow(/unitWeightMultiplier must be > 0/);
+  });
+
+  it("updateTrackableItem replaces the override map when provided, leaves it untouched otherwise", async () => {
+    const book = await createTrackableItem(bookInput({ unitWeightOverrides: { 3: 2 } }));
+
+    const untouched = await updateTrackableItem(book.id, { title: "Renamed" });
+    expect(untouched.unitWeightOverrides).toEqual({ 3: 2 });
+
+    const replaced = await updateTrackableItem(book.id, { unitWeightOverrides: { 5: 4 } });
+    expect(replaced.unitWeightOverrides).toEqual({ 5: 4 });
+  });
+
+  it("updateTrackableItem validates overrides against the item's (possibly updated) unitCount", async () => {
+    const book = await createTrackableItem(bookInput({ unitCount: 10 }));
+    await expect(
+      updateTrackableItem(book.id, { unitCount: 5, unitWeightOverrides: { 8: 2 } }),
+    ).rejects.toThrow(/unitWeightOverrides key 8 must be an integer between 1 and 5/);
   });
 });
 

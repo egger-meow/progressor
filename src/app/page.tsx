@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Link from "next/link";
 import { listTimeSlotsWithLabels, type TimeSlotWithLabel } from "@/server/time-slots";
 import { listRoutines } from "@/server/routines";
 import { listFixedCommitments, listDeadlineTasks } from "@/server/semester-commitments";
@@ -19,6 +20,7 @@ import {
   generateScheduleAction,
   skipSessionAction,
   completeItemAction,
+  advanceSessionAction,
   insertAdHocEventAction,
 } from "./actions";
 import {
@@ -148,9 +150,6 @@ function SlotEditForm({
           <button type="submit" className={styles.button}>
             儲存
           </button>
-          <a href={`/?week=${weekParam}`} className={styles.linkAction}>
-            取消
-          </a>
         </div>
       </form>
     </div>
@@ -169,8 +168,9 @@ function SlotCard({ slot, weekParam }: { slot: TimeSlotWithLabel; weekParam: str
   const isTrackable = slot.occupantType === "trackable-item" && slot.occupantId;
   return (
     <div className={styles.slotItem}>
-      <a
+      <Link
         href={`/?week=${weekParam}&edit=${slot.id}`}
+        scroll={false}
         className={styles.slotItemMain}
         aria-label={`編輯：${slot.occupantLabel}`}
       >
@@ -193,7 +193,7 @@ function SlotCard({ slot, weekParam }: { slot: TimeSlotWithLabel; weekParam: str
             ))}
           </span>
         ) : null}
-      </a>
+      </Link>
       <form action={deleteTimeSlotAction} className={styles.slotDeleteForm}>
         <input type="hidden" name="id" value={slot.id} />
         <input type="hidden" name="week" value={weekParam} />
@@ -210,11 +210,18 @@ function SlotCard({ slot, weekParam }: { slot: TimeSlotWithLabel; weekParam: str
               跳過
             </button>
           </form>
+          <form action={advanceSessionAction} className={styles.inlineForm}>
+            <input type="hidden" name="slotId" value={slot.id} />
+            <input type="hidden" name="week" value={weekParam} />
+            <button type="submit" className={styles.slotChipButtonAccent}>
+              完成本次
+            </button>
+          </form>
           <form action={completeItemAction} className={styles.inlineForm}>
             <input type="hidden" name="itemId" value={slot.occupantId} />
             <input type="hidden" name="week" value={weekParam} />
-            <button type="submit" className={styles.slotChipButtonAccent}>
-              標記完成
+            <button type="submit" className={styles.slotChipButton}>
+              提前完成整本
             </button>
           </form>
         </div>
@@ -263,9 +270,6 @@ function InlineAddForm({
           <button type="submit" className={styles.button}>
             新增
           </button>
-          <a href={`/?week=${weekParam}`} className={styles.linkAction}>
-            取消
-          </a>
         </div>
       </form>
     </div>
@@ -351,15 +355,15 @@ export default async function WeeklyView({
       </div>
 
       <nav className={styles.weekNav}>
-        <a href={`/?week=${prevWeekParam}`} className={styles.navLink}>
+        <Link href={`/?week=${prevWeekParam}`} className={styles.navLink}>
           &larr; 上週
-        </a>
-        <a href={`/?week=${todayWeekParam}`} className={styles.navLink}>
+        </Link>
+        <Link href={`/?week=${todayWeekParam}`} className={styles.navLink}>
           本週
-        </a>
-        <a href={`/?week=${nextWeekParam}`} className={styles.navLink}>
+        </Link>
+        <Link href={`/?week=${nextWeekParam}`} className={styles.navLink}>
           下週 &rarr;
-        </a>
+        </Link>
         <span className={styles.weekLabel}>
           {formatDateLabel(weekStart)} – {formatDateLabel(addDays(weekStart, 6))}
         </span>
@@ -372,7 +376,7 @@ export default async function WeeklyView({
             產生課表
           </button>
         </form>
-        <a
+        <Link
           href={
             params.quickEvent
               ? `/?week=${weekParam}`
@@ -381,7 +385,7 @@ export default async function WeeklyView({
           className={params.quickEvent ? styles.navLinkActive : styles.navLink}
         >
           {params.quickEvent ? "取消快速新增" : "快速新增臨時事件"}
-        </a>
+        </Link>
       </nav>
 
       {params.error ? <p className={styles.error}>{params.error}</p> : null}
@@ -541,13 +545,14 @@ export default async function WeeklyView({
                       )
                     ) : (
                       <div className={styles.hourEmptyActions}>
-                        <a
+                        <Link
                           href={`/?week=${weekParam}&add=${addParam}`}
+                          scroll={false}
                           className={styles.hourAddButton}
                           aria-label={`在 ${formatHourParam(row.hour)} 新增時段`}
                         >
                           ＋
-                        </a>
+                        </Link>
                         {prevAdjacentSlot ? (
                           <ExtendSlotButton
                             slot={prevAdjacentSlot}
@@ -601,6 +606,8 @@ export default async function WeeklyView({
                           overlay={overlayContent}
                           className={styles.hourContent}
                           style={{ gridRow: `${rowIndex + 1} / span ${span}` }}
+                          panelClassName={expandingGroupHere ? styles.hourOverlayPanelWide : undefined}
+                          closeHref={`/?week=${weekParam}`}
                         >
                           {compactContent}
                         </HourCellOverlay>
@@ -643,9 +650,9 @@ export default async function WeeklyView({
               <button type="submit" className={styles.button}>
                 加入
               </button>
-              <a href={`/?week=${weekParam}`} className={styles.linkAction}>
+              <Link href={`/?week=${weekParam}`} className={styles.linkAction}>
                 取消
-              </a>
+              </Link>
             </div>
           </form>
         </section>

@@ -4,9 +4,11 @@ import {
   assertValidCadence,
   assertValidDurationMinutes,
   assertValidPreferredStartTime,
-  assertValidTimeOfDay,
+  assertValidTimeOfDayPreferences,
   normalizeAnchor,
   parseAnchor,
+  parseTimeOfDayPreferences,
+  serializeTimeOfDayPreferences,
   type RoutineCadence,
   type TimeOfDayPreference,
 } from "./cadence";
@@ -20,10 +22,11 @@ export interface CreateRoutineInput {
   // Weekday(s) 0-6 for "weekly", day(s)-of-month 1-31 for "monthly".
   // Ignored (must be omitted) for "daily".
   anchor?: number[];
-  timeOfDayPreference?: TimeOfDayPreference;
+  // Multi-select (2026-07-22) — omitted or [] means no preference.
+  timeOfDayPreferences?: TimeOfDayPreference[];
   // "HH:mm", 24h — domain-model.md's Time-of-Day Preference "(or an
   // explicit hour range)" case. When set, the Scheduler tries this exact
-  // time before timeOfDayPreference's bucket window (routine-placement.ts).
+  // time before timeOfDayPreferences' buckets (routine-placement.ts).
   preferredStartTime?: string;
   // How long one occurrence runs, in minutes. Defaults to 120 (the
   // Scheduler's old hardcoded SESSION_DURATION_MS) when omitted.
@@ -36,8 +39,9 @@ export interface UpdateRoutineInput {
   category?: string;
   cadence?: RoutineCadence;
   anchor?: number[];
-  // Explicit null clears the preference; omitted leaves it unchanged.
-  timeOfDayPreference?: TimeOfDayPreference | null;
+  // [] clears the preference (the column is non-nullable); omitted leaves
+  // it unchanged.
+  timeOfDayPreferences?: TimeOfDayPreference[];
   preferredStartTime?: string | null;
   durationMinutes?: number;
   tags?: string[];
@@ -55,10 +59,16 @@ function withParsedTags<T extends { tags: string }>(
   return { ...routine, tags: parseTags(routine.tags) };
 }
 
+function withParsedTimeOfDayPreferences<T extends { timeOfDayPreferences: string }>(
+  routine: T,
+): Omit<T, "timeOfDayPreferences"> & { timeOfDayPreferences: TimeOfDayPreference[] } {
+  return { ...routine, timeOfDayPreferences: parseTimeOfDayPreferences(routine.timeOfDayPreferences) };
+}
+
 export async function createRoutine(input: CreateRoutineInput) {
   assertValidCadence(input.cadence);
-  if (input.timeOfDayPreference) {
-    assertValidTimeOfDay(input.timeOfDayPreference);
+  if (input.timeOfDayPreferences) {
+    assertValidTimeOfDayPreferences(input.timeOfDayPreferences);
   }
   if (input.preferredStartTime) {
     assertValidPreferredStartTime(input.preferredStartTime);
@@ -74,13 +84,13 @@ export async function createRoutine(input: CreateRoutineInput) {
       category: input.category,
       cadence: input.cadence,
       anchor,
-      timeOfDayPreference: input.timeOfDayPreference ?? null,
+      timeOfDayPreferences: serializeTimeOfDayPreferences(input.timeOfDayPreferences),
       preferredStartTime: input.preferredStartTime ?? null,
       durationMinutes: input.durationMinutes ?? 120,
       tags: serializeTags(input.tags),
     },
   });
-  return withParsedTags(withParsedAnchor(routine));
+  return withParsedTags(withParsedAnchor(withParsedTimeOfDayPreferences(routine)));
 }
 
 export async function removeRoutine(id: string): Promise<void> {
@@ -99,8 +109,8 @@ export async function updateRoutine(id: string, input: UpdateRoutineInput) {
 
   const nextCadence = input.cadence ?? (existing.cadence as RoutineCadence);
   assertValidCadence(nextCadence);
-  if (input.timeOfDayPreference) {
-    assertValidTimeOfDay(input.timeOfDayPreference);
+  if (input.timeOfDayPreferences) {
+    assertValidTimeOfDayPreferences(input.timeOfDayPreferences);
   }
   if (input.preferredStartTime) {
     assertValidPreferredStartTime(input.preferredStartTime);
@@ -126,27 +136,27 @@ export async function updateRoutine(id: string, input: UpdateRoutineInput) {
       category: input.category,
       cadence: nextCadence,
       anchor,
-      timeOfDayPreference:
-        input.timeOfDayPreference === undefined
+      timeOfDayPreferences:
+        input.timeOfDayPreferences === undefined
           ? undefined
-          : input.timeOfDayPreference,
+          : serializeTimeOfDayPreferences(input.timeOfDayPreferences),
       preferredStartTime:
         input.preferredStartTime === undefined ? undefined : input.preferredStartTime,
       durationMinutes: input.durationMinutes,
       tags: input.tags === undefined ? undefined : serializeTags(input.tags),
     },
   });
-  return withParsedTags(withParsedAnchor(routine));
+  return withParsedTags(withParsedAnchor(withParsedTimeOfDayPreferences(routine)));
 }
 
 export async function getRoutine(id: string) {
   const routine = await prisma.routine.findUnique({ where: { id } });
-  return routine ? withParsedTags(withParsedAnchor(routine)) : null;
+  return routine ? withParsedTags(withParsedAnchor(withParsedTimeOfDayPreferences(routine))) : null;
 }
 
 export async function listRoutines() {
   const routines = await prisma.routine.findMany({
     orderBy: { title: "asc" },
   });
-  return routines.map((r) => withParsedTags(withParsedAnchor(r)));
+  return routines.map((r) => withParsedTags(withParsedAnchor(withParsedTimeOfDayPreferences(r))));
 }

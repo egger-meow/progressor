@@ -11,7 +11,6 @@ const CADENCES = [
 ] as const;
 
 const TIME_OF_DAY = [
-  { value: "", label: "（無偏好）" },
   { value: "morning", label: "早上" },
   { value: "afternoon", label: "下午" },
   { value: "evening", label: "傍晚" },
@@ -85,19 +84,22 @@ export default async function RoutinesPage({
                         defaultValue={routine.anchor?.join(",") ?? ""}
                       />
                     </label>
-                    <label>
-                      時段偏好
-                      <select
-                        name="timeOfDayPreference"
-                        defaultValue={routine.timeOfDayPreference ?? ""}
-                      >
+                    <div className={styles.checkboxGroupField}>
+                      時段偏好（可複選；相鄰時段會合併成連續區間）
+                      <div className={styles.checkboxGroup}>
                         {TIME_OF_DAY.map((t) => (
-                          <option key={t.value} value={t.value}>
+                          <label key={t.value} className={styles.checkboxLabel}>
+                            <input
+                              type="checkbox"
+                              name="timeOfDayPreference"
+                              value={t.value}
+                              defaultChecked={routine.timeOfDayPreferences.includes(t.value)}
+                            />
                             {t.label}
-                          </option>
+                          </label>
                         ))}
-                      </select>
-                    </label>
+                      </div>
+                    </div>
                     <label>
                       時間長度（分鐘）
                       <input
@@ -158,8 +160,10 @@ export default async function RoutinesPage({
                     {routine.anchor ? `［${routine.anchor.join(",")}］` : ""}
                     {routine.preferredStartTime
                       ? ` · 指定 ${routine.preferredStartTime}`
-                      : routine.timeOfDayPreference
-                        ? ` · ${TIME_OF_DAY_LABELS[routine.timeOfDayPreference] ?? routine.timeOfDayPreference}`
+                      : routine.timeOfDayPreferences.length > 0
+                        ? ` · ${routine.timeOfDayPreferences
+                            .map((t) => TIME_OF_DAY_LABELS[t] ?? t)
+                            .join("、")}`
                         : ""}
                     {` · ${routine.durationMinutes} 分鐘`}
                   </span>
@@ -215,16 +219,17 @@ export default async function RoutinesPage({
             指定日（以逗號分隔；每週用星期 0-6，每月用日期 1-31，每日則留空）
             <input type="text" name="anchor" placeholder="例如：1,3,5" />
           </label>
-          <label>
-            時段偏好
-            <select name="timeOfDayPreference" defaultValue="">
+          <div className={styles.checkboxGroupField}>
+            時段偏好（可複選；相鄰時段會合併成連續區間）
+            <div className={styles.checkboxGroup}>
               {TIME_OF_DAY.map((t) => (
-                <option key={t.value} value={t.value}>
+                <label key={t.value} className={styles.checkboxLabel}>
+                  <input type="checkbox" name="timeOfDayPreference" value={t.value} />
                   {t.label}
-                </option>
+                </label>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
           <label>
             時間長度（分鐘）
             <input

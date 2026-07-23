@@ -18,6 +18,12 @@ responses that will outlive their usefulness.
 - [`build-status.md`](build-status.md): coarse Built/Partial/Planned/Blocked
   map across the whole project, plus a dated verification-evidence log.
 - [`release.md`](release.md): versioning scheme and release checklist.
+- [`scheduler-constraint-formulation.md`](scheduler-constraint-formulation.md):
+  the Scheduler's formal COP/WCSP definition (decision variables, domain,
+  hard/soft constraints) and its honest relationship to RCPSP/CP-SAT — for
+  readers connecting the code to the constraint-programming literature,
+  not a restatement of `domain-model.md`'s product-facing Scheduler
+  section.
 
 No project-specific docs beyond the standard set yet (e.g. a future
 `api-spec.md` if the Scheduler grows an external API). Add a line here only

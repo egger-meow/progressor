@@ -26,6 +26,18 @@ export interface SchedulerTrackableItem {
   unitCount: number;
   unitsCompleted: number;
   estimatedDays: number;
+  // Baseline sessions-per-unit multiplier, and per-unit-index overrides
+  // (1-based) — see prisma/schema.prisma's TrackableItem.unitWeightOverrides
+  // comment. Consumed by activity-planner.ts's remaining-session count
+  // (2026-07-23) so a chapter needing more sittings gets that many
+  // Activities placed, not just one per remaining unit.
+  unitWeightMultiplier: number;
+  unitWeightOverrides: Record<number, number>;
+  // How many sittings of the CURRENT (unitsCompleted + 1) unit are already
+  // confirmed done — mirrors src/server/trackable-items.ts's field of the
+  // same name. Needed alongside unitWeightMultiplier to know how many more
+  // sessions the current unit still needs, not just the ones after it.
+  currentUnitSessionsCompleted: number;
 }
 
 export type RoutineCadence = "daily" | "weekly" | "monthly";
@@ -40,16 +52,19 @@ export interface SchedulerRoutine {
   // for "daily" — already parsed out of src/server/routines.ts's
   // JSON-encoded storage form.
   anchor: number[] | null;
-  timeOfDayPreference: TimeOfDayPreference | null;
-  // "HH:mm", 24h, or null. Tried before timeOfDayPreference's bucket
-  // window — see routine-placement.ts.
+  // Multi-select (2026-07-22) — [] means no preference. Adjacent selected
+  // buckets merge into one continuous search window; non-adjacent ones are
+  // tried in order. See occurrence-timing.ts's buildCandidateWindows.
+  timeOfDayPreferences: TimeOfDayPreference[];
+  // "HH:mm", 24h, or null. Tried before timeOfDayPreferences' buckets —
+  // see routine-placement.ts.
   preferredStartTime: string | null;
   // How long one occurrence runs, in minutes — replaces what used to be
   // a single hardcoded SESSION_DURATION_MS applied to every Routine.
   durationMinutes: number;
 }
 
-// Mirrors SchedulerRoutine's cadence/anchor/timeOfDayPreference/
+// Mirrors SchedulerRoutine's cadence/anchor/timeOfDayPreferences/
 // preferredStartTime vocabulary (same shape, see occurrence-timing.ts) —
 // an opt-in recurring reservation for one TrackableItemType, shared by
 // every currently-eligible item of that type (see category-placement.ts),
@@ -58,7 +73,7 @@ export interface SchedulerCategoryItemSchedule {
   type: TrackableItemType;
   cadence: RoutineCadence;
   anchor: number[] | null;
-  timeOfDayPreference: TimeOfDayPreference | null;
+  timeOfDayPreferences: TimeOfDayPreference[];
   preferredStartTime: string | null;
   durationMinutes: number;
 }

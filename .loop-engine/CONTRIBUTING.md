@@ -1,10 +1,11 @@
 # Contributing to loop-engine
 
 This file is about improving the **scaffold itself** — the templates,
-`LOOP_ENGINEERING.md`, `INIT_CHECKLIST.md`, and the scripts in `scripts/`.
-If you're using loop-engine inside your own project and want guidance on
-filling in *your* templates, see [`INIT_CHECKLIST.md`](INIT_CHECKLIST.md)
-instead — this file has nothing to say about that.
+`LOOP_ENGINEERING.md`, `INIT_CHECKLIST.md`, and the scripts in
+`.loop-engine/scripts/`. If you're using loop-engine inside your own
+project and want guidance on filling in *your* templates, see
+[`INIT_CHECKLIST.md`](INIT_CHECKLIST.md) instead — this file has nothing
+to say about that.
 
 ## What belongs here vs. in a project that adopts this scaffold
 
@@ -35,30 +36,32 @@ adding a new file or section, check:
 
 ## Making a change
 
-1. Update the template file(s) under repo root and/or `docs/`.
+1. Update the template file(s) under `.loop-engine/`, repo root, and/or
+   `docs/`.
 2. If the change affects the fill-in order or adds a new required step,
    update [`INIT_CHECKLIST.md`](INIT_CHECKLIST.md) to match.
 3. If the change affects the worked example's shape, update
    [`examples/linkcheck/`](examples/linkcheck/) so it stays a faithful,
    fully-filled-in instance of the current templates — a drifted example is
    actively misleading.
-4. If the change affects `README.md`, mirror it in `README.zh-TW.md` — the
+4. If the change affects `README.md`, mirror it in `zh-TW/README.md` — the
    two are translations of each other and must make the same claims. The
-   same applies to the other four files with a `.zh-TW.md` sibling —
+   same applies to the other four files with a `zh-TW/` translation —
    `LOOP_ENGINEERING.md`, `INIT_CHECKLIST.md`, `BOOTSTRAP.md`, and
-   `examples/README.md` (this
-   file, `CONTRIBUTING.md`, is itself one of the five). Everything else
-   deliberately does **not** get a `.zh-TW.md` sibling — see README.md's FAQ
-   "Why do only some files have a Traditional Chinese version?" for why
+   `examples/README.md` (whose translation lives at `examples/zh-TW/
+   README.md`; this file, `CONTRIBUTING.md`, is itself one of the five, with
+   its own translation at `zh-TW/CONTRIBUTING.md`). Everything else
+   deliberately does **not** get a `zh-TW/` translation — see README.md's
+   FAQ "Why do only some files have a Traditional Chinese version?" for why
    (functionally load-bearing filenames + mutable live content don't mix
    with permanent bilingual twins).
 5. Run the template-completeness check against `examples/linkcheck/` (it
    should report clean — that directory has no unfilled `TEMPLATE:`
    markers by design) and against the root scaffold (it should report
    everything still templated, since the root scaffold is meant to stay
-   unfilled):
+   unfilled). From the repo root:
    ```bash
-   ./scripts/check-templates.sh examples/linkcheck
+   ./.loop-engine/scripts/check-templates.sh .loop-engine/examples/linkcheck
    ```
 6. Update `CHANGELOG.md` under `[Unreleased]`.
 

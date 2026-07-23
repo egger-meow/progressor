@@ -29,10 +29,30 @@ model TrackableItem {
   // useful set directly on a not-yet-started item where "today + N days"
   // doesn't mean anything yet. Not consumed by the Scheduler yet.
   targetDate     DateTime?
-  // "Chapters average Nx longer than normal" — a single per-item multiplier,
-  // not per-chapter. Display-only for now (nothing computes "how many units
-  // fit a session" yet); not consumed by the Scheduler.
+  // "Chapters average Nx longer than normal" — the BASELINE multiplier
+  // applied to any unit without its own entry in unitWeightOverrides below.
+  // Consumed by advanceTrackableItemProgress (how many sittings before
+  // unitsCompleted rolls forward), the Weekly View's progress fraction,
+  // and the Scheduler's horizon engine (how many sessions to place before
+  // an item is considered "done" scheduling).
   unitWeightMultiplier Float @default(1.0)
+  // JSON-encoded object mapping a specific unit index (1-based, "第 N 章"
+  // numbering) to its own multiplier — overrides unitWeightMultiplier for
+  // that one unit only, e.g. {"8":2.5} means chapter 8 alone takes 2.5x
+  // the baseline. Project owner, 2026-07-23: a flat per-item average
+  // doesn't fit "usually 3 days/chapter, but chapter 8 is unusually long
+  // so give it 2.5x (~7 days) while every other chapter stays at the
+  // baseline" — most chapters need no entry here at all. Parsed/validated
+  // in src/server/trackable-items.ts.
+  unitWeightOverrides String @default("{}")
+  // How many of this unit's sittings have been confirmed done so far
+  // (via the daily check-in gate's 是/已完成 answer, or the Weekly View's
+  // 完成本次 button — src/server/trackable-items.ts's
+  // advanceTrackableItemProgress). Rolls unitsCompleted forward by one
+  // once it reaches round(unitWeightMultiplier), then resets to 0. Reset
+  // to 0 by any manual edit of unitsCompleted too (see updateTrackableItem)
+  // since a manual override invalidates whatever partial count was mid-way.
+  currentUnitSessionsCompleted Int @default(0)
   // JSON-encoded string array (same convention as Routine.anchor below) —
   // free-text labels the user assigns, e.g. a course tagged "學校課" or a
   // book tagged "trader". Parsed/validated in src/server/tags.ts.
@@ -61,43 +81,49 @@ model WipLimit {
 // additive, never a breaking replacement. Placement:
 // src/scheduler/category-placement.ts.
 model CategoryItemSchedule {
-  type                String   @id
-  cadence             String
-  anchor              String?
-  timeOfDayPreference String?
-  preferredStartTime  String?
-  durationMinutes     Int      @default(120)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  type                 String   @id
+  cadence              String
+  anchor               String?
+  // JSON-encoded array of TimeOfDayPreference — see Routine's field below
+  // for why this is a non-nullable array, not a nullable single string.
+  timeOfDayPreferences String   @default("[]")
+  preferredStartTime   String?
+  durationMinutes      Int      @default(120)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
-// Routine implements docs/domain-model.md's "Routine". `cadence` and
-// `timeOfDayPreference` are plain strings for the same reason as
-// TrackableItem's `type`/`status` (no sqlite enum support). `anchor`'s
-// shape depends on `cadence` (weekday(s) for weekly, day(s)-of-month for
-// monthly, unused for daily), so it's stored as a JSON-encoded array of
-// integers and validated in src/server/routines.ts rather than as columns.
-// `preferredStartTime` ("HH:mm", 24h) is the domain-model doc's
-// Time-of-Day Preference "(or an explicit hour range)" case: an optional
-// concrete anchor the Scheduler tries before `timeOfDayPreference`'s
-// four-bucket window. `durationMinutes` (default 120) replaces what used
-// to be a single hardcoded `SESSION_DURATION_MS` the Scheduler applied to
-// every Routine occurrence — the default matches that prior constant
-// exactly, so an existing Routine's placement is unaffected until its
-// duration is edited.
+// Routine implements docs/domain-model.md's "Routine". `cadence` is a
+// plain string for the same reason as TrackableItem's `type`/`status` (no
+// sqlite enum support). `anchor`'s shape depends on `cadence` (weekday(s)
+// for weekly, day(s)-of-month for monthly, unused for daily), so it's
+// stored as a JSON-encoded array of integers and validated in
+// src/server/routines.ts rather than as columns. `timeOfDayPreferences` is
+// a JSON-encoded array of the same four buckets (multi-select, 2026-07-22
+// — was a single nullable string; the Scheduler now merges adjacent
+// selected buckets into one continuous search window, and tries
+// non-adjacent selections in order — see
+// src/scheduler/occurrence-timing.ts). `preferredStartTime` ("HH:mm", 24h)
+// is the domain-model doc's Time-of-Day Preference "(or an explicit hour
+// range)" case: an optional concrete anchor the Scheduler tries before
+// `timeOfDayPreferences`. `durationMinutes` (default 120) replaces what
+// used to be a single hardcoded `SESSION_DURATION_MS` the Scheduler
+// applied to every Routine occurrence — the default matches that prior
+// constant exactly, so an existing Routine's placement is unaffected until
+// its duration is edited.
 model Routine {
-  id                  String   @id @default(cuid())
-  title               String
-  category            String
-  cadence             String
-  anchor              String?
-  timeOfDayPreference String?
-  preferredStartTime  String?
-  durationMinutes     Int      @default(120)
+  id                   String   @id @default(cuid())
+  title                String
+  category             String
+  cadence              String
+  anchor               String?
+  timeOfDayPreferences String   @default("[]")
+  preferredStartTime   String?
+  durationMinutes      Int      @default(120)
   // JSON-encoded string array — see TrackableItem.tags above.
-  tags                String   @default("[]")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  tags                 String   @default("[]")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 // FixedCommitment and DeadlineTask both implement docs/domain-model.md's
@@ -177,6 +203,14 @@ model TimeSlot {
   endAt        DateTime
   occupantType String
   occupantId   String?
+  // Set when the user confirms, via the daily check-in gate
+  // (src/server/check-ins.ts), that this session actually happened. Only
+  // ever meaningful for occupantType "trackable-item"/"deadline-task" — a
+  // session the gate never asks about (future slot, or a Routine/Fixed
+  // Commitment/Ad-hoc Event/Slack occurrence) stays null forever. A "no,
+  // didn't happen" answer deletes the Time Slot outright instead of ever
+  // writing a "missed" value here.
+  confirmedAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

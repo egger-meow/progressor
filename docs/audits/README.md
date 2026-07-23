@@ -17,7 +17,7 @@ covers those. An audit is for the bigger unit: the thing that was worth a
 human explicitly authorizing as a phase in the first place.
 
 This folder is append-only history, not routine reading — see
-`../../LOOP_ENGINEERING.md`, "Reading discipline." When you need evidence
+`../../.loop-engine/LOOP_ENGINEERING.md`, "Reading discipline." When you need evidence
 for a specific phase, open only that phase's file via the Index below;
 don't read every audit in this folder to "get context."
 
@@ -29,7 +29,7 @@ exit condition (pull it from `ROADMAP.md` — or its git history, since the
 phase gets removed on completion). Each requirement gets a specific piece of
 evidence: a command and its result, a manual verification with what was
 checked, a link to a test. "It should work" is not evidence; re-read
-`LOOP_ENGINEERING.md`, "Two verification gates," if that's tempting.
+`../../.loop-engine/LOOP_ENGINEERING.md`, "Two verification gates," if that's tempting.
 
 Audits are append-only history, like `CHANGELOG.md` — once written, don't
 edit an audit to reflect later changes. If something the audit certified

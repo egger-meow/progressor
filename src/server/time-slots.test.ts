@@ -272,7 +272,37 @@ describe("listTimeSlotsWithLabels — occupantProgress", () => {
     const labeled = await listTimeSlotsWithLabels();
     const found = labeled.find((s) => s.id === slot.id);
     expect(found?.occupantLabel).toBe("Reminiscences of a Stock Operator");
-    expect(found?.occupantProgress).toBe("第 12 章／共 24 章");
+    expect(found?.occupantProgress).toBe("第 12 章 1/1／共 24 章");
+  });
+
+  it("adds a session-within-unit fraction when unitWeightMultiplier rounds above 1", async () => {
+    const book = await createTrackableItem({
+      title: "Deep Work",
+      type: "book",
+      priority: 1,
+      unitCount: 10,
+      unitsCompleted: 0,
+      estimatedDays: 5,
+      unitWeightMultiplier: 3,
+    });
+    const slots = await Promise.all(
+      [20, 21, 22, 23].map((day) =>
+        createTimeSlot({
+          startAt: new Date(2026, 6, day, 9, 0, 0),
+          endAt: new Date(2026, 6, day, 10, 0, 0),
+          occupantType: "trackable-item",
+          occupantId: book.id,
+        }),
+      ),
+    );
+
+    const labeled = await listTimeSlotsWithLabels();
+    const progressBySlotId = new Map(labeled.map((s) => [s.id, s.occupantProgress]));
+    expect(progressBySlotId.get(slots[0].id)).toBe("第 1 章 1/3／共 10 章");
+    expect(progressBySlotId.get(slots[1].id)).toBe("第 1 章 2/3／共 10 章");
+    expect(progressBySlotId.get(slots[2].id)).toBe("第 1 章 3/3／共 10 章");
+    // Cycles for the next unit's own sessions rather than counting forever.
+    expect(progressBySlotId.get(slots[3].id)).toBe("第 1 章 1/3／共 10 章");
   });
 
   it("leaves occupantProgress undefined for every other occupant kind, including slack", async () => {

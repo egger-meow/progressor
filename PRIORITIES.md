@@ -46,7 +46,7 @@ Everything else that's real work but doesn't meet this bar belongs under
    nice-to-have work here — that goes under "Non-Blocking / Later."
 3. If a new item is more dangerous/urgent than an existing item, explicitly
    reorder the list instead of appending it casually. Reordering on a real
-   danger judgment call is a human decision (see `LOOP_ENGINEERING.md`,
+   danger judgment call is a human decision (see `.loop-engine/LOOP_ENGINEERING.md`,
    "When the agent must stop and ask a human") — an agent should flag the
    conflict and propose an order, not silently resequence the file.
 4. Keep priority items in strict order from most urgent to least urgent.

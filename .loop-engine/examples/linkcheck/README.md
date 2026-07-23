@@ -4,7 +4,7 @@ A CLI that scans a tree of Markdown files for broken links — internal
 relative paths, heading anchors, and (optionally) external URLs — and can
 automatically repair the subset of breaks it can fix with full confidence.
 
-> This is a worked example for [loop-engine](../../README.md), not a
+> This is a worked example for [loop-engine](../../../README.md), not a
 > published package. See [`../README.md`](../README.md) for why it exists.
 
 ## Install & run

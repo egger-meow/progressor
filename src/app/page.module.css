@@ -506,6 +506,24 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Same bordered-card look as .slotItem, but for contexts (like
+   CategoryScheduleForm, src/app/items/page.tsx) that put text/form
+   content directly inside — .slotItem itself has no padding because its
+   original use (SlotCard/GroupedSlotBlock) puts padding on the inner
+   .slotItemMain instead, so reusing it bare left the border touching the
+   text (project owner, 2026-07-23: "都它媽貼到字了"). */
+.paddedCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 .slotItemMain {
   display: flex;
   flex-direction: column;
@@ -534,6 +552,15 @@
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+/* GroupedSlotBlock's trailing "共 N 項" — a smaller, deliberately terser
+   caption than .slotOccupant's title list above it, so the count reads as
+   a footnote rather than competing with the titles for attention. */
+.slotGroupCount {
+  color: var(--color-muted-foreground);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 /* Category chip ("常規事件"/"固定事務"/...) inside a SlotCard — off by
@@ -673,6 +700,25 @@
   align-self: center;
   gap: var(--space-2);
   cursor: pointer;
+}
+
+/* Multi-select Time-of-Day Preference (2026-07-22) — a group of
+   .checkboxLabel rows under one field heading, replacing the old single
+   <select>. Mirrors .slotForm label's own text styling so the group's
+   heading lines up with every other field label in the form. */
+.checkboxGroupField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+}
+
+.checkboxGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
 }
 
 /* Themed checkbox instead of the bare browser-default square, which
@@ -965,20 +1011,261 @@
   font-weight: 700;
 }
 
-/* --- Floating edit/add-slot panel (src/app/hour-cell-overlay.tsx) — a
-   thin positioning wrapper only; the visible card look comes from the
-   .addForm the panel's content (SlotEditForm/InlineAddForm) already
-   renders internally. Elevated to --shadow-lg since it now floats
-   disconnected from the page's normal flow instead of --shadow-sm's
-   flush-with-the-page look. --- */
-
-.hourOverlayPanel {
+/* --- Floating edit/add/expand-slot panel (src/app/hour-cell-overlay.tsx)
+   --- backdrop centers the panel in the viewport (see hour-cell-overlay.tsx
+   for why this replaced anchor-relative positioning: it removes the whole
+   class of "content cut off past the viewport edge" bugs instead of
+   patching clamp math again). Backdrop click (the invisible full-cover
+   Link) closes the panel, same as the panel's own 取消/關閉 link. */
+.hourOverlayBackdrop {
+  position: fixed;
+  inset: 0;
   z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, black 45%, transparent);
+  animation: hourOverlayBackdropIn var(--duration-fast) var(--ease-out);
+}
+
+.hourOverlayBackdropClose {
+  position: absolute;
+  inset: 0;
+}
+
+/* The visible card look comes from .addForm, which the panel's content
+   (SlotEditForm/InlineAddForm/GroupedSlotDetailPanel) already renders
+   internally. Elevated to --shadow-lg since it now floats disconnected
+   from the page's normal flow instead of --shadow-sm's flush-with-the-page
+   look. Bounded to the viewport with its own scroll so content of any
+   length is reachable, never cut off. */
+.hourOverlayPanel {
+  position: relative;
+  z-index: 1;
   width: 260px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  animation: hourOverlayPanelIn var(--duration-fast) var(--ease-out);
+}
+
+/* Scrolling happens on the content card itself, not this positioning
+   wrapper, so .hourOverlayCloseButton (an absolute child of the wrapper)
+   stays pinned in the corner instead of scrolling away with long content. */
+.hourOverlayPanel > .addForm {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+/* Standard top-right modal close affordance — project owner, 2026-07-22:
+   "關閉 should be like a x on right up which is more intuitive", replacing
+   the text 取消/關閉 link previously buried at the bottom of each panel's
+   content (SlotEditForm/InlineAddForm/GroupedSlotDetailPanel all dropped
+   theirs in favor of this single shared one). */
+.hourOverlayCloseButton {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-md);
+  color: var(--color-muted-foreground);
+  background: var(--color-surface);
+  transition: background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.hourOverlayCloseButton:hover {
+  background: color-mix(in srgb, var(--color-destructive) 12%, var(--color-surface));
+  color: var(--color-destructive);
+}
+
+/* GroupedSlotDetailPanel's list needs more room than a single edit/add
+   form — each row carries a title plus three action buttons. 260px was
+   only ever wide enough for the single-item forms; reusing it for the
+   multi-item list left almost no width for .recordTitle once the action
+   buttons took their share, wrapping CJK titles one character per line
+   (project owner, 2026-07-22 screenshot: "股票作手回憶錄" stacked
+   vertically). */
+.hourOverlayPanelWide {
+  width: min(440px, calc(100vw - 32px));
+}
+
+@keyframes hourOverlayBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hourOverlayPanelIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* GroupedSlotDetailPanel reuses .recordCard/.recordMain/.slotActions from
+   the /items /routines /commitments record-list pages, where the row
+   layout (title block beside the action-button block) has plenty of
+   width. Squeezed into the floating panel's ~250-380px, that same row
+   layout left .recordMain almost no width once three action buttons
+   claimed their share — stack title above actions here instead so the
+   title always gets the panel's near-full width. */
+.hourOverlayPanel .recordCard {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.hourOverlayPanel .slotActions {
+  margin-top: var(--space-2);
 }
 
 .hourOverlayPanel .addForm {
   box-shadow: var(--shadow-lg);
+}
+
+/* --- Daily Check-In Gate (src/app/check-in-gate.tsx) — blocks the whole
+   app (rendered from layout.tsx, above the nav bar and every page) until
+   every past, unconfirmed Book/Course/Deadline Task session is answered.
+   Higher z-index than .hourOverlayBackdrop (260) since it must sit above
+   any per-cell overlay too. Plain server-rendered fixed div — no portal or
+   client-mounted gating needed, since layout.tsx is already the tree
+   root. */
+.checkInGateBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, black 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.checkInGatePanel {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Only this form (header + list already rendered above it) grows/shrinks
+   with the panel — lets .checkInGateList be the one thing that scrolls. */
+.checkInGateForm {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.checkInGateHint {
+  color: var(--color-muted-foreground);
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.checkInGateList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.checkInGateItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+}
+
+.checkInGateItemInfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkInGateItemTitle {
+  font-weight: 600;
+}
+
+.checkInGateItemTime {
+  color: var(--color-muted-foreground);
+  font-size: 0.875rem;
+}
+
+.checkInGateItemActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.checkInGateItemActions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The not-yet-picked or not-picked option of a pair dims once the other
+   is selected, so the chosen answer visibly stands out — the "reaction i
+   selected" the project owner asked for. Neither button is ever disabled
+   (still switchable any time before 提交). */
+.checkInGateChoiceInactive {
+  opacity: 0.35;
+}
+
+/* A fixed flex child *outside* .checkInGateList's own scroll region — not
+   position:sticky. Sticky inside the same scroll container as the list
+   glues this bar over whatever row is last in the visible band regardless
+   of scroll position, permanently covering that row's buttons ("穿模" —
+   project owner, 2026-07-23). Living outside the scrollable area means
+   the list scrolls fully clear underneath it instead. Stays reachable
+   without scrolling through every pending row — project owner,
+   2026-07-22: "at the lowest part why no something like 提交." */
+.checkInGateSubmitBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  margin: var(--space-4) calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.checkInGateSubmitCount {
+  color: var(--color-muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.checkInGateSubmitBar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* --- Click-based Time/Date pickers (src/app/time-picker.tsx,

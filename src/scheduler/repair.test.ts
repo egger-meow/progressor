@@ -24,6 +24,9 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
         unitCount: 20,
         unitsCompleted: 4,
         estimatedDays: 10,
+        unitWeightMultiplier: 1,
+        unitWeightOverrides: {},
+        currentUnitSessionsCompleted: 0,
       },
       {
         id: "book-b",
@@ -34,6 +37,9 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
         unitCount: 12,
         unitsCompleted: 0,
         estimatedDays: 6,
+        unitWeightMultiplier: 1,
+        unitWeightOverrides: {},
+        currentUnitSessionsCompleted: 0,
       },
       {
         id: "course-a",
@@ -44,6 +50,9 @@ function baseInput(overrides: Partial<SchedulerInput> = {}): SchedulerInput {
         unitCount: 8,
         unitsCompleted: 1,
         estimatedDays: 4,
+        unitWeightMultiplier: 1,
+        unitWeightOverrides: {},
+        currentUnitSessionsCompleted: 0,
       },
     ],
     routines: [],
@@ -170,6 +179,133 @@ describe("repairSchedule: insert-ad-hoc-event", () => {
     expect(result.conflicts).toEqual([]);
   });
 
+  it("preserves the evicted session's own original duration when relocating, not the generic 2h default", () => {
+    // Regression: relocateSession used to always search for exactly
+    // SESSION_DURATION_MS (2h), silently shrinking/growing a relocated
+    // session that was actually a different length — e.g. a
+    // CategoryItemSchedule's configured 200-minute block.
+    const input = baseInput({
+      existingSlots: [
+        slot("slot-book-a", "2026-07-13T17:00:00", "2026-07-13T20:20:00", "trackable-item", "book-a"),
+      ],
+    });
+
+    const result = repairSchedule(input, {
+      kind: "insert-ad-hoc-event",
+      event: { id: "ahe-1", title: "Emergency", notes: null },
+      startAt: new Date("2026-07-13T18:00:00"),
+      endAt: new Date("2026-07-13T19:00:00"),
+    });
+
+    const relocated = result.addedSlots.find((s) => s.occupantId === "book-a");
+    expect(relocated).toBeDefined();
+    expect(relocated!.endAt.getTime() - relocated!.startAt.getTime()).toBe(200 * 60 * 1000);
+  });
+
+  it("relocates every item sharing a CategoryItemSchedule occurrence together, to the same new window", () => {
+    // Regression: two Trackable Items sharing one occurrence (same
+    // [startAt,endAt) — category-placement.ts's core invariant) used to
+    // be evicted and relocated independently, letting them land on
+    // different days/times and fragmenting "all books in progress" back
+    // into separate carve-outs.
+    const input = baseInput({
+      existingSlots: [
+        slot("slot-book-a", "2026-07-13T17:00:00", "2026-07-13T20:20:00", "trackable-item", "book-a"),
+        slot("slot-book-b", "2026-07-13T17:00:00", "2026-07-13T20:20:00", "trackable-item", "book-b"),
+      ],
+    });
+
+    const result = repairSchedule(input, {
+      kind: "insert-ad-hoc-event",
+      event: { id: "ahe-1", title: "Emergency", notes: null },
+      startAt: new Date("2026-07-13T18:00:00"),
+      endAt: new Date("2026-07-13T19:00:00"),
+    });
+
+    expect(result.removedSlotIds.sort()).toEqual(["slot-book-a", "slot-book-b"]);
+    const relocatedA = result.addedSlots.find((s) => s.occupantId === "book-a");
+    const relocatedB = result.addedSlots.find((s) => s.occupantId === "book-b");
+    expect(relocatedA).toBeDefined();
+    expect(relocatedB).toBeDefined();
+    expect(relocatedA!.startAt).toEqual(relocatedB!.startAt);
+    expect(relocatedA!.endAt).toEqual(relocatedB!.endAt);
+    expect(relocatedA!.endAt.getTime() - relocatedA!.startAt.getTime()).toBe(200 * 60 * 1000);
+  });
+
+  it("drops the whole group rather than fragmenting it when no shared window exists anywhere this week", () => {
+    // Every day is packed solid via a Routine-type filler (Routines are
+    // "left alone" — never evicted, never flagged — so they're a clean
+    // way to fill every day without side effects on this test), so no
+    // day has 200 contiguous minutes free for the evicted pair to share.
+    const fillers = Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(weekStart);
+      day.setDate(day.getDate() + i);
+      // Local date components, not toISOString() (which converts to UTC
+      // and can shift the calendar date depending on the runner's
+      // timezone) — matches how weekStart/slot() dates are constructed
+      // everywhere else in this file (local "YYYY-MM-DDTHH:mm:ss").
+      const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      return slot(`filler-${i}`, `${iso}T08:00:00`, `${iso}T23:00:00`, "routine", "routine-filler");
+    });
+    const input = baseInput({
+      existingSlots: [
+        ...fillers,
+        slot("slot-book-a", "2026-07-13T17:00:00", "2026-07-13T20:20:00", "trackable-item", "book-a"),
+        slot("slot-book-b", "2026-07-13T17:00:00", "2026-07-13T20:20:00", "trackable-item", "book-b"),
+      ],
+    });
+
+    const result = repairSchedule(input, {
+      kind: "insert-ad-hoc-event",
+      event: { id: "ahe-1", title: "Emergency", notes: null },
+      startAt: new Date("2026-07-13T18:00:00"),
+      endAt: new Date("2026-07-13T19:00:00"),
+    });
+
+    expect(result.removedSlotIds.sort()).toEqual(["slot-book-a", "slot-book-b"]);
+    // Neither book got relocated — not even one of them alone (that would
+    // be fragmentation, worse than dropping both).
+    expect(result.addedSlots.filter((s) => s.occupantType === "trackable-item")).toEqual([]);
+  });
+
+  it("does not let a relocation search land on a Fixed Commitment's own window, even though the commitment overlapped the Ad-hoc Event and was excluded from eviction", () => {
+    // Regression: `busy` used to exclude *every* slot overlapping the new
+    // Ad-hoc Event, regardless of type — including a Fixed Commitment
+    // that's flagged as a conflict but never actually removed from the
+    // board. That wrongly freed up the FC's own real-world-occupied
+    // window for a same-day relocation search to land on.
+    const input = baseInput({
+      fixedCommitments: [
+        { id: "fc-1", title: "Long Meeting", dayOfWeek: 1, startTime: "09:30", endTime: "12:00", ignoreSemesterBounds: false },
+      ],
+      existingSlots: [
+        slot("filler-am", "2026-07-13T08:00:00", "2026-07-13T09:00:00", "routine", "routine-filler"),
+        slot("filler-pm", "2026-07-13T12:00:00", "2026-07-13T23:00:00", "routine", "routine-filler"),
+        slot("slot-fc", "2026-07-13T09:30:00", "2026-07-13T12:00:00", "fixed-commitment", "fc-1"),
+        slot("slot-book-a", "2026-07-13T09:00:00", "2026-07-13T10:00:00", "trackable-item", "book-a"),
+      ],
+    });
+
+    const result = repairSchedule(input, {
+      kind: "insert-ad-hoc-event",
+      event: { id: "ahe-1", title: "Surprise", notes: null },
+      startAt: new Date("2026-07-13T09:00:00"),
+      endAt: new Date("2026-07-13T10:00:00"),
+    });
+
+    const relocated = result.addedSlots.find((s) => s.occupantId === "book-a");
+    expect(relocated).toBeDefined();
+    // Must never overlap the Fixed Commitment's real window (09:30-12:00),
+    // on 07-13 or any other day it recurs on.
+    const fcStart = new Date("2026-07-13T09:30:00").getTime();
+    const fcEnd = new Date("2026-07-13T12:00:00").getTime();
+    const overlapsFc = relocated!.startAt.getTime() < fcEnd && fcStart < relocated!.endAt.getTime();
+    expect(overlapsFc).toBe(false);
+    // Day 07-13 is fully packed (filler + Ad-hoc Event + FC leave no
+    // gap), so the fix should push it to the next day entirely.
+    expect(relocated!.startAt).toEqual(new Date("2026-07-14T08:00:00"));
+  });
+
   it("flags, but does not evict, an overlap with a Fixed Commitment", () => {
     const input = baseInput({
       fixedCommitments: [
@@ -235,7 +371,7 @@ describe("repairSchedule: insert-ad-hoc-event", () => {
           category: "gym",
           cadence: "weekly",
           anchor: [1],
-          timeOfDayPreference: null,
+          timeOfDayPreferences: [],
           preferredStartTime: null,
           durationMinutes: 120,
         },

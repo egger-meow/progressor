@@ -26,10 +26,18 @@ describe("setCategoryItemSchedule", () => {
     const schedule = await setCategoryItemSchedule("book", {
       cadence: "weekly",
       anchor: [1, 3],
-      timeOfDayPreference: "morning",
+      timeOfDayPreferences: ["morning"],
     });
     expect(schedule.anchor).toEqual([1, 3]);
-    expect(schedule.timeOfDayPreference).toBe("morning");
+    expect(schedule.timeOfDayPreferences).toEqual(["morning"]);
+  });
+
+  it("creates a schedule with multiple time-of-day preferences, deduped and sorted", async () => {
+    const schedule = await setCategoryItemSchedule("book", {
+      cadence: "daily",
+      timeOfDayPreferences: ["night", "morning", "morning"],
+    });
+    expect(schedule.timeOfDayPreferences).toEqual(["morning", "night"]);
   });
 
   it("creates a monthly schedule with a day-of-month anchor", async () => {
@@ -71,7 +79,7 @@ describe("setCategoryItemSchedule", () => {
       setCategoryItemSchedule("book", {
         cadence: "daily",
         // @ts-expect-error deliberately invalid input to prove runtime validation
-        timeOfDayPreference: "midnight",
+        timeOfDayPreferences: ["midnight"],
       }),
     ).rejects.toThrow(/Invalid Time-of-Day Preference/);
   });

@@ -23,6 +23,9 @@ function buildFixture(): SchedulerInput {
         unitCount: 20,
         unitsCompleted: 4,
         estimatedDays: 10,
+        unitWeightMultiplier: 1,
+        unitWeightOverrides: {},
+        currentUnitSessionsCompleted: 0,
       },
       {
         id: "book-b",
@@ -33,6 +36,9 @@ function buildFixture(): SchedulerInput {
         unitCount: 12,
         unitsCompleted: 0,
         estimatedDays: 6,
+        unitWeightMultiplier: 1,
+        unitWeightOverrides: {},
+        currentUnitSessionsCompleted: 0,
       },
       {
         id: "course-a",
@@ -43,6 +49,9 @@ function buildFixture(): SchedulerInput {
         unitCount: 8,
         unitsCompleted: 0,
         estimatedDays: 4,
+        unitWeightMultiplier: 1,
+        unitWeightOverrides: {},
+        currentUnitSessionsCompleted: 0,
       },
     ],
     routines: [
@@ -52,7 +61,7 @@ function buildFixture(): SchedulerInput {
         category: "gym",
         cadence: "weekly",
         anchor: [1, 4], // Monday, Thursday
-        timeOfDayPreference: null,
+        timeOfDayPreferences: [],
         preferredStartTime: null,
         durationMinutes: 120,
       },
@@ -209,7 +218,7 @@ describe("computeSchedule (end-to-end fixture)", () => {
         type: "book",
         cadence: "weekly",
         anchor: [2], // Tuesday — clear of the Monday Fixed Commitment/Routine
-        timeOfDayPreference: null,
+        timeOfDayPreferences: [],
         preferredStartTime: null,
         durationMinutes: 120,
       },

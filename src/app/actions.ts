@@ -7,9 +7,10 @@ import {
   updateTimeSlot,
   type OccupantType,
 } from "@/server/time-slots";
-import { runScheduler } from "@/server/scheduler-runs";
+import { runSchedulerForHorizon } from "@/server/scheduler-runs";
 import { skipSession, insertAdHocEvent, completeItemEarly } from "@/server/scheduler-repair";
-import { combineDateAndTime, parseDateParam, addDays } from "./week";
+import { confirmCheckIn } from "@/server/check-ins";
+import { combineDateAndTime, parseDateParam, addDays, startOfWeek } from "./week";
 
 // Occupant <select> options are encoded as "type|id" (or "slack|") — see
 // Weekly View form markup. Parsing that pair back apart is a UI-layer
@@ -80,17 +81,20 @@ export async function deleteTimeSlotAction(formData: FormData): Promise<void> {
   redirectToWeek(week);
 }
 
-// Only fills genuinely empty time — see src/server/scheduler-runs.ts's
-// header comment for the re-run policy. Never touches an existing Time
-// Slot, so this is safe to click repeatedly.
+// Runs the Whole-Future Persisted Scheduling Engine (src/scheduler/horizon.ts,
+// 2026-07-23) anchored at the REAL current week — not whichever week's
+// form this was submitted from — so switching to any future week becomes
+// a pure DB read instead of requiring another click from inside it. Only
+// fills genuinely empty time (see src/server/scheduler-runs.ts's re-run
+// policy); never touches an existing Time Slot, so this is safe to click
+// repeatedly. The redirect still returns to whichever week the click came
+// from.
 export async function generateScheduleAction(formData: FormData): Promise<void> {
   const week = String(formData.get("week"));
-  const weekStart = parseDateParam(week);
-  const weekEnd = addDays(weekStart, 7);
 
   let message: string | undefined;
   try {
-    const result = await runScheduler(weekStart, weekEnd);
+    const result = await runSchedulerForHorizon(startOfWeek(new Date()));
     if (result.output.conflicts.length > 0) {
       message = result.output.conflicts.map((c) => c.message).join("; ");
     }
@@ -120,6 +124,27 @@ export async function skipSessionAction(formData: FormData): Promise<void> {
     message = conflictMessage(result.conflicts);
   } catch (error) {
     message = error instanceof Error ? error.message : "跳過時段失敗";
+  }
+
+  redirectToWeek(week, message);
+}
+
+// "This one session is done" — advances the item's progress by exactly
+// one sitting (src/server/trackable-items.ts's advanceTrackableItemProgress,
+// via the same confirmCheckIn the daily check-in gate's 是，已完成 answer
+// uses). Not to be confused with completeItemAction below, which finishes
+// the WHOLE item regardless of which session's card it's clicked from —
+// project owner, 2026-07-23: every session showed the same chapter forever
+// because nothing before this advanced progress per session at all.
+export async function advanceSessionAction(formData: FormData): Promise<void> {
+  const week = String(formData.get("week"));
+  const slotId = String(formData.get("slotId"));
+
+  let message: string | undefined;
+  try {
+    await confirmCheckIn(slotId);
+  } catch (error) {
+    message = error instanceof Error ? error.message : "完成本次失敗";
   }
 
   redirectToWeek(week, message);

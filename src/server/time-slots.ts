@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { parseTags } from "./tags";
+import { effectiveUnitWeightMultiplier } from "./trackable-items";
 
 // The six occupant kinds from docs/domain-model.md's "Time Slot" — five
 // real occupant tables plus "slack" (deliberately empty, occupantId null).
@@ -187,9 +188,10 @@ export function listTimeSlots(range?: ListTimeSlotsRange) {
 // opened for detail — project owner, 2026-07-21: a card packed with both
 // at once ("固定事務：資料探勘") was clutter for something that should
 // read at a glance from the grid.
-async function occupantInfo(
+export async function resolveOccupantInfo(
   occupantType: OccupantType,
   occupantId: string | null,
+  slotContext?: { id: string },
 ): Promise<{ kind: string; label: string; progress?: string; tags: string[] }> {
   if (occupantType === "slack" || !occupantId) {
     return { kind: "", label: "留白", tags: [] };
@@ -230,10 +232,50 @@ async function occupantInfo(
       const kind = item.type === "book" ? "書籍" : "課程";
       const unitLabel = item.type === "book" ? "章" : "支影片";
       const currentUnit = Math.min(item.unitsCompleted + 1, item.unitCount);
+
+      // A single unit (Chapter/Video) isn't necessarily one sitting — the
+      // project owner, 2026-07-22: "we dont read the whole chapter... if
+      // you split chapter into 5 days, than would be like 第1章 1/5, or
+      // 第1章 3/5." `unitWeightMultiplier` ("average每單元比正常長 N 倍")
+      // was added 2026-07-21 specifically for this and marked
+      // display-only/not yet wired in — this is that wiring. Sessions per
+      // unit is the multiplier rounded to a whole session count; which
+      // session *this* one is comes from this slot's chronological rank
+      // among every Time Slot ever placed for this item, cycled modulo
+      // that count — since a bare unit count has no stored "chapter
+      // started here" marker, consecutive same-length units naturally
+      // line up as the cycle repeats. Always shown, even for a plain
+      // 1-session unit ("第 1 章 1/1／共 13 章") — project owner,
+      // 2026-07-23: hiding it for the common 1x case ("阿他沒有 ?/?
+      // ... 每個就都要 ?/?") left no way to tell "this chapter is one
+      // sitting" apart from "still loading." Uses the CURRENT unit's own
+      // effective multiplier (its unitWeightOverrides entry if one
+      // exists, otherwise the baseline) — 2026-07-23, per-chapter
+      // overrides, not a single flat per-item average.
+      const currentMultiplier = effectiveUnitWeightMultiplier(
+        item.unitWeightOverrides,
+        item.unitWeightMultiplier,
+        currentUnit,
+      );
+      const sessionsPerUnit = Math.max(1, Math.round(currentMultiplier));
+      let sessionFraction = "";
+      if (slotContext) {
+        const siblings = await prisma.timeSlot.findMany({
+          where: { occupantType: "trackable-item", occupantId: item.id },
+          orderBy: { startAt: "asc" },
+          select: { id: true },
+        });
+        const rank = siblings.findIndex((slot) => slot.id === slotContext.id);
+        if (rank !== -1) {
+          const sessionIndex = (rank % sessionsPerUnit) + 1;
+          sessionFraction = ` ${sessionIndex}/${sessionsPerUnit}`;
+        }
+      }
+
       return {
         kind,
         label: item.title,
-        progress: `第 ${currentUnit} ${unitLabel}／共 ${item.unitCount} ${unitLabel}`,
+        progress: `第 ${currentUnit} ${unitLabel}${sessionFraction}／共 ${item.unitCount} ${unitLabel}`,
         tags: parseTags(item.tags),
       };
     }
@@ -252,6 +294,7 @@ export interface TimeSlotWithLabel {
   endAt: Date;
   occupantType: OccupantType;
   occupantId: string | null;
+  confirmedAt: Date | null;
   occupantKind: string;
   occupantLabel: string;
   occupantProgress?: string;
@@ -264,13 +307,16 @@ export async function listTimeSlotsWithLabels(
   const slots = await listTimeSlots(range);
   return Promise.all(
     slots.map(async (slot) => {
-      const info = await occupantInfo(slot.occupantType as OccupantType, slot.occupantId);
+      const info = await resolveOccupantInfo(slot.occupantType as OccupantType, slot.occupantId, {
+        id: slot.id,
+      });
       return {
         id: slot.id,
         startAt: slot.startAt,
         endAt: slot.endAt,
         occupantType: slot.occupantType as OccupantType,
         occupantId: slot.occupantId,
+        confirmedAt: slot.confirmedAt,
         occupantKind: info.kind,
         occupantLabel: info.label,
         occupantProgress: info.progress,

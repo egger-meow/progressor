@@ -29,3 +29,12 @@ export const MIN_SLACK_SHARE_PER_DAY = 0.2;
 // genuinely small *final* remainder (see placeDeadlineTasks): this only
 // gates how much of the day's slack budget must be available up front.
 export const MIN_DEADLINE_SESSION_MS = 30 * 60 * 1000;
+
+// How far ahead the Whole-Future Persisted Scheduling Engine
+// (src/scheduler/horizon.ts, 2026-07-23) plans by default, and the hard
+// cap it's extended to when a Deadline Task's due date or the configured
+// Semester's end runs further out — same "inferred default, documented,
+// adjustable" status as DEFAULT_WIP_LIMIT. The cap exists so a mis-set
+// due date years out can't trigger unbounded computation/storage.
+export const DEFAULT_HORIZON_WEEKS = 12;
+export const MAX_HORIZON_WEEKS = 26;

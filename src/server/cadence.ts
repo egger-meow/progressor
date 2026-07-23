@@ -41,6 +41,37 @@ export function assertValidTimeOfDay(
   }
 }
 
+// Multi-select Time-of-Day Preference (2026-07-22) — a Routine/
+// CategoryItemSchedule can now pick more than one bucket at once; the
+// Scheduler merges adjacent selected buckets into one continuous search
+// window and tries non-adjacent ones in order (src/scheduler/
+// occurrence-timing.ts). Validates every element with the existing
+// per-element assertValidTimeOfDay, so the error message/regex stays the
+// same regardless of which element in the array is invalid.
+export function assertValidTimeOfDayPreferences(
+  values: string[],
+): asserts values is TimeOfDayPreference[] {
+  values.forEach((value) => assertValidTimeOfDay(value));
+}
+
+// Dedupes and sorts into VALID_TIME_OF_DAY's canonical order before
+// storing, so occurrence-timing.ts's merge logic can trust the array is
+// already ordered rather than re-sorting on every placement.
+export function serializeTimeOfDayPreferences(
+  values: TimeOfDayPreference[] | undefined,
+): string {
+  if (!values || values.length === 0) {
+    return "[]";
+  }
+  const unique = [...new Set(values)];
+  unique.sort((a, b) => VALID_TIME_OF_DAY.indexOf(a) - VALID_TIME_OF_DAY.indexOf(b));
+  return JSON.stringify(unique);
+}
+
+export function parseTimeOfDayPreferences(raw: string): TimeOfDayPreference[] {
+  return JSON.parse(raw) as TimeOfDayPreference[];
+}
+
 export function assertValidPreferredStartTime(value: string): void {
   if (!TIME_PATTERN.test(value)) {
     throw new Error(`Invalid preferredStartTime: ${value} (expected "HH:mm")`);

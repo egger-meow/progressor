@@ -9,6 +9,7 @@ import {
 } from "./actions";
 import { PriorityList } from "./priority-list";
 import { formatTagsInput } from "../tag-utils";
+import { formatUnitWeightOverridesInput } from "../unit-weight-utils";
 import { DatePicker } from "../date-picker";
 import { TimePicker } from "../time-picker";
 import { formatDateParam } from "../week";
@@ -28,7 +29,6 @@ const CADENCES = [
 ] as const;
 
 const TIME_OF_DAY = [
-  { value: "", label: "（無偏好）" },
   { value: "morning", label: "早上" },
   { value: "afternoon", label: "下午" },
   { value: "evening", label: "傍晚" },
@@ -46,7 +46,7 @@ const TIME_OF_DAY_LABELS: Record<string, string> = {
 const CATEGORY_TYPE_LABELS: Record<"book" | "course", string> = { book: "書籍", course: "課程" };
 
 // One form per Trackable Item type ("book"/"course") — same cadence/anchor/
-// timeOfDayPreference/preferredStartTime/durationMinutes fields as a
+// timeOfDayPreferences/preferredStartTime/durationMinutes fields as a
 // Routine's form (src/app/routines/page.tsx), since CategoryItemSchedule
 // shares that exact vocabulary (src/server/cadence.ts). Deliberately shipped
 // only now that the Scheduler already consumes it (category-placement.ts)
@@ -60,13 +60,13 @@ function CategoryScheduleForm({
   schedule: {
     cadence: string;
     anchor: number[] | null;
-    timeOfDayPreference: string | null;
+    timeOfDayPreferences: string[];
     preferredStartTime: string | null;
     durationMinutes: number;
   } | null;
 }) {
   return (
-    <div className={styles.slotItem}>
+    <div className={styles.paddedCard}>
       <h4>{CATEGORY_TYPE_LABELS[type]}</h4>
       {schedule ? (
         <p className={styles.hint}>
@@ -74,8 +74,10 @@ function CategoryScheduleForm({
           {schedule.anchor ? `［${schedule.anchor.join(",")}］` : ""}
           {schedule.preferredStartTime
             ? ` · 指定 ${schedule.preferredStartTime}`
-            : schedule.timeOfDayPreference
-              ? ` · ${TIME_OF_DAY_LABELS[schedule.timeOfDayPreference] ?? schedule.timeOfDayPreference}`
+            : schedule.timeOfDayPreferences.length > 0
+              ? ` · ${schedule.timeOfDayPreferences
+                  .map((t) => TIME_OF_DAY_LABELS[t] ?? t)
+                  .join("、")}`
               : ""}
           {` · ${schedule.durationMinutes} 分鐘`} —
           期間所有進行中的{CATEGORY_TYPE_LABELS[type]}會共用同一個時段，不會分開排。
@@ -101,16 +103,22 @@ function CategoryScheduleForm({
           指定日（以逗號分隔；每週用星期 0-6，每月用日期 1-31，每日則留空）
           <input type="text" name="anchor" defaultValue={schedule?.anchor?.join(",") ?? ""} />
         </label>
-        <label>
-          時段偏好
-          <select name="timeOfDayPreference" defaultValue={schedule?.timeOfDayPreference ?? ""}>
+        <div className={styles.checkboxGroupField}>
+          時段偏好（可複選；相鄰時段會合併成連續區間）
+          <div className={styles.checkboxGroup}>
             {TIME_OF_DAY.map((t) => (
-              <option key={t.value} value={t.value}>
+              <label key={t.value} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  name="timeOfDayPreference"
+                  value={t.value}
+                  defaultChecked={schedule?.timeOfDayPreferences.includes(t.value) ?? false}
+                />
                 {t.label}
-              </option>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </div>
         <label>
           時間長度（分鐘）
           <input
@@ -243,7 +251,7 @@ export default async function ItemsPage({
               />
             </label>
             <label>
-              平均每單元倍率（例如章節偏長填 1.5）
+              平均每單元倍率（未特別設定的單元都用這個，例如章節普遍偏長填 1.5）
               <input
                 type="number"
                 name="unitWeightMultiplier"
@@ -251,6 +259,15 @@ export default async function ItemsPage({
                 min={0.1}
                 step={0.1}
                 required
+              />
+            </label>
+            <label>
+              個別單元倍率覆蓋（選填；格式：單元:倍率，用逗號分隔，例如 8:2.5, 15:1.8——只有不尋常的單元才需要填）
+              <input
+                type="text"
+                name="unitWeightOverrides"
+                defaultValue={formatUnitWeightOverridesInput(editingItem.unitWeightOverrides)}
+                placeholder="例如：8:2.5, 15:1.8"
               />
             </label>
             <label className={styles.checkboxLabel}>
@@ -343,8 +360,12 @@ export default async function ItemsPage({
             <input type="number" name="estimatedDays" required />
           </label>
           <label>
-            平均每單元倍率（例如章節偏長填 1.5）
+            平均每單元倍率（未特別設定的單元都用這個，例如章節普遍偏長填 1.5）
             <input type="number" name="unitWeightMultiplier" defaultValue={1.0} min={0.1} step={0.1} required />
+          </label>
+          <label>
+            個別單元倍率覆蓋（選填；格式：單元:倍率，用逗號分隔，例如 8:2.5, 15:1.8——只有不尋常的單元才需要填）
+            <input type="text" name="unitWeightOverrides" placeholder="例如：8:2.5, 15:1.8" />
           </label>
           <label className={styles.checkboxLabel}>
             <input type="checkbox" name="setTargetDate" />

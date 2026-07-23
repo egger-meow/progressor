@@ -9,11 +9,118 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 
 ### Added
 
+- **Whole-Future Persisted Scheduling Engine**: 產生課表 now schedules the
+  whole future (default 12 weeks, extended to cover the furthest
+  `Deadline Task`/`Semester` end, capped at 26) in one run and persists
+  it, so switching to any future week is a pure DB read instead of
+  requiring another click from inside it. Formalized as a Constraint
+  Optimization Problem (Weighted Constraint Satisfaction objective,
+  Resource-Constrained Project Scheduling Problem structure) and solved
+  via a Serial Schedule Generation Scheme priority-rule heuristic — new
+  `src/scheduler/activity-planner.ts` (Task Planner), `resource-calendar.ts`
+  (Constraint Engine), `rcpsp-solver.ts` (Optimization Engine), `horizon.ts`
+  (orchestrator), and `src/server/scheduler-runs.ts`'s
+  `runSchedulerForHorizon`. Fixes real cross-week bugs the old single-week
+  engine had: a flexible `Trackable Item` only ever got one session per
+  run no matter how many were requested, and a `Deadline Task` recomputed
+  its full hour budget from scratch every week, both silently
+  under-scheduling and duplicating `SchedulerConflict`s. See
+  `docs/domain-model.md`'s "Whole-Future Persisted Scheduling Engine"
+  subsection and `docs/audits/whole-future-scheduling-engine-audit.md`.
+- Per-unit weight overrides for `Trackable Item`s: `unitWeightMultiplier`
+  is now explicitly the baseline for any unit without its own entry in
+  the new `unitWeightOverrides` (JSON unit-index → multiplier map,
+  migration `20260723015650_trackable_item_unit_weight_overrides`) — e.g.
+  chapter 8 alone can be set to 2.5x while every other chapter stays at
+  1x, instead of one flat average across the whole book. New
+  `effectiveUnitWeightMultiplier` (`src/server/trackable-items.ts`) is
+  shared by progress advancement, the Weekly View's progress-fraction
+  display, and the Whole-Future Scheduling Engine's remaining-session
+  count (a real correctness fix there: a long chapter now gets enough
+  sessions actually scheduled to match how many confirmations it takes to
+  finish, not just one). `/items`' edit/create forms gained a sparse
+  "個別單元倍率覆蓋" input (`8:2.5, 15:1.8` format — project owner,
+  2026-07-23, clarifying what the old flat multiplier field should have
+  meant).
+- Per-session progress advancement for `Trackable Item`s: answering "是，
+  已完成" in the Daily Check-In Gate, or clicking the Weekly View's new
+  **完成本次** button, now advances the item's `unitsCompleted` by one
+  sitting (`advanceTrackableItemProgress`, `src/server/trackable-items.ts`;
+  new `TrackableItem.currentUnitSessionsCompleted` field, migration
+  `20260722164624_trackable_item_current_unit_sessions`) — rolling forward
+  once `round(unitWeightMultiplier)` sessions are logged. Fixes a real
+  gap: previously nothing anywhere advanced progress per session, so every
+  session for a book/course showed the identical chapter/video forever —
+  project owner, 2026-07-23: "why the fuck everyday book content all the
+  same, same progress, same content, same chapter." The existing whole-item
+  "標記完成" button is relabeled **提前完成整本** and visually de-emphasized
+  to distinguish it from the new per-session action.
+- Daily Check-In Gate (Phase 8): a same-day, mandatory yes/no confirmation
+  for every past `Book`/`Course`/`Deadline Task` `Time Slot` the user never
+  marked resolved. Blocks the whole app (`src/app/layout.tsx`) until
+  answered. "Yes" only timestamps `TimeSlot.confirmedAt`; "no" deletes the
+  session and reschedules the item's outstanding work via the existing
+  `runScheduler`, pruning any fresh placement that itself still lands on an
+  already-elapsed day. New: `src/server/check-ins.ts`, `src/app/
+  check-in-gate.tsx`, `src/app/check-in-actions.ts`, migration
+  `20260722151340_time_slot_confirmed_at`. See `docs/domain-model.md`'s
+  "Daily Check-In" entry and `docs/status.md`'s Phase 8 section.
+
+### Fixed
+
+- `placeCategoryItemSchedules` (`src/scheduler/category-placement.ts`): a
+  category-scheduled `Trackable Item` (a shared daily/weekly book or
+  course slot) got a brand-new session on every eligible occurrence
+  forever, with no regard for `unitCount` — a 13-chapter book with a
+  daily shared slot was computed to receive 157 sessions, running months
+  past when it should have finished (project owner, 2026-07-23, live on
+  real data: "她媽13天讀完喔?" / "到底在幹三小"). Now caps each item at its
+  own remaining-session budget via `activity-planner.ts`'s
+  `computeRemainingSessions` (now exported), threaded across the horizon
+  week loop (`horizon.ts`'s `categoryScheduledCounts`) so a multi-week
+  run stops exactly where the non-shared-slot path already does.
+- Weekly View's `occupantProgress` session fraction (e.g. `1/1`) was only
+  shown when a unit needed more than one sitting, hiding it for the
+  common 1x case and leaving no way to tell "this chapter is one
+  sitting" from a stale/incomplete display — now always shown.
+- `/items`' 固定排程 card (`CategoryScheduleForm`) reused `.slotItem`
+  (which relies on its Weekly-View-only child for padding) with no
+  padding of its own, so its border sat directly on the text — new
+  `.paddedCard` class.
+- Daily Check-In Gate: clicking 提交 processed the answers but never
+  closed the gate — `submitCheckInsAction` had no `redirect()`/
+  `revalidatePath()`, so `layout.tsx`'s `listPendingCheckIns()` never
+  re-ran and the exact same stale pending list kept rendering.
+  `revalidatePath("/", "layout")` added (project owner, 2026-07-23: "why
+  the fuck click 提交 it dont close"). Found and fixed live, unrelated to
+  this release's scheduler work.
+- A `Trackable Item` session's `occupantProgress` now shows which sitting
+  of a multi-session unit it is (e.g. `第 13 章 1/2／共 24 章`) when
+  `unitWeightMultiplier` rounds above 1, instead of only naming the
+  chapter/video — project owner, 2026-07-22: "we dont read the whole
+  chapter... if you split chapter into 5 days, than would be like 第1章
+  1/5." Wires up `unitWeightMultiplier`, previously display-only/unused.
+- The Daily Check-In Gate's 是/否 controls are now select-then-submit
+  (`src/app/check-in-gate-form.tsx`) instead of each being its own
+  instant-submit Server Action — project owner: "at least have the
+  reaction i selected" (no visible confirmation before the round-trip)
+  and "why no something like 提交." Picking an answer is now instant
+  client state (the picked option highlights, the other dims), nothing
+  is sent until a sticky "提交" button (disabled until every pending item
+  has an answer) submits every answer in one batch
+  (`submitCheckInsAction`/`submitCheckIns`).
+- The Daily Check-In Gate's sticky "提交" bar no longer overlaps ("穿模")
+  the last pending row's 是/否 buttons — project owner, 2026-07-23. The
+  bar was `position: sticky` inside the same scrolling container as the
+  list, so it glued over whatever row landed in the bottom viewport band
+  regardless of scroll position. `.checkInGateList` is now the only
+  scrolling element; the submit bar is a plain flex child below it.
+
 - Bootstrap: drafted all canonical docs (`docs/project-charter.md`,
   `docs/domain-model.md`, `docs/system-direction.md`, `ROADMAP.md`,
   `docs/status.md`, `docs/build-status.md`, `docs/release.md`, `CLAUDE.md`,
   `AGENTS.md`, `PRIORITIES.md`, `README.md`) from the human's project idea,
-  per `BOOTSTRAP.md`.
+  per `.loop-engine/BOOTSTRAP.md`.
 - Project scaffold: Next.js 16 + TypeScript + Prisma 6 (SQLite) + Vitest 3 +
   ESLint, following `docs/system-direction.md`'s layering. `npm run verify`
   (lint + typecheck + test + build) is now the established task gate.
@@ -241,6 +348,86 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   via the existing "?edit="-style query-param pattern, no new client JS)
   — project owner, 2026-07-21: "all books together in a time zone...not
   different books separated, only details looks what the books' progress."
+- `placeFlexibleTrackableItems` (`src/scheduler/flexible-placement.ts`) now
+  ranks its placement candidates instead of taking the first free gap it
+  finds — project owner, 2026-07-22 (`/goal`): "don't build a simple
+  priority scheduler...optimize for the best schedule, not just a valid
+  one," framed as Weighted Constraint Satisfaction (hard constraints filter
+  what's feasible, soft constraints rank the survivors). New
+  `src/scheduler/objective.ts`: for each candidate, scores fragmentation
+  avoidance (a placement leaving a leftover under 30 minutes is a dead,
+  unusable sliver and is penalized), free-block preservation (a placement
+  is rewarded, up to a cap, by how much usable contiguous free time it
+  leaves behind), and daily load balance (an emptier day scores higher, so
+  eligible items spread across the week instead of every item piling onto
+  the first day with any room, which is what the old first-fit version
+  did). `flexible-placement.ts` now enumerates every structurally feasible
+  (day, gap) candidate across the whole week before picking, rather than
+  stopping at the first day with room. Stated as v1 scope, not
+  overclaimed: this ranks one placement path's own candidate search (the
+  only path with no `Time-of-Day Preference` of its own to lean on already
+  — `Routine`/`CategoryItemSchedule` occurrences already search a
+  preferred window via `occurrence-timing.ts`), not a general-purpose
+  CP-SAT/RCPSP solver. See `docs/domain-model.md`'s Scheduler section and
+  `objective.ts`'s header comment for the full framing and explicit
+  non-goals.
+- `objective.ts` (follow-up, 2026-07-22, same `/goal`) scores two more
+  terms from the requested `Score` formula: EnergyAlignment
+  (`energyAlignmentScore` — a generic, weakly-weighted default preferring
+  earlier-in-day starts, since a bare `Trackable Item` has no per-item
+  `Time-of-Day Preference` of its own to read a real signal from) and
+  ContextSwitching (`contextSwitchPenalty` — a candidate placed back-to-back
+  with a differently-kinded occupant, e.g. a `Routine` or `Fixed
+  Commitment`, is penalized; touching another `Trackable Item` session is
+  continuity, not a switch, and is never penalized). ContextSwitching
+  needed occupant-kind-tagged busy intervals (new `KindedInterval` type),
+  threaded from `index.ts`'s `computeSchedule` — which now also builds a
+  `kindedBusy` list from every earlier layer's placements plus
+  `existingSlots` — through `flexible-placement.ts`'s new optional third
+  parameter. `docs/domain-model.md`'s Scheduler section now carries the
+  full term-by-term mapping table (every one of the formula's 7 terms,
+  scored / handled elsewhere / explicitly out of scope with a stated
+  reason) so the v1 boundary is precise rather than a blanket "not
+  overclaimed" note. 5 new tests in `objective.test.ts`, 1 new pipeline
+  test in `flexible-placement.test.ts` (isolates ContextSwitching's effect
+  on a real placement decision by holding FreeBlockSize and daily-balance
+  equal between two candidate gaps on the same day, differing only in
+  which one touches a different-kind neighbor).
+- `objective.ts` (follow-up, 2026-07-22, project owner's explicit scope
+  decision after the Stop hook flagged the remaining gap — RCPSP resource/
+  dependency modeling and a formal solver architecture would require new
+  domain concepts this project's `ROADMAP.md` governance reserves for a
+  human to authorize; extending the existing WCSP gap-scoring to more
+  placement paths without inventing those concepts was chosen instead):
+  new `pickBestGapInWindow`, a drop-in replacement for `time.ts`'s
+  `findFreeInterval` with the identical signature and feasibility contract,
+  but scoring FreeBlockSize/Fragmentation across every gap in the given
+  window instead of returning the first one found. Wired into
+  `occurrence-timing.ts`'s `findOccurrenceWindow` (`Routine`/
+  `CategoryItemSchedule`, all three of its search branches) and
+  `hard-constraints.ts`'s `placeDeadlineTasks` (`findFreeSlot`).
+  Deliberately does **not** change which day/window each path searches —
+  only which gap inside an already-chosen window comes back — so
+  `Deadline Task`'s day-by-day slack-budget loop and the charter's
+  never-silently-drop guarantee are untouched; all 97 pre-existing
+  scheduler tests passed unmodified against the new code, including all 22
+  `hard-constraints.test.ts` cases. 2 new tests (`category-placement.test.ts`,
+  `hard-constraints.test.ts`) mirror `flexible-placement.test.ts`'s
+  fragmentation-avoidance test: a day split into a gap that would be filled
+  exactly (zero leftover) and a gap with a large leftover now picks the
+  latter, where the old first-fit search picked the former.
+- `docs/scheduler-constraint-formulation.md` (new): the Scheduler's formal
+  Constraint Optimization Problem definition — decision variables, domain,
+  hard/soft constraints written in standard CP/WCSP notation matching
+  `objective.ts`'s actual weights — plus an honest section on how the
+  current greedy/sequential search differs from a real CP-SAT
+  branch-and-bound solver, and how RCPSP's resource-capacity/precedence
+  extensions relate to what Progressor does and doesn't model. Written to
+  directly engage with the `/goal`'s recommended references (Handbook of
+  Constraint Programming, RCPSP surveys, OR-Tools CP-SAT) without adding
+  any new dependency, domain concept, or architecture — pure documentation
+  of what the existing, already-tested implementation already does,
+  formalized in the requested vocabulary. Linked from `docs/README.md`.
 
 ### Changed
 
@@ -364,6 +551,42 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
   shared `src/scheduler/time.ts` so both placement layers use the same
   Slack-budget logic (`flexible-placement.ts` re-exports them for
   `repair.ts`'s existing import).
+- `Routine`/`CategoryItemSchedule`'s Time-of-Day Preference is now
+  multi-select (`timeOfDayPreference: TimeOfDayPreference | null` →
+  `timeOfDayPreferences: TimeOfDayPreference[]`, JSON-encoded array column,
+  default `"[]"`) — project owner, 2026-07-22, while investigating the
+  evening/08:00 placement bug documented under "Fixed" below: wanted to
+  pick more than one bucket (e.g. 早上 AND 傍晚), and "if the time periods
+  are contiguous, the system can even join them together."
+  `src/scheduler/occurrence-timing.ts`'s `findOccurrenceWindow` now builds
+  a list of candidate windows (`buildCandidateWindows`) from the selected
+  buckets, merging adjacent ones (e.g. `morning`+`afternoon`, which touch
+  at 12:00) into one continuous window; non-adjacent selections (e.g.
+  `morning`+`night`) stay separate and are tried in day order, so a gap
+  the user didn't select is never silently filled. Only the last candidate
+  is allowed to run past its own bucket's end (up to the full daily
+  window) — the same overflow behavior as the evening/08:00 fix below,
+  now generalized to N selected buckets; earlier candidates stay strictly
+  bounded to their own window. New shared helpers in
+  `src/server/cadence.ts`: `assertValidTimeOfDayPreferences`,
+  `serializeTimeOfDayPreferences` (dedupes + sorts into canonical order),
+  `parseTimeOfDayPreferences`. The UI (`/routines`, `/items`) replaced the
+  single `<select>` with a checkbox group; `formData.getAll` reads every
+  checked value, so the old "（無偏好）" sentinel option is gone — zero
+  boxes checked now means no preference. Migration
+  (`20260722034900_routine_multi_time_of_day`) preserves existing data:
+  an existing single value like `"evening"` becomes `["evening"]`, not `[]`.
+- `GroupedSlotBlock`'s compact card (`src/app/grouped-slot-block.tsx`)
+  showed only a bare "N 項進行中" count, never the actual item titles —
+  unlike `SlotCard`, which always shows its one item's title inline.
+  Project owner, 2026-07-22: "why the fuck the blocks still blank and not
+  even showing 看書 or 書籍...if time table block space enough, can still
+  show...book names...wont ever explode since the border can just cut
+  off." Now joins every item's title into the same `.slotOccupant` span
+  `SlotCard` uses — already 3-line-clamped with `overflow: hidden` on the
+  parent, so a long list is safely truncated in place rather than
+  inflating the block, with the full list one click away via the existing
+  expand panel. Added `.slotGroupCount` for a smaller trailing "共 N 項".
 
 ### Fixed
 
@@ -387,5 +610,114 @@ this project's versioning is defined in [`docs/release.md`](docs/release.md).
 - `updateTimeSlot` silently reused a `Time Slot`'s previous `occupantId`
   when `occupantType` changed without a new id — now requires a fresh
   `occupantId` whenever the type changes.
+- `HourCellOverlay`'s floating edit/add-slot panel (`src/app/
+  hour-cell-overlay.tsx`) clamped its `position: fixed` placement against a
+  guessed constant height (340px) instead of the panel's real size — once
+  its content grew past that guess (e.g. expanding the 內容 occupant
+  picker's list), the bottom of the panel overflowed past the viewport
+  with no way to scroll to it (project owner, 2026-07-22: "content below
+  lower bound would never seen and manipulate"). Now measures the panel's
+  actual rendered size via `ResizeObserver` and re-clamps on both content
+  resize and window resize, plus a `max-height`/`overflow-y: auto` fallback
+  on `.hourOverlayPanel` (`src/app/page.module.css`) so content taller than
+  the viewport itself is still reachable by scrolling inside the panel.
+- `GroupedSlotDetailPanel`'s per-item rows (`src/app/grouped-slot-block.tsx`)
+  reused `.recordCard`'s row layout (title block beside a 3-button action
+  block), built for the wide record-list pages (`/items`, `/routines`,
+  `/commitments`) — squeezed into the floating panel's 260px, `.recordMain`
+  was left almost no width, wrapping CJK book titles one character per line
+  and clipping the `／共 N 章` half of the progress fraction out of view
+  (project owner, 2026-07-22 screenshot: "股票作手回憶錄" stacked
+  vertically, "第13章的 ?/?"). Added a `.hourOverlayPanel .recordCard`
+  override (`src/app/page.module.css`) that stacks the action row below the
+  title instead of beside it, and a `panelClassName` prop on
+  `HourCellOverlay` so this one floating-panel case can render at 400px
+  instead of 260px.
+- `findOccurrenceWindow`'s Time-of-Day Preference search
+  (`src/scheduler/occurrence-timing.ts`, shared by `Routine` and
+  `CategoryItemSchedule`) bounded the search to the preference bucket's own
+  end (e.g. evening's 17:00-20:00) — a session whose `durationMinutes`
+  alone exceeds the bucket's width (e.g. a book's 200-minute block vs.
+  evening's 180-minute span) could then never fit, silently failing the
+  bucket search and falling through to the full-day fallback, which starts
+  searching from 08:00 and ignores the preference entirely (project owner,
+  2026-07-22: set 傍晚/200min on `book`, got placed at 08:00 with the
+  evening window sitting empty — "why 排 早上, other space are even
+  empty"). The bucket search now only bounds the earliest allowed *start*
+  (`window.start`), letting the session run past the bucket's own end up
+  to `DAILY_WINDOW_END` — it still starts as close to the preferred bucket
+  as possible instead of abandoning the preference outright. Existing
+  `Time Slot`s already generated before this fix still reflect the old
+  08:00 placement; regenerating (`產生課表`) only fills in new/unfilled
+  occurrences, so already-placed days need their old `Time Slot`s removed
+  first for the corrected placement to apply retroactively.
+- `placeDeadlineTasks`'s (`src/scheduler/hard-constraints.ts`)
+  `MIN_DEADLINE_SESSION_MS` day-budget gate compared a day's whole slack
+  headroom against the 30-minute threshold, skipping the day outright
+  whenever that headroom was small — even when the task's actual remaining
+  work was itself smaller than the headroom and would have fit.
+  `constants.ts`'s own comment on `MIN_DEADLINE_SESSION_MS` promises this
+  doesn't block "a genuinely small *final* remainder," but the code never
+  actually implemented that carve-out. Now compares the chunk it would
+  actually place (`chunkMs`) against the threshold, and only skips when
+  more of the task remains after this chunk — a task's last few minutes of
+  work are no longer needlessly surfaced as a `SchedulerConflict` on a day
+  that had just enough room.
+- `repairInsertAdHocEvent` (`src/scheduler/repair.ts`), part of Phase 3's
+  Elastic Re-Scheduling, predated `CategoryItemSchedule`
+  (`category-placement.ts`, added this session) and had two related gaps
+  once the two features interact: (1) `relocateSession` always searched
+  for exactly the generic `SESSION_DURATION_MS` (2h) when relocating a
+  Trackable Item session evicted by a new Ad-hoc Event, silently
+  shrinking/growing a relocated session that was actually a different
+  length (e.g. a book's 200-minute `CategoryItemSchedule` block) — now
+  preserves the evicted slot's own original duration. (2) Two or more
+  Trackable Item `Time Slot`s sharing one `CategoryItemSchedule` occurrence
+  (identical `[startAt,endAt)`, per that feature's core "all books in
+  progress share one window" invariant) were evicted and relocated
+  independently, letting them land on different days/times and fragmenting
+  the occurrence right back into the separate carve-outs the feature was
+  built to avoid — `relocateSession` → `relocateGroup` now relocates every
+  member of a shared occurrence to the same new window together, or drops
+  the whole group (no session for either) if no shared window exists,
+  never a partial fragment. Also found while fixing this: `busy` excluded
+  *every* slot overlapping the new Ad-hoc Event regardless of type,
+  including a Fixed Commitment/Deadline Task/Routine that's flagged (or
+  left alone) but never actually removed from the board — wrongly freeing
+  up that commitment's own real-world-occupied window for a relocation
+  search to land on. Now only Trackable Item slots (the ones actually
+  evicted) are excluded from `busy`.
+- `GroupedSlotBlock` (`src/app/grouped-slot-block.tsx`) rendered no tag
+  markup at all, so the Weekly View's "標籤" display-option toggle had no
+  effect on merged book/course blocks even though it correctly showed/hid
+  tags on every single-item `SlotCard` — project owner, 2026-07-22: "show
+  標籤 cliked but books inside 標籤 not showed." Now renders the group's
+  deduped tags through the same `.slotTags`/`.slotTagChip` markup
+  `SlotCard` already used, so the existing `data-show-tags` CSS toggle
+  (`display-options.tsx`) applies uniformly.
+- `HourCellOverlay`'s floating panel (`src/app/hour-cell-overlay.tsx`)
+  still clipped in some cell positions even after the previous
+  anchor-clamp fix — project owner, 2026-07-22, on the expanded book detail
+  panel running off the right/bottom edge: "bro still cut wtf, I dont wanna
+  see any cut in any cases...why not just set that more centered in the
+  screen." Replaced anchor-relative positioning entirely with a centered
+  modal: a fixed, dimmed backdrop with the panel centered inside it,
+  bounded to `calc(100vw/vh - 32px)` with its own internal scroll —
+  verified down to a 380×300 viewport, where the panel still stays fully
+  on-screen and scrolls internally instead of spilling past an edge.
+  Removes the whole class of "content cut off past the viewport edge"
+  bugs instead of patching the clamp math a third time.
+- Every internal `?edit=`/`?add=`/`?expand=`/week-nav link (`src/app/
+  page.tsx`, `grouped-slot-block.tsx`) was a plain `<a href>`, forcing a
+  full document reload on every click — project owner, 2026-07-22: "the
+  page rerender and have a kind of lag or tick." Converted to `next/link`'s
+  `Link` for client-side transitions; verified live that closing the
+  detail panel no longer reloads the page.
+- The floating panel's close action was a "取消"/"關閉" text link buried at
+  the bottom of its content — project owner, 2026-07-22: "關閉 should be
+  like a x on right up which is more intuitive." Replaced with a single
+  top-right X button rendered by `HourCellOverlay` itself (so it applies
+  uniformly to the edit/add/expand panels), removing the redundant
+  per-form text links.
 
 ### Removed

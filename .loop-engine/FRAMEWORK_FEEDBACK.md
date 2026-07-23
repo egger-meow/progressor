@@ -8,8 +8,8 @@ working. This is how defects discovered in real downstream use find their
 way back upstream.
 
 This file is about the framework, never the project: a bug in the code
-goes to `PRIORITIES.md` or `INBOX.md`; a defect in *how the loops are run*
-goes here.
+goes to `../PRIORITIES.md` or `../INBOX.md`; a defect in *how the loops are
+run* goes here.
 
 Ships ready to use — nothing to fill in. Empty is the normal state of a
 framework that's working.
@@ -25,8 +25,8 @@ framework that's working.
 - the human had to intervene where the framework promised autonomy.
 
 **Humans may append too.** Same format, same rules. Framework friction the
-human notices doesn't need to route through `INBOX.md` — entries here are
-reports, not instructions, so they never trigger work.
+human notices doesn't need to route through `../INBOX.md` — entries here
+are reports, not instructions, so they never trigger work.
 
 **Entry format** — hard cap ~6 lines, any language, appended under
 "Entries" below (newest last):

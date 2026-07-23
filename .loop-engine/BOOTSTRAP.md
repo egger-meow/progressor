@@ -44,7 +44,7 @@ steer.
 ## Agent procedure
 
 You may arrive here two ways: the human pasted the prompt above, or your
-entry-point file (`CLAUDE.md` / `AGENTS.md`) routed you here because the
+entry-point file (`../CLAUDE.md` / `../AGENTS.md`) routed you here because the
 repo still carries `TEMPLATE:` markers. The procedure is identical either
 way — and if the human already described their project in chat, that
 description **is** the Stage 1 idea dump; don't ask them to restate it in
@@ -112,7 +112,7 @@ Fill the files in checklist order, steps 1–9 (charter → domain model →
 system direction → roadmap → status → build-status → release → agent
 entry points → priorities), exactly as the checklist describes each. Also
 honor its "Before step 1" note: replace loop-engine's own `README.md` /
-`README.zh-TW.md` with a short, real README for this project.
+`zh-TW/README.md` with a short, real README for this project.
 
 Marker rules:
 
@@ -125,11 +125,12 @@ Marker rules:
   No phase in this file licenses any work while this marker exists. -->
   ```
 
-Run `./scripts/check-templates.sh` (or `.ps1`): the **only** remaining hit
-must be that marker. (This file's own quotation of the marker doesn't
-count — `BOOTSTRAP.md` and its `.zh-TW` sibling are excluded from the scan
-by design, like `docs/audits/TEMPLATE.md`.) Commit the whole draft as one
-commit, e.g. `bootstrap: draft all canonical docs, awaiting authorization`.
+Run `.loop-engine/scripts/check-templates.sh` (or `.ps1`) from the repo
+root: the **only** remaining hit must be that marker. (This file's own
+quotation of the marker doesn't count — `BOOTSTRAP.md` and its
+`zh-TW/BOOTSTRAP.md` sibling are excluded from the scan by design, like
+`../docs/audits/TEMPLATE.md`.) Commit the whole draft as one commit, e.g.
+`bootstrap: draft all canonical docs, awaiting authorization`.
 
 **Exit:** check-templates reports exactly the one authorization marker.
 
@@ -166,13 +167,14 @@ channel is proven before it's relied on.
 
 Bootstrap is then over and this file has nothing further to say —
 `LOOP_ENGINEERING.md` governs from here, and the project may delete
-`BOOTSTRAP.md` (and `BOOTSTRAP.zh-TW.md`) whenever it likes.
+`BOOTSTRAP.md` (and `zh-TW/BOOTSTRAP.md`) whenever it likes.
 
 ## Locating yourself
 
 Repo state alone tells any agent — fresh session, different tool, months
 later — exactly where bootstrap stands. Run
-`./scripts/check-templates.sh`, then check `ROADMAP.md`:
+`.loop-engine/scripts/check-templates.sh` from the repo root, then check
+`ROADMAP.md`:
 
 | Repo state | Stage | Do |
 | --- | --- | --- |

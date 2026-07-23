@@ -153,21 +153,45 @@ function repairItemCompleted(input: SchedulerInput, itemId: string, now: Date): 
 // this searches the rest of the week the same way ordinary flexible
 // placement does — bounded to 7 days, never a full recompute of every
 // other item's placement.
-function relocateSession(input: SchedulerInput, itemId: string, busy: Interval[]): ScheduledTimeSlot | null {
+//
+// Relocates every item in `itemIds` to the SAME new window (or none of
+// them) rather than one at a time — a CategoryItemSchedule occurrence
+// (category-placement.ts) places one Time Slot per eligible item, all
+// sharing one identical [startAt,endAt); relocating its members
+// independently would let a single Ad-hoc Event fragment "all books in
+// progress" back into separate carve-outs, contradicting that feature's
+// whole point (docs/domain-model.md's Category Item Schedule). A single
+// evicted flexible session is just the itemIds.length === 1 case of the
+// same logic. `durationMs` is the evicted window's own original length
+// (endAt - startAt), not the generic SESSION_DURATION_MS constant — a
+// relocated session must keep whatever length it actually had (a
+// CategoryItemSchedule's configured duration, or a manually-resized
+// slot), never silently snap to 2 hours.
+function relocateGroup(
+  input: SchedulerInput,
+  itemIds: string[],
+  durationMs: number,
+  busy: Interval[],
+): ScheduledTimeSlot[] | null {
   for (let offset = 0; offset < 7; offset++) {
     const day = addDays(input.weekStart, offset);
     const slackBudget = dailyWindowMs(day) * (1 - MIN_SLACK_SHARE_PER_DAY);
-    if (usedMsOnDay(day, busy) + SESSION_DURATION_MS > slackBudget) {
+    if (usedMsOnDay(day, busy) + durationMs > slackBudget) {
       continue;
     }
     const found = findFreeInterval(
       combineDateAndTime(day, DAILY_WINDOW_START),
       combineDateAndTime(day, DAILY_WINDOW_END),
-      SESSION_DURATION_MS,
+      durationMs,
       busy,
     );
     if (found) {
-      return { startAt: found.start, endAt: found.end, occupantType: "trackable-item", occupantId: itemId };
+      return itemIds.map((occupantId) => ({
+        startAt: found.start,
+        endAt: found.end,
+        occupantType: "trackable-item" as const,
+        occupantId,
+      }));
     }
   }
   return null;
@@ -196,24 +220,52 @@ function repairInsertAdHocEvent(
   const conflicts: SchedulerConflict[] = [];
 
   const overlapping = input.existingSlots.filter((slot) => overlaps(startAt, endAt, slot.startAt, slot.endAt));
-  const overlappingIds = new Set(overlapping.map((slot) => slot.id));
 
-  let busy = toBusy(input.existingSlots.filter((slot) => !overlappingIds.has(slot.id)));
+  // Only Trackable Item slots are actually evicted (removed from the
+  // board below) — a Fixed Commitment/Deadline Task overlap is flagged as
+  // a conflict but the commitment itself never moves, and a Routine
+  // overlap is left alone entirely (both per this function's own header
+  // comment). Excluding *every* overlapping slot from `busy` regardless
+  // of type — as this used to — wrongly freed up a Fixed Commitment's own
+  // window for a relocation search below to land on, since only the
+  // Trackable Item ones are genuinely vacated.
+  const trackableOverlaps = overlapping.filter((slot) => slot.occupantType === "trackable-item");
+  const trackableOverlapIds = new Set(trackableOverlaps.map((slot) => slot.id));
+
+  let busy = toBusy(input.existingSlots.filter((slot) => !trackableOverlapIds.has(slot.id)));
   busy.push({ start: startAt, end: endAt });
 
+  // Group overlapping Trackable Item slots by their original
+  // [startAt,endAt) — 2+ sharing the exact same window is a
+  // CategoryItemSchedule occurrence and must relocate together (see
+  // relocateGroup's comment); a lone slot is just a group of one.
+  const groups = new Map<string, typeof trackableOverlaps>();
+  for (const slot of trackableOverlaps) {
+    const key = `${slot.startAt.getTime()}:${slot.endAt.getTime()}`;
+    const group = groups.get(key) ?? [];
+    group.push(slot);
+    groups.set(key, group);
+  }
+
+  for (const group of groups.values()) {
+    removedSlotIds.push(...group.map((slot) => slot.id));
+    const durationMs = group[0].endAt.getTime() - group[0].startAt.getTime();
+    const itemIds = group
+      .map((slot) => slot.occupantId)
+      .filter((id): id is string => id !== null);
+    const relocated = itemIds.length > 0 ? relocateGroup(input, itemIds, durationMs, busy) : null;
+    if (relocated) {
+      addedSlots.push(...relocated);
+      busy = [...busy, ...relocated.map((slot) => ({ start: slot.startAt, end: slot.endAt }))];
+    }
+    // No shared room anywhere else this week: the whole group simply gets
+    // no session — same silent-skip precedent as ordinary flexible
+    // placement (docs/status.md), and preferable to fragmenting a shared
+    // occurrence across different times.
+  }
+
   for (const slot of overlapping) {
-    if (slot.occupantType === "trackable-item") {
-      removedSlotIds.push(slot.id);
-      const relocated = slot.occupantId ? relocateSession(input, slot.occupantId, busy) : null;
-      if (relocated) {
-        addedSlots.push(relocated);
-        busy = [...busy, { start: relocated.startAt, end: relocated.endAt }];
-      }
-      // No room anywhere else this week: the item simply gets no session,
-      // same silent-skip precedent as ordinary flexible placement
-      // (docs/status.md) — flexible Trackable Item work isn't covered by
-      // the never-silently-drop guardrail.
-    } else if (slot.occupantType === "fixed-commitment" || slot.occupantType === "deadline-task") {
+    if (slot.occupantType === "fixed-commitment" || slot.occupantType === "deadline-task") {
       conflicts.push({
         reason: "ad-hoc-event-overlap",
         occupantType: "ad-hoc-event",

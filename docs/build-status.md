@@ -49,7 +49,7 @@ new entry correcting it and say so explicitly.
   `docs/status.md`, `docs/build-status.md`, `docs/release.md`, `CLAUDE.md`,
   `AGENTS.md`, `PRIORITIES.md`, `README.md` drafted. No application code
   exists yet, so nothing beyond the docs themselves has been verified. Next
-  verification: `./scripts/check-templates.sh` must report only the
+  verification: `.loop-engine/scripts/check-templates.sh` must report only the
   `ROADMAP.md` bootstrap-authorization marker before this can move to Stage
   4 (human authorization).
 - 2026-07-18: bootstrap authorized by the human; `ROADMAP.md`'s marker
@@ -732,3 +732,87 @@ new entry correcting it and say so explicitly.
   verification (deletion counts cross-checked against creation counts
   each time), leaving the project owner's real `Book`/`Course` records
   and their status/progress completely untouched throughout.
+- 2026-07-22: two follow-up fixes plus a scheduler feature, found while
+  investigating a real placement bug the project owner reported. (1) A
+  book's `CategoryItemSchedule` (傍晚/200min) landed at 08:00 instead of
+  the evening — root cause: `findOccurrenceWindow`'s bucket search
+  (`src/scheduler/occurrence-timing.ts`) bounded itself to the bucket's
+  own end (evening = 17:00-20:00, 180min), so a 200-minute session could
+  never fit, silently failed, and fell through to the full-day fallback
+  from 08:00. Fixed to bound only the bucket's *start*, letting the
+  session run past the bucket's own end up to `DAILY_WINDOW_END`. (2)
+  Extended into multi-select Time-of-Day Preference with contiguous
+  merging (project owner: "can select multiple prefer 時段, and if 時段
+  is 接續, system can even 連在一起") — `timeOfDayPreference:
+  TimeOfDayPreference | null` → `timeOfDayPreferences:
+  TimeOfDayPreference[]` on both `Routine` and `CategoryItemSchedule`
+  (migration `20260722034900_routine_multi_time_of_day`, hand-edited
+  `RedefineTables` INSERT to convert existing single values into
+  one-element arrays rather than dropping them), new `buildCandidateWindows`
+  merging adjacent buckets and trying non-adjacent ones in day order
+  without bleeding into a gap the user didn't select, checkbox-group UI on
+  `/routines` and `/items` replacing the old single `<select>`. (3) Two
+  unrelated UI bugs found in the same session: `HourCellOverlay`'s
+  floating panel clamped position against a guessed 340px height instead
+  of the panel's real size, overflowing the viewport bottom unreachably on
+  content growth — now uses `ResizeObserver` + a CSS `overflow-y: auto`
+  fallback; `GroupedSlotDetailPanel`'s per-item rows squeezed `.recordTitle`
+  to near-zero width inside the 260px floating panel, wrapping CJK book
+  titles one character per line — fixed by stacking the action row below
+  the title instead of beside it, plus a wider panel variant for this case.
+  `npm run verify` passes — 231 tests (12 new: 5 merge/overflow cases in
+  `routine-placement.test.ts`, 4 multi-value create/dedupe cases split
+  across `routines.test.ts`/`category-item-schedules.test.ts`, 1
+  regression pin for the evening/08:00 fix), lint/typecheck/build clean.
+  Verified live: shrunk the Browser pane to 1280×150 with the floating
+  panel open and confirmed it stays clamped and internally scrollable;
+  after the placement fix, deleted the project owner's real week's stale
+  book `Time Slot`s (14 rows, explicitly confirmed with the project owner
+  first since these were real pre-existing data, not test artifacts) and
+  regenerated via the actual "產生課表" button, confirming both books moved
+  from 08:00-11:20 to 17:00-20:20 — the corrected evening placement.
+- 2026-07-22 (follow-up): project owner asked to "re enforce, enhance the
+  排程 engine, since it is the most complicate element in our system" —
+  audited `src/scheduler/` for correctness gaps rather than adding new
+  surface area, and found two real bugs. (1)
+  `MIN_DEADLINE_SESSION_MS`'s gate in `placeDeadlineTasks`
+  (`hard-constraints.ts`) compared a day's whole slack headroom against
+  the 30-minute threshold and skipped the day outright even when the
+  task's actual remaining work was smaller than that headroom and would
+  have fit — `constants.ts`'s own comment promised a "small final
+  remainder" carve-out that the code never implemented; fixed to compare
+  the chunk actually being placed, and only skip when more work remains
+  after it. (2) `repair.ts`'s Ad-hoc Event eviction/relocation
+  (`repairInsertAdHocEvent`) predated `CategoryItemSchedule`
+  (added earlier this same session) and had two gaps once the two
+  interact: relocated sessions always searched for the generic 2h
+  `SESSION_DURATION_MS` instead of preserving the evicted slot's own
+  original duration (silently reshaping a book's 200-minute block down to
+  2h), and two-or-more Trackable Item slots sharing one
+  `CategoryItemSchedule` occurrence were relocated independently instead
+  of together, able to fragment "all books in progress share one window"
+  back into separate carve-outs — fixed via a new `relocateGroup` that
+  moves every member of a shared occurrence to the same new window or
+  drops the whole group together, never a partial fragment. Also fixed in
+  the same pass: the eviction search's `busy` set used to exclude *every*
+  slot overlapping the new Ad-hoc Event regardless of type, wrongly
+  freeing up a Fixed Commitment's/Deadline Task's/Routine's own
+  real-world-occupied window (flagged or left alone, but never actually
+  removed from the board) for a relocation to land on top of. Separately,
+  `GroupedSlotBlock` (`src/app/grouped-slot-block.tsx`) was fixed to show
+  actual item titles (reusing `SlotCard`'s existing 3-line-clamped
+  `.slotOccupant` styling, so it's bounded the same way a single item's
+  title already is) instead of a bare "N 項進行中" count — project owner:
+  "why the fuck the blocks still blank...if time table block space
+  enough, can still show...book names...wont ever explode since the
+  border can just cut off." `npm run verify` passes — 237 tests (6 new: 2
+  in `hard-constraints.test.ts` pinning the final-remainder fix, 4 in
+  `repair.test.ts` pinning duration preservation, grouped relocation,
+  group-or-nothing dropping, and the Fixed-Commitment-window-safety fix),
+  lint/typecheck/build all clean. These four fixes are pure `src/scheduler/`
+  logic changes with full fixture-test coverage — no live Browser-pane
+  verification needed for them (per this project's own testing
+  discipline, `src/scheduler/` is designed to be fully fixture-testable
+  without a database or UI); the `GroupedSlotBlock` display fix was
+  verified live against the project owner's real book schedule in the
+  Browser pane.

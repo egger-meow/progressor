@@ -14,7 +14,6 @@ import {
   offsetFromMonday,
   combineDateAndTime,
   overlaps,
-  findFreeInterval,
   sameCalendarDay,
   startOfWeek,
   dailyWindowMs,
@@ -28,6 +27,7 @@ import {
   MIN_SLACK_SHARE_PER_DAY,
   MIN_DEADLINE_SESSION_MS,
 } from "./constants";
+import { pickBestGapInWindow } from "./objective";
 
 export interface HardConstraintResult {
   slots: ScheduledTimeSlot[];
@@ -157,10 +157,16 @@ export function placeFixedCommitments(input: SchedulerInput): HardConstraintResu
   return { slots, conflicts };
 }
 
-// Finds the first free `durationMs` window on `day` inside the daily
+// Finds the best free `durationMs` window on `day` inside the daily
 // scheduling window (constants.ts), not overlapping any interval in `busy`
 // and ending no later than `notAfter`. Returns null if no such window
-// exists on this day.
+// exists on this day. Which *day* gets tried, and how much of it
+// (chunkMs), is entirely placeDeadlineTasks' own slack-budget loop below —
+// unchanged by this. This only picks, among the gaps available on the
+// day placeDeadlineTasks already chose, the one that best avoids leaving a
+// fragmenting sliver (objective.ts's pickBestGapInWindow, 2026-07-22, same
+// `/goal` as flexible-placement.ts's scoring) instead of simply the
+// earliest gap.
 function findFreeSlot(
   day: Date,
   durationMs: number,
@@ -169,7 +175,7 @@ function findFreeSlot(
 ): Interval | null {
   const windowStart = combineDateAndTime(day, DAILY_WINDOW_START);
   const windowEnd = combineDateAndTime(day, DAILY_WINDOW_END);
-  return findFreeInterval(windowStart, windowEnd, durationMs, busy, notAfter);
+  return pickBestGapInWindow(windowStart, windowEnd, durationMs, busy, notAfter);
 }
 
 // Deadline Task work is a hour budget (SchedulerDeadlineTask.estimatedHours),
@@ -218,11 +224,25 @@ export function placeDeadlineTasks(
 
       const slackBudget = dailyWindowMs(day) * (1 - MIN_SLACK_SHARE_PER_DAY);
       const dayBudget = slackBudget - usedMsOnDay(day, allBusy);
-      if (dayBudget < MIN_DEADLINE_SESSION_MS) {
+      if (dayBudget <= 0) {
         continue;
       }
 
       const chunkMs = Math.min(remainingMs, SESSION_DURATION_MS, dayBudget);
+      // A tiny sliver (below MIN_DEADLINE_SESSION_MS) isn't worth searching
+      // a day for — UNLESS it's genuinely the task's last remaining chunk
+      // (chunkMs === remainingMs), in which case skipping it would only
+      // manufacture a conflict for hours that actually fit. Comparing
+      // dayBudget alone against MIN_DEADLINE_SESSION_MS (as this used to)
+      // skipped that final-remainder case whenever the day's slack
+      // headroom was itself small, even though the remainder needed less
+      // room than the headroom available — constants.ts's own comment on
+      // MIN_DEADLINE_SESSION_MS promises this carve-out; this now actually
+      // implements it.
+      if (chunkMs < remainingMs && chunkMs < MIN_DEADLINE_SESSION_MS) {
+        continue;
+      }
+
       const found = findFreeSlot(day, chunkMs, allBusy, deadline);
       if (!found) {
         continue;

@@ -51,16 +51,20 @@ function readDurationMinutes(formData: FormData): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+// A group of checked boxes sharing one name — formData.getAll returns
+// every checked value, and unchecked boxes simply don't appear at all, so
+// there's no need for an explicit "（無偏好）" sentinel option anymore.
+function readTimeOfDayPreferences(formData: FormData): TimeOfDayPreference[] {
+  return formData.getAll("timeOfDayPreference").map(String) as TimeOfDayPreference[];
+}
+
 function readEditableFields(formData: FormData) {
-  const timeOfDayRaw = String(formData.get("timeOfDayPreference") ?? "");
   return {
     title: String(formData.get("title")),
     category: String(formData.get("category")),
     cadence: String(formData.get("cadence")) as RoutineCadence,
     anchor: parseAnchor(String(formData.get("anchor") ?? "")),
-    timeOfDayPreference: timeOfDayRaw
-      ? (timeOfDayRaw as TimeOfDayPreference)
-      : undefined,
+    timeOfDayPreferences: readTimeOfDayPreferences(formData),
     tags: parseTagsInput(String(formData.get("tags") ?? "")),
   };
 }
@@ -81,13 +85,12 @@ export async function createRoutineAction(formData: FormData): Promise<void> {
 export async function updateRoutineAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
   try {
-    const timeOfDayRaw = String(formData.get("timeOfDayPreference") ?? "");
     await updateRoutine(id, {
       title: String(formData.get("title")),
       category: String(formData.get("category")),
       cadence: String(formData.get("cadence")) as RoutineCadence,
       anchor: parseAnchor(String(formData.get("anchor") ?? "")),
-      timeOfDayPreference: timeOfDayRaw ? (timeOfDayRaw as TimeOfDayPreference) : null,
+      timeOfDayPreferences: readTimeOfDayPreferences(formData),
       preferredStartTime: readPreferredStartTime(formData) ?? null,
       durationMinutes: readDurationMinutes(formData),
       tags: parseTagsInput(String(formData.get("tags") ?? "")),

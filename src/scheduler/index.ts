@@ -9,15 +9,29 @@
 // src/scheduler/ pass in a snapshot and get a proposed SchedulerOutput back,
 // nothing more.
 
-import { SchedulerInput, SchedulerOutput } from "./types";
+import { SchedulerInput, SchedulerOccupantType, SchedulerOutput } from "./types";
 import { placeHardConstraints } from "./hard-constraints";
 import { placeRoutines } from "./routine-placement";
 import { placeCategoryItemSchedules } from "./category-placement";
 import { placeFlexibleTrackableItems } from "./flexible-placement";
+import type { KindedInterval } from "./objective";
 import type { Interval } from "./time";
 
 function toBusy(slots: { startAt: Date; endAt: Date }[]): Interval[] {
   return slots.map((slot) => ({ start: slot.startAt, end: slot.endAt }));
+}
+
+// Same as toBusy, but keeps occupantType — objective.ts's ContextSwitching
+// term needs to tell "another Trackable Item session" (continuity) apart
+// from every other occupant kind (a genuine activity switch).
+function toKindedBusy(
+  slots: { startAt: Date; endAt: Date; occupantType: SchedulerOccupantType }[],
+): KindedInterval[] {
+  return slots.map((slot) => ({
+    start: slot.startAt,
+    end: slot.endAt,
+    occupantType: slot.occupantType,
+  }));
 }
 
 export function computeSchedule(input: SchedulerInput): SchedulerOutput {
@@ -46,12 +60,17 @@ export function computeSchedule(input: SchedulerInput): SchedulerOutput {
     ...input,
     trackableItems: input.trackableItems.filter((item) => !scheduledTypes.has(item.type)),
   };
-  const flexibleResult = placeFlexibleTrackableItems(flexibleInput, [
-    ...existingBusy,
-    ...hardBusy,
-    ...routineBusy,
-    ...categoryBusy,
-  ]);
+  const kindedBusy = [
+    ...toKindedBusy(input.existingSlots),
+    ...toKindedBusy(hardResult.slots),
+    ...toKindedBusy(routineResult.slots),
+    ...toKindedBusy(categoryResult.slots),
+  ];
+  const flexibleResult = placeFlexibleTrackableItems(
+    flexibleInput,
+    [...existingBusy, ...hardBusy, ...routineBusy, ...categoryBusy],
+    kindedBusy,
+  );
 
   return {
     weekStart: input.weekStart,
@@ -72,3 +91,6 @@ export { placeRoutines } from "./routine-placement";
 export { placeCategoryItemSchedules } from "./category-placement";
 export { placeFlexibleTrackableItems } from "./flexible-placement";
 export { repairSchedule } from "./repair";
+export { computeHorizonSchedule } from "./horizon";
+export type { HorizonSchedulerInput, HorizonSchedulerOutput } from "./horizon";
+export { DEFAULT_HORIZON_WEEKS, MAX_HORIZON_WEEKS } from "./constants";
